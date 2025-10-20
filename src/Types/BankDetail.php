@@ -6,7 +6,7 @@ namespace BlindPay\SDK\Types;
 
 readonly class BankDetail
 {
-    /**
+    /*
      * @param BankDetailItem[] $items
      */
     public function __construct(
@@ -15,8 +15,7 @@ readonly class BankDetail
         public string $key,
         public array $items,
         public bool $required
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {
@@ -36,4 +35,3 @@ readonly class BankDetail
         );
     }
 }
-

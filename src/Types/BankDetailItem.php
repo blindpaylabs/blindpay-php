@@ -10,8 +10,7 @@ readonly class BankDetailItem
         public string $label,
         public string $value,
         public ?bool $isActive = null
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {
@@ -22,4 +21,3 @@ readonly class BankDetailItem
         );
     }
 }
-

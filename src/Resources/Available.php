@@ -4,20 +4,19 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK\Resources;
 
-use BlindPay\SDK\Enums\Rail;
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Types\BankDetail;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\RailInfo;
 
-class AvailableResource
+class Available
 {
     public function __construct(
         private readonly ApiClientInterface $client
-    ) {
-    }
+    ) {}
 
-    /**
+    /*
      * Get bank details for a specific rail
      *
      * @param Rail $rail The rail type to get bank details for
@@ -27,7 +26,7 @@ class AvailableResource
     {
         $response = $this->client->get("available/bank-details?rail={$rail->value}");
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        if ($response->isSuccess()) {
             $bankDetails = array_map(
                 fn (array $item) => BankDetail::fromArray($item),
                 $response->data
@@ -39,7 +38,7 @@ class AvailableResource
         return $response;
     }
 
-    /**
+    /*
      * Get all available rails
      *
      * @return BlindPayApiResponse<RailInfo[]>
@@ -48,7 +47,7 @@ class AvailableResource
     {
         $response = $this->client->get('available/rails');
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        if ($response->isSuccess()) {
             $rails = array_map(
                 fn (array $item) => RailInfo::fromArray($item),
                 $response->data
@@ -60,4 +59,3 @@ class AvailableResource
         return $response;
     }
 }
-

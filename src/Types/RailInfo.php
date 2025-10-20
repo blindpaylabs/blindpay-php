@@ -10,8 +10,7 @@ readonly class RailInfo
         public string $label,
         public string $value,
         public string $country
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {
@@ -22,4 +21,3 @@ readonly class RailInfo
         );
     }
 }
-

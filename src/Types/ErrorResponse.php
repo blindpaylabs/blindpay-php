@@ -8,8 +8,7 @@ readonly class ErrorResponse
 {
     public function __construct(
         public string $message
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {
@@ -17,5 +16,11 @@ readonly class ErrorResponse
             message: $data['message'] ?? 'Unknown error'
         );
     }
-}
 
+    public function toArray(): array
+    {
+        return [
+            'message' => $this->message,
+        ];
+    }
+}
