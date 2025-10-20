@@ -6,10 +6,6 @@ namespace BlindPay\SDK\Internal;
 
 use BlindPay\SDK\Types\BlindPayApiResponse;
 
-/**
- * Internal API client interface that resources use to make HTTP requests.
- * This interface is not exposed to SDK users.
- */
 interface ApiClientInterface
 {
     public function get(string $path): BlindPayApiResponse;
@@ -22,4 +18,3 @@ interface ApiClientInterface
 
     public function delete(string $path, ?array $body = null): BlindPayApiResponse;
 }
-

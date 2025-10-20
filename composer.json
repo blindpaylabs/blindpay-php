@@ -46,8 +46,8 @@
     "scripts": {
         "test": "pest",
         "test:coverage": "pest --coverage",
-        "pint": "pint",
-        "pint:test": "pint --test"
+        "lint:check": "pint --test",
+        "lint:fix": "pint"
     }
 }
 
