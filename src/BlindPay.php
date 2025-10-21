@@ -46,12 +46,24 @@ class BlindPay implements ApiClientInterface
 
     public readonly VirtualAccounts $virtualAccounts;
 
+    /**
+     * @var object{getMembers():BlindPayApiResponse,update(UpdateInstanceInput):BlindPayApiResponse,delete():BlindPayApiResponse,deleteMember(string):BlindPayApiResponse,updateMemberRole(UpdateMemberRoleInput):BlindPayApiResponse,apiKeys:ApiKeys,webhookEndpoints:Webhooks}
+     */
     public readonly object $instances;
 
+    /**
+     * @var object{list(?ListPayinsInput):BlindPayApiResponse,get(string):BlindPayApiResponse,getTrack(string):BlindPayApiResponse,export(ExportPayinsInput):BlindPayApiResponse,createEvm(string):BlindPayApiResponse,quotes:PayinQuotes}
+     */
     public readonly object $payins;
 
+    /**
+     * @var object{list():BlindPayApiResponse,createIndividualWithStandardKYC(CreateIndividualWithStandardKYCInput):BlindPayApiResponse,createIndividualWithEnhancedKYC(CreateIndividualWithEnhancedKYCInput):BlindPayApiResponse,createBusinessWithStandardKYB(CreateBusinessWithStandardKYBInput):BlindPayApiResponse,get(string):BlindPayApiResponse,update(UpdateReceiverInput):BlindPayApiResponse,delete(string):BlindPayApiResponse,getLimits(string):BlindPayApiResponse,getLimitIncreaseRequests(string):BlindPayApiResponse,requestLimitIncrease(RequestLimitIncreaseInput):BlindPayApiResponse,bankAccounts:BankAccounts}
+     */
     public readonly object $receivers;
 
+    /**
+     * @var object{blockchain:BlockchainWallets,offramp:OfframpWallets}
+     */
     public readonly object $wallets;
 
     public function __construct(
