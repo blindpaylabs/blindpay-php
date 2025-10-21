@@ -162,7 +162,7 @@ class PartnerFees
      */
     public function list(): BlindPayApiResponse
     {
-        $response = $this->client->get("/instances/{$this->instanceId}/partner-fees");
+        $response = $this->client->get("instances/{$this->instanceId}/partner-fees");
 
         if ($response->isSuccess() && is_array($response->data)) {
             $fees = array_map(
@@ -185,7 +185,7 @@ class PartnerFees
     public function create(CreatePartnerFeeInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/partner-fees",
+            "instances/{$this->instanceId}/partner-fees",
             $input->toArray()
         );
 
@@ -212,7 +212,7 @@ class PartnerFees
             );
         }
 
-        $response = $this->client->get("/instances/{$this->instanceId}/partner-fees/{$id}");
+        $response = $this->client->get("instances/{$this->instanceId}/partner-fees/{$id}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
@@ -237,6 +237,6 @@ class PartnerFees
             );
         }
 
-        return $this->client->delete("/instances/{$this->instanceId}/partner-fees/{$id}");
+        return $this->client->delete("instances/{$this->instanceId}/partner-fees/{$id}");
     }
 }

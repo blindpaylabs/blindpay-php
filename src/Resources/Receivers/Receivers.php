@@ -956,7 +956,7 @@ class Receivers
      */
     public function list(): BlindPayApiResponse
     {
-        $response = $this->client->get("/instances/{$this->instanceId}/receivers");
+        $response = $this->client->get("instances/{$this->instanceId}/receivers");
 
         if ($response->isSuccess() && is_array($response->data)) {
             try {
@@ -985,7 +985,7 @@ class Receivers
     public function createIndividualWithStandardKYC(CreateIndividualWithStandardKYCInput $data): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers",
+            "instances/{$this->instanceId}/receivers",
             $data->toArray()
         );
 
@@ -1007,7 +1007,7 @@ class Receivers
     public function createIndividualWithEnhancedKYC(CreateIndividualWithEnhancedKYCInput $data): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers",
+            "instances/{$this->instanceId}/receivers",
             $data->toArray()
         );
 
@@ -1029,7 +1029,7 @@ class Receivers
     public function createBusinessWithStandardKYB(CreateBusinessWithStandardKYBInput $data): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers",
+            "instances/{$this->instanceId}/receivers",
             $data->toArray()
         );
 
@@ -1056,7 +1056,7 @@ class Receivers
             );
         }
 
-        $response = $this->client->get("/instances/{$this->instanceId}/receivers/{$receiverId}");
+        $response = $this->client->get("instances/{$this->instanceId}/receivers/{$receiverId}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             try {
@@ -1088,7 +1088,7 @@ class Receivers
         }
 
         return $this->client->patch(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}",
             $input->toArray()
         );
     }
@@ -1107,7 +1107,7 @@ class Receivers
             );
         }
 
-        return $this->client->delete("/instances/{$this->instanceId}/receivers/{$receiverId}");
+        return $this->client->delete("instances/{$this->instanceId}/receivers/{$receiverId}");
     }
 
     /*
@@ -1124,7 +1124,7 @@ class Receivers
             );
         }
 
-        $response = $this->client->get("/instances/{$this->instanceId}/limits/receivers/{$receiverId}");
+        $response = $this->client->get("instances/{$this->instanceId}/limits/receivers/{$receiverId}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
@@ -1149,7 +1149,7 @@ class Receivers
             );
         }
 
-        $response = $this->client->get("/instances/{$this->instanceId}/receivers/{$receiverId}/limit-increase");
+        $response = $this->client->get("instances/{$this->instanceId}/receivers/{$receiverId}/limit-increase");
 
         if ($response->isSuccess() && is_array($response->data)) {
             $requests = array_map(
@@ -1178,7 +1178,7 @@ class Receivers
         }
 
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/limit-increase",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/limit-increase",
             $input->toArray()
         );
 

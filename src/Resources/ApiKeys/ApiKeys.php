@@ -135,7 +135,7 @@ class ApiKeys
      */
     public function list(): BlindPayApiResponse
     {
-        $response = $this->client->get("/instances/{$this->instanceId}/api-keys");
+        $response = $this->client->get("instances/{$this->instanceId}/api-keys");
 
         if ($response->isSuccess() && is_array($response->data)) {
             $apiKeys = array_map(
@@ -158,7 +158,7 @@ class ApiKeys
     public function create(CreateApiKeyInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/api-keys",
+            "instances/{$this->instanceId}/api-keys",
             $input->toArray()
         );
 
@@ -185,7 +185,7 @@ class ApiKeys
             );
         }
 
-        $response = $this->client->get("/instances/{$this->instanceId}/api-keys/{$id}");
+        $response = $this->client->get("instances/{$this->instanceId}/api-keys/{$id}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
@@ -210,6 +210,6 @@ class ApiKeys
             );
         }
 
-        return $this->client->delete("/instances/{$this->instanceId}/api-keys/{$id}");
+        return $this->client->delete("instances/{$this->instanceId}/api-keys/{$id}");
     }
 }

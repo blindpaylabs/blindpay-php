@@ -150,7 +150,7 @@ class Webhooks
      */
     public function list(): BlindPayApiResponse
     {
-        $response = $this->client->get("/instances/{$this->instanceId}/webhook-endpoints");
+        $response = $this->client->get("instances/{$this->instanceId}/webhook-endpoints");
 
         if ($response->isSuccess() && is_array($response->data)) {
             $webhooks = array_map(
@@ -172,7 +172,7 @@ class Webhooks
     public function create(CreateWebhookEndpointInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/webhook-endpoints",
+            "instances/{$this->instanceId}/webhook-endpoints",
             $input->toArray()
         );
 
@@ -198,7 +198,7 @@ class Webhooks
             );
         }
 
-        return $this->client->delete("/instances/{$this->instanceId}/webhook-endpoints/{$id}");
+        return $this->client->delete("instances/{$this->instanceId}/webhook-endpoints/{$id}");
     }
 
     /**
@@ -214,7 +214,7 @@ class Webhooks
             );
         }
 
-        $response = $this->client->get("/instances/{$this->instanceId}/webhook-endpoints/{$id}/secret");
+        $response = $this->client->get("instances/{$this->instanceId}/webhook-endpoints/{$id}/secret");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
@@ -232,7 +232,7 @@ class Webhooks
      */
     public function getPortalAccessUrl(): BlindPayApiResponse
     {
-        $response = $this->client->get("/instances/{$this->instanceId}/webhook-endpoints/portal-access");
+        $response = $this->client->get("instances/{$this->instanceId}/webhook-endpoints/portal-access");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(

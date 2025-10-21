@@ -160,7 +160,7 @@ class BlockchainWallets
         }
 
         $response = $this->client->get(
-            "/instances/{$this->instanceId}/receivers/{$receiverId}/blockchain-wallets"
+            "instances/{$this->instanceId}/receivers/{$receiverId}/blockchain-wallets"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -183,7 +183,7 @@ class BlockchainWallets
     public function createWithAddress(CreateBlockchainWalletWithAddressInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets",
             $input->toArray()
         );
 
@@ -204,7 +204,7 @@ class BlockchainWallets
     public function createWithHash(CreateBlockchainWalletWithHashInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets",
             $input->toArray()
         );
 
@@ -231,7 +231,7 @@ class BlockchainWallets
         }
 
         $response = $this->client->get(
-            "/instances/{$this->instanceId}/receivers/{$receiverId}/blockchain-wallets/sign-message"
+            "instances/{$this->instanceId}/receivers/{$receiverId}/blockchain-wallets/sign-message"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -257,7 +257,7 @@ class BlockchainWallets
         }
 
         $response = $this->client->get(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets/{$input->id}"
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets/{$input->id}"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -283,7 +283,7 @@ class BlockchainWallets
         }
 
         return $this->client->delete(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets/{$input->id}"
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets/{$input->id}"
         );
     }
 
@@ -301,7 +301,7 @@ class BlockchainWallets
         }
 
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/create-asset-trustline",
+            "instances/{$this->instanceId}/create-asset-trustline",
             ['address' => $address]
         );
 
@@ -322,7 +322,7 @@ class BlockchainWallets
     public function mintUsdbStellar(MintUsdbStellarInput $input): BlindPayApiResponse
     {
         return $this->client->post(
-            "/instances/{$this->instanceId}/mint-usdb-stellar",
+            "instances/{$this->instanceId}/mint-usdb-stellar",
             $input->toArray()
         );
     }

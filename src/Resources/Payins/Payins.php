@@ -399,7 +399,7 @@ class Payins
     public function list(?ListPayinsInput $params = null): BlindPayApiResponse
     {
         $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get("/instances/{$this->instanceId}/payins{$queryParams}");
+        $response = $this->client->get("instances/{$this->instanceId}/payins{$queryParams}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
@@ -424,7 +424,7 @@ class Payins
             );
         }
 
-        $response = $this->client->get("/instances/{$this->instanceId}/payins/{$payinId}");
+        $response = $this->client->get("instances/{$this->instanceId}/payins/{$payinId}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
@@ -449,7 +449,7 @@ class Payins
             );
         }
 
-        $response = $this->client->get("/e/payins/{$payinId}");
+        $response = $this->client->get("e/payins/{$payinId}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
@@ -469,7 +469,7 @@ class Payins
     public function export(ExportPayinsInput $params): BlindPayApiResponse
     {
         $queryParams = $params->toQueryString();
-        $response = $this->client->get("/instances/{$this->instanceId}/export/payins{$queryParams}");
+        $response = $this->client->get("instances/{$this->instanceId}/export/payins{$queryParams}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             $payins = array_map(
@@ -498,7 +498,7 @@ class Payins
         }
 
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/payins/evm",
+            "instances/{$this->instanceId}/payins/evm",
             ['payin_quote_id' => $payinQuoteId]
         );
 

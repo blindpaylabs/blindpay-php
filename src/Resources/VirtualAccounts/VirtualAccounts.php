@@ -252,7 +252,7 @@ class VirtualAccounts
     public function create(CreateVirtualAccountInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/virtual-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/virtual-accounts",
             $input->toArray()
         );
 
@@ -273,7 +273,7 @@ class VirtualAccounts
     public function update(UpdateVirtualAccountInput $input): BlindPayApiResponse
     {
         return $this->client->put(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/virtual-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/virtual-accounts",
             $input->toArray()
         );
     }
@@ -292,7 +292,7 @@ class VirtualAccounts
         }
 
         $response = $this->client->get(
-            "/instances/{$this->instanceId}/receivers/{$receiverId}/virtual-accounts"
+            "instances/{$this->instanceId}/receivers/{$receiverId}/virtual-accounts"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {

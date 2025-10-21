@@ -397,7 +397,7 @@ class Payouts
     public function list(?ListPayoutsInput $params = null): BlindPayApiResponse
     {
         $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get("/instances/{$this->instanceId}/payouts{$queryParams}");
+        $response = $this->client->get("instances/{$this->instanceId}/payouts{$queryParams}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
@@ -417,7 +417,7 @@ class Payouts
     public function export(?ExportPayoutsInput $params = null): BlindPayApiResponse
     {
         $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get("/instances/{$this->instanceId}/export/payouts{$queryParams}");
+        $response = $this->client->get("instances/{$this->instanceId}/export/payouts{$queryParams}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             $payouts = array_map(
@@ -445,7 +445,7 @@ class Payouts
             );
         }
 
-        $response = $this->client->get("/instances/{$this->instanceId}/payouts/{$payoutId}");
+        $response = $this->client->get("instances/{$this->instanceId}/payouts/{$payoutId}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
@@ -470,7 +470,7 @@ class Payouts
             );
         }
 
-        $response = $this->client->get("/e/payouts/{$payoutId}");
+        $response = $this->client->get("e/payouts/{$payoutId}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
@@ -490,7 +490,7 @@ class Payouts
     public function authorizeStellarToken(AuthorizeStellarTokenInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/payouts/stellar/authorize",
+            "instances/{$this->instanceId}/payouts/stellar/authorize",
             $input->toArray()
         );
 
@@ -512,7 +512,7 @@ class Payouts
     public function createStellar(CreateStellarPayoutInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/payouts/stellar",
+            "instances/{$this->instanceId}/payouts/stellar",
             $input->toArray()
         );
 
@@ -534,7 +534,7 @@ class Payouts
     public function createEvm(CreateEvmPayoutInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/payouts/evm",
+            "instances/{$this->instanceId}/payouts/evm",
             $input->toArray()
         );
 

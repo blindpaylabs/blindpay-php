@@ -229,7 +229,7 @@ class Quotes
     public function create(CreateQuoteInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/quotes",
+            "instances/{$this->instanceId}/quotes",
             $input->toArray()
         );
 
@@ -251,7 +251,7 @@ class Quotes
     public function getFxRate(GetFxRateInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/quotes/fx",
+            "instances/{$this->instanceId}/quotes/fx",
             $input->toArray()
         );
 

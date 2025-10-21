@@ -104,7 +104,7 @@ class Instances
      */
     public function getMembers(): BlindPayApiResponse
     {
-        $response = $this->client->get("/instances/{$this->instanceId}/members");
+        $response = $this->client->get("instances/{$this->instanceId}/members");
 
         if ($response->isSuccess() && is_array($response->data)) {
             $members = array_map(
@@ -127,7 +127,7 @@ class Instances
     public function update(UpdateInstanceInput $input): BlindPayApiResponse
     {
         return $this->client->put(
-            "/instances/{$this->instanceId}",
+            "instances/{$this->instanceId}",
             $input->toArray()
         );
     }
@@ -139,7 +139,7 @@ class Instances
      */
     public function delete(): BlindPayApiResponse
     {
-        return $this->client->delete("/instances/{$this->instanceId}");
+        return $this->client->delete("instances/{$this->instanceId}");
     }
 
     /*
@@ -156,7 +156,7 @@ class Instances
             );
         }
 
-        return $this->client->delete("/instances/{$this->instanceId}/members/{$memberId}");
+        return $this->client->delete("instances/{$this->instanceId}/members/{$memberId}");
     }
 
     /*
@@ -174,7 +174,7 @@ class Instances
         }
 
         return $this->client->put(
-            "/instances/{$this->instanceId}/members/{$input->memberId}",
+            "instances/{$this->instanceId}/members/{$input->memberId}",
             ['role' => $input->role->value]
         );
     }

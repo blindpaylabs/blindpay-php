@@ -828,7 +828,7 @@ class BankAccounts
         }
 
         $response = $this->client->get(
-            "/instances/{$this->instanceId}/receivers/{$receiverId}/bank-accounts"
+            "instances/{$this->instanceId}/receivers/{$receiverId}/bank-accounts"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -855,7 +855,7 @@ class BankAccounts
         }
 
         $response = $this->client->get(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts/{$input->id}"
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts/{$input->id}"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -882,7 +882,7 @@ class BankAccounts
         }
 
         return $this->client->delete(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts/{$input->id}"
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts/{$input->id}"
         );
     }
 
@@ -895,7 +895,7 @@ class BankAccounts
     public function createPix(CreatePixInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
             $input->toArray()
         );
 
@@ -917,7 +917,7 @@ class BankAccounts
     public function createArgentinaTransfers(CreateArgentinaTransfersInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
             $input->toArray()
         );
 
@@ -939,7 +939,7 @@ class BankAccounts
     public function createSpei(CreateSpeiInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
             $input->toArray()
         );
 
@@ -961,7 +961,7 @@ class BankAccounts
     public function createColombiaAch(CreateColombiaAchInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
             $input->toArray()
         );
 
@@ -983,7 +983,7 @@ class BankAccounts
     public function createAch(CreateAchInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1005,7 +1005,7 @@ class BankAccounts
     public function createWire(CreateWireInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1027,7 +1027,7 @@ class BankAccounts
     public function createInternationalSwift(CreateInternationalSwiftInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1049,7 +1049,7 @@ class BankAccounts
     public function createRtp(CreateRtpInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "/instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
             $input->toArray()
         );
 
