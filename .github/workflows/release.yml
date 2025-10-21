@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: openssl, json
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          body: |
+            ## Installation
+            ```bash
+            composer require blindpay/php
+            ```
+            
+            ## What's Changed
+            See full changelog below.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
