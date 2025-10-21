@@ -10,15 +10,19 @@ use BlindPay\SDK\Resources\ApiKeys\ApiKeys;
 use BlindPay\SDK\Resources\Available\Available;
 use BlindPay\SDK\Resources\BankAccounts\BankAccounts;
 use BlindPay\SDK\Resources\Instances\Instances;
+use BlindPay\SDK\Resources\Instances\InstancesWrapper;
 use BlindPay\SDK\Resources\PartnerFees\PartnerFees;
 use BlindPay\SDK\Resources\Payins\Payins;
+use BlindPay\SDK\Resources\Payins\PayinsWrapper;
 use BlindPay\SDK\Resources\Payins\Quotes as PayinQuotes;
 use BlindPay\SDK\Resources\Payouts\Payouts;
 use BlindPay\SDK\Resources\Quotes\Quotes;
 use BlindPay\SDK\Resources\Receivers\Receivers;
+use BlindPay\SDK\Resources\Receivers\ReceiversWrapper;
 use BlindPay\SDK\Resources\VirtualAccounts\VirtualAccounts;
 use BlindPay\SDK\Resources\Wallets\BlockchainWallets;
 use BlindPay\SDK\Resources\Wallets\OfframpWallets;
+use BlindPay\SDK\Resources\Wallets\WalletsWrapper;
 use BlindPay\SDK\Resources\Webhooks\Webhooks;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\ErrorResponse;
@@ -46,25 +50,13 @@ class BlindPay implements ApiClientInterface
 
     public readonly VirtualAccounts $virtualAccounts;
 
-    /**
-     * @var object{getMembers():BlindPayApiResponse,update(UpdateInstanceInput):BlindPayApiResponse,delete():BlindPayApiResponse,deleteMember(string):BlindPayApiResponse,updateMemberRole(UpdateMemberRoleInput):BlindPayApiResponse,apiKeys:ApiKeys,webhookEndpoints:Webhooks}
-     */
-    public readonly object $instances;
+    public readonly InstancesWrapper $instances;
 
-    /**
-     * @var object{list(?ListPayinsInput):BlindPayApiResponse,get(string):BlindPayApiResponse,getTrack(string):BlindPayApiResponse,export(ExportPayinsInput):BlindPayApiResponse,createEvm(string):BlindPayApiResponse,quotes:PayinQuotes}
-     */
-    public readonly object $payins;
+    public readonly PayinsWrapper $payins;
 
-    /**
-     * @var object{list():BlindPayApiResponse,createIndividualWithStandardKYC(CreateIndividualWithStandardKYCInput):BlindPayApiResponse,createIndividualWithEnhancedKYC(CreateIndividualWithEnhancedKYCInput):BlindPayApiResponse,createBusinessWithStandardKYB(CreateBusinessWithStandardKYBInput):BlindPayApiResponse,get(string):BlindPayApiResponse,update(UpdateReceiverInput):BlindPayApiResponse,delete(string):BlindPayApiResponse,getLimits(string):BlindPayApiResponse,getLimitIncreaseRequests(string):BlindPayApiResponse,requestLimitIncrease(RequestLimitIncreaseInput):BlindPayApiResponse,bankAccounts:BankAccounts}
-     */
-    public readonly object $receivers;
+    public readonly ReceiversWrapper $receivers;
 
-    /**
-     * @var object{blockchain:BlockchainWallets,offramp:OfframpWallets}
-     */
-    public readonly object $wallets;
+    public readonly WalletsWrapper $wallets;
 
     public function __construct(
         private readonly string $apiKey,
@@ -109,19 +101,11 @@ class BlindPay implements ApiClientInterface
         $apiKeysResource = new ApiKeys($this->instanceId, $this);
         $webhooksResource = new Webhooks($this->instanceId, $this);
 
-        $this->instances = new class($instancesResource, $apiKeysResource, $webhooksResource)
-        {
-            public function __construct(
-                private readonly Instances $base,
-                public readonly ApiKeys $apiKeys,
-                public readonly Webhooks $webhookEndpoints
-            ) {}
-
-            public function __call(string $method, array $arguments): mixed
-            {
-                return $this->base->$method(...$arguments);
-            }
-        };
+        $this->instances = new InstancesWrapper(
+            $instancesResource,
+            $apiKeysResource,
+            $webhooksResource
+        );
     }
 
     private function initializePayins(): void
@@ -129,18 +113,7 @@ class BlindPay implements ApiClientInterface
         $payinsResource = new Payins($this->instanceId, $this);
         $quotesResource = new PayinQuotes($this->instanceId, $this);
 
-        $this->payins = new class($payinsResource, $quotesResource)
-        {
-            public function __construct(
-                private readonly Payins $base,
-                public readonly PayinQuotes $quotes
-            ) {}
-
-            public function __call(string $method, array $arguments): mixed
-            {
-                return $this->base->$method(...$arguments);
-            }
-        };
+        $this->payins = new PayinsWrapper($payinsResource, $quotesResource);
     }
 
     private function initializeReceivers(): void
@@ -148,18 +121,7 @@ class BlindPay implements ApiClientInterface
         $receiversResource = new Receivers($this->instanceId, $this);
         $bankAccountsResource = new BankAccounts($this->instanceId, $this);
 
-        $this->receivers = new class($receiversResource, $bankAccountsResource)
-        {
-            public function __construct(
-                private readonly Receivers $base,
-                public readonly BankAccounts $bankAccounts
-            ) {}
-
-            public function __call(string $method, array $arguments): mixed
-            {
-                return $this->base->$method(...$arguments);
-            }
-        };
+        $this->receivers = new ReceiversWrapper($receiversResource, $bankAccountsResource);
     }
 
     private function initializeWallets(): void
@@ -167,20 +129,7 @@ class BlindPay implements ApiClientInterface
         $blockchainResource = new BlockchainWallets($this->instanceId, $this);
         $offrampResource = new OfframpWallets($this->instanceId, $this);
 
-        $this->wallets = new class($blockchainResource, $offrampResource)
-        {
-            public readonly BlockchainWallets $blockchain;
-
-            public readonly OfframpWallets $offramp;
-
-            public function __construct(
-                BlockchainWallets $blockchainResource,
-                OfframpWallets $offrampResource
-            ) {
-                $this->blockchain = $blockchainResource;
-                $this->offramp = $offrampResource;
-            }
-        };
+        $this->wallets = new WalletsWrapper($blockchainResource, $offrampResource);
     }
 
     private function request(string $method, string $path, ?array $body = null): BlindPayApiResponse

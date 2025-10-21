@@ -25,9 +25,9 @@ readonly class InstanceMember
         public string $id,
         public string $email,
         public string $firstName,
-        public string $middleName,
+        public ?string $middleName,
         public string $lastName,
-        public string $imageUrl,
+        public ?string $imageUrl,
         public DateTimeImmutable $createdAt,
         public InstanceMemberRole $role
     ) {}
@@ -38,9 +38,9 @@ readonly class InstanceMember
             id: $data['id'],
             email: $data['email'],
             firstName: $data['first_name'],
-            middleName: $data['middle_name'],
+            middleName: $data['middle_name'] ?? null,
             lastName: $data['last_name'],
-            imageUrl: $data['image_url'],
+            imageUrl: $data['image_url'] ?? null,
             createdAt: new DateTimeImmutable($data['created_at']),
             role: InstanceMemberRole::from($data['role'])
         );
