@@ -17,7 +17,7 @@ use BlindPay\SDK\Types\TrackingTransaction;
 use BlindPay\SDK\Types\TransactionStatus;
 use DateTimeImmutable;
 
-readonly class BlindpayBankAch
+readonly class BankAch
 {
     public function __construct(
         public string $routingNumber,
@@ -41,7 +41,7 @@ readonly class BlindpayBankAch
     }
 }
 
-readonly class BlindpayBankWire
+readonly class BankWire
 {
     public function __construct(
         public string $routingNumber,
@@ -65,7 +65,7 @@ readonly class BlindpayBankWire
     }
 }
 
-readonly class BlindpayBankRtp
+readonly class BankRtp
 {
     public function __construct(
         public string $routingNumber,
@@ -89,7 +89,7 @@ readonly class BlindpayBankRtp
     }
 }
 
-readonly class BlindpayBankBeneficiary
+readonly class BankBeneficiary
 {
     public function __construct(
         public string $name,
@@ -116,7 +116,7 @@ readonly class BlindpayBankBeneficiary
     }
 }
 
-readonly class BlindpayBankReceivingBank
+readonly class BankReceivingBank
 {
     public function __construct(
         public string $name,
@@ -143,18 +143,18 @@ readonly class BlindpayBankReceivingBank
     }
 }
 
-readonly class BlindpayBankDetails
+readonly class BankDetails
 {
     public function __construct(
         public string $routingNumber,
         public string $accountNumber,
         public string $accountType,
         public string $swiftBicCode,
-        public BlindpayBankAch $ach,
-        public BlindpayBankWire $wire,
-        public BlindpayBankRtp $rtp,
-        public BlindpayBankBeneficiary $beneficiary,
-        public BlindpayBankReceivingBank $receivingBank
+        public BankAch $ach,
+        public BankWire $wire,
+        public BankRtp $rtp,
+        public BankBeneficiary $beneficiary,
+        public BankReceivingBank $receivingBank
     ) {}
 
     public static function fromArray(array $data): self
@@ -164,11 +164,11 @@ readonly class BlindpayBankDetails
             accountNumber: $data['account_number'],
             accountType: $data['account_type'],
             swiftBicCode: $data['swift_bic_code'],
-            ach: BlindpayBankAch::fromArray($data['ach']),
-            wire: BlindpayBankWire::fromArray($data['wire']),
-            rtp: BlindpayBankRtp::fromArray($data['rtp']),
-            beneficiary: BlindpayBankBeneficiary::fromArray($data['beneficiary']),
-            receivingBank: BlindpayBankReceivingBank::fromArray($data['receiving_bank'])
+            ach: BankAch::fromArray($data['ach']),
+            wire: BankWire::fromArray($data['wire']),
+            rtp: BankRtp::fromArray($data['rtp']),
+            beneficiary: BankBeneficiary::fromArray($data['beneficiary']),
+            receivingBank: BankReceivingBank::fromArray($data['receiving_bank'])
         );
     }
 
@@ -212,7 +212,7 @@ readonly class Payin
         public string $name,
         public string $address,
         public Network $network,
-        public BlindpayBankDetails $blindpayBankDetails,
+        public BankDetails $BankDetails,
         public ?string $pixCode = null,
         public ?string $memoCode = null,
         public ?string $clabe = null,
@@ -250,7 +250,7 @@ readonly class Payin
             name: $data['name'],
             address: $data['address'],
             network: Network::from($data['network']),
-            blindpayBankDetails: BlindpayBankDetails::fromArray($data['blindpay_bank_details']),
+            BankDetails: BankDetails::fromArray($data['blindpay_bank_details']),
             pixCode: $data['pix_code'] ?? null,
             memoCode: $data['memo_code'] ?? null,
             clabe: $data['clabe'] ?? null,
@@ -354,7 +354,7 @@ readonly class CreateEvmPayinResponse
         public TransactionStatus $status,
         public string $receiverId,
         public float $receiverAmount,
-        public BlindpayBankDetails $blindpayBankDetails,
+        public BankDetails $BankDetails,
         public ?string $pixCode = null,
         public ?string $memoCode = null,
         public ?string $clabe = null,
@@ -371,7 +371,7 @@ readonly class CreateEvmPayinResponse
             status: TransactionStatus::from($data['status']),
             receiverId: $data['receiver_id'],
             receiverAmount: (float) $data['receiver_amount'],
-            blindpayBankDetails: BlindpayBankDetails::fromArray($data['blindpay_bank_details']),
+            BankDetails: BankDetails::fromArray($data['blindpay_bank_details']),
             pixCode: $data['pix_code'] ?? null,
             memoCode: $data['memo_code'] ?? null,
             clabe: $data['clabe'] ?? null,
