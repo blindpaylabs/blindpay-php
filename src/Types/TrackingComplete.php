@@ -39,4 +39,3 @@ readonly class TrackingComplete extends BaseTracking
         ];
     }
 }
-

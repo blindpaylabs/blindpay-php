@@ -8,4 +8,3 @@ enum Permission: string
 {
     case FULL_ACCESS = 'full_access';
 }
-

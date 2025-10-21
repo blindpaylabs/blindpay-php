@@ -10,4 +10,3 @@ enum StablecoinToken: string
     case USDT = 'USDT';
     case USDB = 'USDB';
 }
-

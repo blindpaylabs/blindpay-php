@@ -36,4 +36,3 @@ readonly class TrackingPartnerFee extends BaseTracking
         ];
     }
 }
-

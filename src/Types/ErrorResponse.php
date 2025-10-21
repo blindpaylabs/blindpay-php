@@ -24,4 +24,3 @@ readonly class ErrorResponse
         ];
     }
 }
-

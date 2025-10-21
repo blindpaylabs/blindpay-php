@@ -39,4 +39,3 @@ readonly class TrackingTransaction extends BaseTracking
         ];
     }
 }
-

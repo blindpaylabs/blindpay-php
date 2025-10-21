@@ -9,4 +9,3 @@ enum CurrencyType: string
     case SENDER = 'sender';
     case RECEIVER = 'receiver';
 }
-

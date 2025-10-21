@@ -15,4 +15,3 @@ abstract readonly class BaseTracking
 
     abstract public function toArray(): array;
 }
-

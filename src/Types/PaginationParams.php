@@ -65,4 +65,3 @@ readonly class PaginationParams
         return '?'.http_build_query($params);
     }
 }
-

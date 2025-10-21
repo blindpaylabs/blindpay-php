@@ -42,4 +42,3 @@ readonly class TrackingLiquidity extends BaseTracking
         ];
     }
 }
-

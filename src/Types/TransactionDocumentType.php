@@ -14,4 +14,3 @@ enum TransactionDocumentType: string
     case BILL_OF_LADING = 'bill_of_lading';
     case OTHERS = 'others';
 }
-

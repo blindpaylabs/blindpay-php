@@ -15,4 +15,3 @@ enum Currency: string
     case COP = 'COP';
     case ARS = 'ARS';
 }
-

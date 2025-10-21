@@ -18,4 +18,3 @@ enum Network: string
     case STELLAR_TESTNET = 'stellar_testnet';
     case TRON = 'tron';
 }
-

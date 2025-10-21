@@ -12,4 +12,3 @@ enum TransactionStatus: string
     case FAILED = 'failed';
     case ON_HOLD = 'on_hold';
 }
-

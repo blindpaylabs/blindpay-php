@@ -9,4 +9,3 @@ enum AccountClass: string
     case INDIVIDUAL = 'individual';
     case BUSINESS = 'business';
 }
-

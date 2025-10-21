@@ -45,4 +45,3 @@ readonly class TrackingPayment extends BaseTracking
         ];
     }
 }
-
