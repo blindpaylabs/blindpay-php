@@ -71,9 +71,6 @@ enum OwnerRole: string
     case CONTROLLING_PERSON = 'controlling_person';
 }
 
-/*
- * Limit increase request status
- */
 enum LimitIncreaseRequestStatus: string
 {
     case IN_REVIEW = 'in_review';
@@ -207,6 +204,9 @@ readonly class Limit
 
 abstract readonly class BaseReceiver
 {
+    /**
+     * @param  KycWarning[]|null  $kycWarnings
+     */
     public function __construct(
         public string $id,
         public AccountClass $type,
@@ -444,6 +444,9 @@ readonly class IndividualWithEnhancedKYC extends BaseReceiver
 
 readonly class BusinessWithStandardKYB extends BaseReceiver
 {
+    /**
+     * @param  Owner[]  $owners
+     */
     public function __construct(
         string $id,
         string $kycStatus,
@@ -796,112 +799,42 @@ readonly class UpdateReceiverInput
 
     public function toArray(): array
     {
-        $data = [];
-
-        if ($this->email !== null) {
-            $data['email'] = $this->email;
-        }
-        if ($this->taxId !== null) {
-            $data['tax_id'] = $this->taxId;
-        }
-        if ($this->addressLine1 !== null) {
-            $data['address_line_1'] = $this->addressLine1;
-        }
-        if ($this->addressLine2 !== null) {
-            $data['address_line_2'] = $this->addressLine2;
-        }
-        if ($this->city !== null) {
-            $data['city'] = $this->city;
-        }
-        if ($this->stateProvinceRegion !== null) {
-            $data['state_province_region'] = $this->stateProvinceRegion;
-        }
-        if ($this->country !== null) {
-            $data['country'] = $this->country->value;
-        }
-        if ($this->postalCode !== null) {
-            $data['postal_code'] = $this->postalCode;
-        }
-        if ($this->ipAddress !== null) {
-            $data['ip_address'] = $this->ipAddress;
-        }
-        if ($this->imageUrl !== null) {
-            $data['image_url'] = $this->imageUrl;
-        }
-        if ($this->phoneNumber !== null) {
-            $data['phone_number'] = $this->phoneNumber;
-        }
-        if ($this->proofOfAddressDocType !== null) {
-            $data['proof_of_address_doc_type'] = $this->proofOfAddressDocType->value;
-        }
-        if ($this->proofOfAddressDocFile !== null) {
-            $data['proof_of_address_doc_file'] = $this->proofOfAddressDocFile;
-        }
-        if ($this->firstName !== null) {
-            $data['first_name'] = $this->firstName;
-        }
-        if ($this->lastName !== null) {
-            $data['last_name'] = $this->lastName;
-        }
-        if ($this->dateOfBirth !== null) {
-            $data['date_of_birth'] = $this->dateOfBirth;
-        }
-        if ($this->idDocCountry !== null) {
-            $data['id_doc_country'] = $this->idDocCountry->value;
-        }
-        if ($this->idDocType !== null) {
-            $data['id_doc_type'] = $this->idDocType->value;
-        }
-        if ($this->idDocFrontFile !== null) {
-            $data['id_doc_front_file'] = $this->idDocFrontFile;
-        }
-        if ($this->idDocBackFile !== null) {
-            $data['id_doc_back_file'] = $this->idDocBackFile;
-        }
-        if ($this->legalName !== null) {
-            $data['legal_name'] = $this->legalName;
-        }
-        if ($this->alternateName !== null) {
-            $data['alternate_name'] = $this->alternateName;
-        }
-        if ($this->formationDate !== null) {
-            $data['formation_date'] = $this->formationDate;
-        }
-        if ($this->website !== null) {
-            $data['website'] = $this->website;
-        }
-        if ($this->owners !== null) {
-            $data['owners'] = $this->owners;
-        }
-        if ($this->incorporationDocFile !== null) {
-            $data['incorporation_doc_file'] = $this->incorporationDocFile;
-        }
-        if ($this->proofOfOwnershipDocFile !== null) {
-            $data['proof_of_ownership_doc_file'] = $this->proofOfOwnershipDocFile;
-        }
-        if ($this->sourceOfFundsDocType !== null) {
-            $data['source_of_funds_doc_type'] = $this->sourceOfFundsDocType->value;
-        }
-        if ($this->sourceOfFundsDocFile !== null) {
-            $data['source_of_funds_doc_file'] = $this->sourceOfFundsDocFile;
-        }
-        if ($this->individualHoldingDocFrontFile !== null) {
-            $data['individual_holding_doc_front_file'] = $this->individualHoldingDocFrontFile;
-        }
-        if ($this->purposeOfTransactions !== null) {
-            $data['purpose_of_transactions'] = $this->purposeOfTransactions->value;
-        }
-        if ($this->purposeOfTransactionsExplanation !== null) {
-            $data['purpose_of_transactions_explanation'] = $this->purposeOfTransactionsExplanation;
-        }
-        if ($this->externalId !== null) {
-            $data['external_id'] = $this->externalId;
-        }
-        if ($this->tosId !== null) {
-            $data['tos_id'] = $this->tosId;
-        }
-
-        return $data;
+        return array_filter([
+            'email' => $this->email,
+            'tax_id' => $this->taxId,
+            'address_line_1' => $this->addressLine1,
+            'address_line_2' => $this->addressLine2,
+            'city' => $this->city,
+            'state_province_region' => $this->stateProvinceRegion,
+            'country' => $this->country?->value,
+            'postal_code' => $this->postalCode,
+            'ip_address' => $this->ipAddress,
+            'image_url' => $this->imageUrl,
+            'phone_number' => $this->phoneNumber,
+            'proof_of_address_doc_type' => $this->proofOfAddressDocType?->value,
+            'proof_of_address_doc_file' => $this->proofOfAddressDocFile,
+            'first_name' => $this->firstName,
+            'last_name' => $this->lastName,
+            'date_of_birth' => $this->dateOfBirth,
+            'id_doc_country' => $this->idDocCountry?->value,
+            'id_doc_type' => $this->idDocType?->value,
+            'id_doc_front_file' => $this->idDocFrontFile,
+            'id_doc_back_file' => $this->idDocBackFile,
+            'legal_name' => $this->legalName,
+            'alternate_name' => $this->alternateName,
+            'formation_date' => $this->formationDate,
+            'website' => $this->website,
+            'owners' => $this->owners,
+            'incorporation_doc_file' => $this->incorporationDocFile,
+            'proof_of_ownership_doc_file' => $this->proofOfOwnershipDocFile,
+            'source_of_funds_doc_type' => $this->sourceOfFundsDocType?->value,
+            'source_of_funds_doc_file' => $this->sourceOfFundsDocFile,
+            'individual_holding_doc_front_file' => $this->individualHoldingDocFrontFile,
+            'purpose_of_transactions' => $this->purposeOfTransactions?->value,
+            'purpose_of_transactions_explanation' => $this->purposeOfTransactionsExplanation,
+            'external_id' => $this->externalId,
+            'tos_id' => $this->tosId,
+        ], fn ($value) => $value !== null);
     }
 }
 
@@ -998,6 +931,24 @@ class Receivers
         private readonly ApiClientInterface $client
     ) {}
 
+    /**
+     * Maps API data to the appropriate receiver class
+     *
+     * @throws \InvalidArgumentException
+     */
+    private function mapReceiver(array $data): IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB
+    {
+        $type = $data['type'] ?? null;
+        $kycType = $data['kyc_type'] ?? null;
+
+        return match (true) {
+            $type === 'individual' && $kycType === 'standard' => IndividualWithStandardKYC::fromArray($data),
+            $type === 'individual' && $kycType === 'enhanced' => IndividualWithEnhancedKYC::fromArray($data),
+            $type === 'business' && $kycType === 'standard' => BusinessWithStandardKYB::fromArray($data),
+            default => throw new \InvalidArgumentException("Unknown receiver type: {$type}/{$kycType}")
+        };
+    }
+
     /*
      * List all receivers
      *
@@ -1008,22 +959,18 @@ class Receivers
         $response = $this->client->get("/instances/{$this->instanceId}/receivers");
 
         if ($response->isSuccess() && is_array($response->data)) {
-            $receivers = array_map(function (array $item) {
-                $type = $item['type'] ?? null;
-                $kycType = $item['kyc_type'] ?? null;
+            try {
+                $receivers = array_map(
+                    fn (array $item) => $this->mapReceiver($item),
+                    $response->data
+                );
 
-                if ($type === 'individual' && $kycType === 'standard') {
-                    return IndividualWithStandardKYC::fromArray($item);
-                } elseif ($type === 'individual' && $kycType === 'enhanced') {
-                    return IndividualWithEnhancedKYC::fromArray($item);
-                } elseif ($type === 'business' && $kycType === 'standard') {
-                    return BusinessWithStandardKYB::fromArray($item);
-                }
-
-                throw new \InvalidArgumentException("Unknown receiver type: {$type}/{$kycType}");
-            }, $response->data);
-
-            return BlindPayApiResponse::success($receivers);
+                return BlindPayApiResponse::success($receivers);
+            } catch (\InvalidArgumentException $e) {
+                return BlindPayApiResponse::error(
+                    new \BlindPay\SDK\Types\ErrorResponse($e->getMessage())
+                );
+            }
         }
 
         return $response;
@@ -1112,26 +1059,15 @@ class Receivers
         $response = $this->client->get("/instances/{$this->instanceId}/receivers/{$receiverId}");
 
         if ($response->isSuccess() && is_array($response->data)) {
-            $type = $response->data['type'] ?? null;
-            $kycType = $response->data['kyc_type'] ?? null;
-
-            if ($type === 'individual' && $kycType === 'standard') {
+            try {
                 return BlindPayApiResponse::success(
-                    IndividualWithStandardKYC::fromArray($response->data)
+                    $this->mapReceiver($response->data)
                 );
-            } elseif ($type === 'individual' && $kycType === 'enhanced') {
-                return BlindPayApiResponse::success(
-                    IndividualWithEnhancedKYC::fromArray($response->data)
-                );
-            } elseif ($type === 'business' && $kycType === 'standard') {
-                return BlindPayApiResponse::success(
-                    BusinessWithStandardKYB::fromArray($response->data)
+            } catch (\InvalidArgumentException $e) {
+                return BlindPayApiResponse::error(
+                    new \BlindPay\SDK\Types\ErrorResponse($e->getMessage())
                 );
             }
-
-            return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse("Unknown receiver type: {$type}/{$kycType}")
-            );
         }
 
         return $response;

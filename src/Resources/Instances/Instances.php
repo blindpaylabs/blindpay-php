@@ -82,7 +82,7 @@ readonly class UpdateInstanceInput
     }
 }
 
-readonly class UpdateInstanceMemberRoleInput
+readonly class UpdateMemberRoleInput
 {
     public function __construct(
         public string $memberId,
@@ -162,10 +162,10 @@ class Instances
     /*
      * Update a member's role
      *
-     * @param UpdateInstanceMemberRoleInput $input
+     * @param UpdateMemberRoleInput $input
      * @return BlindPayApiResponse<null>
      */
-    public function updateMemberRole(UpdateInstanceMemberRoleInput $input): BlindPayApiResponse
+    public function updateMemberRole(UpdateMemberRoleInput $input): BlindPayApiResponse
     {
         if (empty($input->memberId)) {
             return BlindPayApiResponse::error(

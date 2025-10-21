@@ -17,7 +17,8 @@ use BlindPay\SDK\Resources\Payouts\Payouts;
 use BlindPay\SDK\Resources\Quotes\Quotes;
 use BlindPay\SDK\Resources\Receivers\Receivers;
 use BlindPay\SDK\Resources\VirtualAccounts\VirtualAccounts;
-use BlindPay\SDK\Resources\Wallets\Wallets;
+use BlindPay\SDK\Resources\Wallets\BlockchainWallets;
+use BlindPay\SDK\Resources\Wallets\OfframpWallets;
 use BlindPay\SDK\Resources\Webhooks\Webhooks;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\ErrorResponse;
@@ -151,18 +152,21 @@ class BlindPay implements ApiClientInterface
 
     private function initializeWallets(): void
     {
-        $walletsResource = new Wallets($this->instanceId, $this);
+        $blockchainResource = new BlockchainWallets($this->instanceId, $this);
+        $offrampResource = new OfframpWallets($this->instanceId, $this);
 
-        $this->wallets = new class($walletsResource)
+        $this->wallets = new class($blockchainResource, $offrampResource)
         {
-            public readonly Wallets $blockchain;
+            public readonly BlockchainWallets $blockchain;
 
-            public readonly Wallets $offramp;
+            public readonly OfframpWallets $offramp;
 
-            public function __construct(Wallets $walletsResource)
-            {
-                $this->blockchain = $walletsResource;
-                $this->offramp = $walletsResource;
+            public function __construct(
+                BlockchainWallets $blockchainResource,
+                OfframpWallets $offrampResource
+            ) {
+                $this->blockchain = $blockchainResource;
+                $this->offramp = $offrampResource;
             }
         };
     }
