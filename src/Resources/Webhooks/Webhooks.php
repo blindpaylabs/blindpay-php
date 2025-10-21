@@ -22,6 +22,7 @@ enum WebhookEvents: string
     case PAYIN_UPDATE = 'payin.update';
     case PAYIN_COMPLETE = 'payin.complete';
     case PAYIN_PARTNER_FEE = 'payin.partnerFee';
+    case TOS_ACCEPTED = 'tos.accepted';
 }
 
 readonly class WebhookEndpoint
