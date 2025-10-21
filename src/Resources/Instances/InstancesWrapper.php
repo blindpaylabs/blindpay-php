@@ -69,4 +69,3 @@ readonly class InstancesWrapper
         return $this->base->updateMemberRole($input);
     }
 }
-

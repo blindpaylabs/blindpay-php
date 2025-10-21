@@ -18,4 +18,3 @@ readonly class WalletsWrapper
         $this->offramp = $offrampResource;
     }
 }
-

@@ -123,4 +123,3 @@ readonly class ReceiversWrapper
         return $this->base->requestLimitIncrease($input);
     }
 }
-
