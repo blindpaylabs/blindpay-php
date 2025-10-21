@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace BlindPay\SDK\Resources;
+namespace BlindPay\SDK\Resources\Available;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Types\BlindPayApiResponse;

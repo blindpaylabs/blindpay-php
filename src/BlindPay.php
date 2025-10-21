@@ -7,7 +7,7 @@ namespace BlindPay\SDK;
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\BlindPayException;
 use BlindPay\SDK\Resources\ApiKeys\ApiKeys;
-use BlindPay\SDK\Resources\Available;
+use BlindPay\SDK\Resources\Available\Available;
 use BlindPay\SDK\Resources\BankAccounts\BankAccounts;
 use BlindPay\SDK\Resources\Instances\Instances;
 use BlindPay\SDK\Resources\PartnerFees\PartnerFees;
