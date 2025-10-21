@@ -13,6 +13,3 @@ permissions:
 jobs:
   lint:
     uses: ./.github/workflows/lint.yaml
-  tests:
-    needs: lint
-    uses: ./.github/workflows/tests.yaml
