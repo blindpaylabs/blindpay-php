@@ -1,5 +1,5 @@
 {
-    "name": "blindpay/php-sdk",
+    "name": "blindpay/php",
     "type": "library",
     "description": "Official PHP SDK for BlindPay API - Global payments infrastructure",
     "keywords": [
@@ -10,7 +10,6 @@
         "global-payments",
         "payment-processing"
     ],
-    "version": "1.0.0",
     "require": {
         "php": "^8.2",
         "guzzlehttp/guzzle": "^7.9",
