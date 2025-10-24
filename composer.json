@@ -24,7 +24,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/"
+            "BlindPay\\SDK\\Tests\\": "tests/"
         }
     },
     "authors": [
@@ -49,4 +49,3 @@
         "lint:fix": "pint"
     }
 }
-
