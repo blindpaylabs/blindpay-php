@@ -174,4 +174,38 @@ class AvailableTest extends TestCase
         $this->assertEquals('rtp', $response->data[7]->value);
         $this->assertEquals('US', $response->data[7]->country);
     }
+
+    #[Test]
+    public function it_get_bank_details_of_a_swift_code(): void
+    {
+        $mockedBankDetails = [
+            [
+                'id' => '416',
+                'bank' => 'BANK OF AMERICA, N.A.',
+                'city' => 'NEW JERSEY',
+                'branch' => 'LENDING SERVICES AND OPERATIONS (LSOP)',
+                'swiftCode' => 'BOFAUS3NLMA',
+                'swiftCodeLink' => 'https://bank.codes/swift-code/united-states/bofaus3nlma/',
+                'country' => 'United States',
+                'countrySlug' => 'united-states',
+            ],
+        ];
+
+        $this->mockResponse($mockedBankDetails);
+
+        $response = $this->blindpay->available->getSwiftCodeBankDetails('BOFAUS3NLMA');
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->error);
+        $this->assertIsArray($response->data);
+        $this->assertCount(1, $response->data);
+        $this->assertEquals('416', $response->data[0]->id);
+        $this->assertEquals('BANK OF AMERICA, N.A.', $response->data[0]->bank);
+        $this->assertEquals('NEW JERSEY', $response->data[0]->city);
+        $this->assertEquals('LENDING SERVICES AND OPERATIONS (LSOP)', $response->data[0]->branch);
+        $this->assertEquals('BOFAUS3NLMA', $response->data[0]->swiftCode);
+        $this->assertEquals('https://bank.codes/swift-code/united-states/bofaus3nlma/', $response->data[0]->swiftCodeLink);
+        $this->assertEquals('United States', $response->data[0]->country);
+        $this->assertEquals('united-states', $response->data[0]->countrySlug);
+    }
 }
