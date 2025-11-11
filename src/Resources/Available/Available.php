@@ -76,6 +76,34 @@ readonly class BankDetail
     }
 }
 
+readonly class SwiftCodeBankDetails
+{
+    public function __construct(
+        public string $id,
+        public string $bank,
+        public string $city,
+        public string $branch,
+        public string $swiftCode,
+        public string $swiftCodeLink,
+        public string $country,
+        public string $countrySlug
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'],
+            bank: $data['bank'],
+            city: $data['city'],
+            branch: $data['branch'],
+            swiftCode: $data['swiftCode'],
+            swiftCodeLink: $data['swiftCodeLink'],
+            country: $data['country'],
+            countrySlug: $data['countrySlug']
+        );
+    }
+}
+
 class Available
 {
     public function __construct(
@@ -120,6 +148,28 @@ class Available
             );
 
             return BlindPayApiResponse::success($rails);
+        }
+
+        return $response;
+    }
+
+    /*
+     * Get bank details for a specific swift code
+     *
+     * @param string $swift The swift code to get bank details for
+     * @return BlindPayApiResponse<SwiftCodeBankDetails[]>
+     */
+    public function getSwiftCodeBankDetails(string $swift): BlindPayApiResponse
+    {
+        $response = $this->client->get("available/swift/{$swift}");
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            $swiftCodeBankDetails = array_map(
+                fn (array $item) => SwiftCodeBankDetails::fromArray($item),
+                $response->data
+            );
+
+            return BlindPayApiResponse::success($swiftCodeBankDetails);
         }
 
         return $response;
