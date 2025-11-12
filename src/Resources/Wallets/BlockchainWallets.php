@@ -136,6 +136,74 @@ readonly class MintUsdbStellarInput
     }
 }
 
+readonly class MintUsdbSolanaInput
+{
+    public function __construct(
+        public string $address,
+        public string $amount
+    ) {}
+
+    public function toArray(): array
+    {
+        return [
+            'address' => $this->address,
+            'amount' => $this->amount,
+        ];
+    }
+}
+
+readonly class MintUsdbSolanaResponse
+{
+    public function __construct(
+        public bool $success,
+        public string $signature,
+        public string $error
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            success: $data['success'],
+            signature: $data['signature'],
+            error: $data['error']
+        );
+    }
+}
+
+readonly class PrepareSolanaDelegationTransactionInput
+{
+    public function __construct(
+        public string $tokenAddress,
+        public string $amount,
+        public string $ownerAddress
+    ) {}
+
+    public function toArray(): array
+    {
+        return [
+            'token_address' => $this->tokenAddress,
+            'amount' => $this->amount,
+            'owner_address' => $this->ownerAddress,
+        ];
+    }
+}
+
+readonly class PrepareSolanaDelegationTransactionResponse
+{
+    public function __construct(
+        public bool $success,
+        public string $transaction
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            success: $data['success'],
+            transaction: $data['transaction']
+        );
+    }
+}
+
 /**
  * Blockchain Wallets resource
  */
@@ -325,5 +393,47 @@ class BlockchainWallets
             "instances/{$this->instanceId}/mint-usdb-stellar",
             $input->toArray()
         );
+    }
+
+    /**
+     * Mint USDB on Solana
+     *
+     * @return BlindPayApiResponse<MintUsdbSolanaResponse>
+     */
+    public function mintUsdbSolana(MintUsdbSolanaInput $input): BlindPayApiResponse
+    {
+        $response = $this->client->post(
+            "instances/{$this->instanceId}/mint-usdb-solana",
+            $input->toArray()
+        );
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            return BlindPayApiResponse::success(
+                MintUsdbSolanaResponse::fromArray($response->data)
+            );
+        }
+
+        return $response;
+    }
+
+    /**
+     * Prepare Solana delegation transaction
+     *
+     * @return BlindPayApiResponse<PrepareSolanaDelegationTransactionResponse>
+     */
+    public function prepareSolanaDelegationTransaction(PrepareSolanaDelegationTransactionInput $input): BlindPayApiResponse
+    {
+        $response = $this->client->post(
+            "instances/{$this->instanceId}/prepare-delegate-solana",
+            $input->toArray()
+        );
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            return BlindPayApiResponse::success(
+                PrepareSolanaDelegationTransactionResponse::fromArray($response->data)
+            );
+        }
+
+        return $response;
     }
 }
