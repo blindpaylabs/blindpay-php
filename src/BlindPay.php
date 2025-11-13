@@ -19,6 +19,7 @@ use BlindPay\SDK\Resources\Payouts\Payouts;
 use BlindPay\SDK\Resources\Quotes\Quotes;
 use BlindPay\SDK\Resources\Receivers\Receivers;
 use BlindPay\SDK\Resources\Receivers\ReceiversWrapper;
+use BlindPay\SDK\Resources\TermsOfService\TermsOfService;
 use BlindPay\SDK\Resources\VirtualAccounts\VirtualAccounts;
 use BlindPay\SDK\Resources\Wallets\BlockchainWallets;
 use BlindPay\SDK\Resources\Wallets\OfframpWallets;
@@ -100,11 +101,13 @@ class BlindPay implements ApiClientInterface
         $instancesResource = new Instances($this->instanceId, $this);
         $apiKeysResource = new ApiKeys($this->instanceId, $this);
         $webhooksResource = new Webhooks($this->instanceId, $this);
+        $termsOfServiceResource = new TermsOfService($this->instanceId, $this);
 
         $this->instances = new InstancesWrapper(
             $instancesResource,
             $apiKeysResource,
-            $webhooksResource
+            $webhooksResource,
+            $termsOfServiceResource
         );
     }
 

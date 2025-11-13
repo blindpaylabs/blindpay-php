@@ -9,6 +9,8 @@ use BlindPay\SDK\Resources\Wallets\CreateBlockchainWalletWithAddressInput;
 use BlindPay\SDK\Resources\Wallets\CreateBlockchainWalletWithHashInput;
 use BlindPay\SDK\Resources\Wallets\DeleteBlockchainWalletInput;
 use BlindPay\SDK\Resources\Wallets\GetBlockchainWalletInput;
+use BlindPay\SDK\Resources\Wallets\MintUsdbSolanaInput;
+use BlindPay\SDK\Resources\Wallets\PrepareSolanaDelegationTransactionInput;
 use BlindPay\SDK\Types\Network;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -217,5 +219,54 @@ class BlockchainWalletsTest extends TestCase
         $this->assertIsArray($response->data);
         $this->assertArrayHasKey('data', $response->data);
         $this->assertNull($response->data['data']);
+    }
+
+    #[Test]
+    public function it_mints_usdb_on_solana(): void
+    {
+        $mockedResponse = [
+            'success' => true,
+            'signature' => '4wceVEQeJG4vpS4k2o1dHU5cFWeWTQU8iaCEpRaV5KkqSxPfbdAc8hzXa7nNYG6rvqgAmDkzBycbcXkKKAeK8Jtu',
+            'error' => '',
+        ];
+
+        $this->mockResponse($mockedResponse);
+
+        $input = new MintUsdbSolanaInput(
+            address: '7YttLkHDoNj9wyDur5pM1ejNaAvT9X4eqaYcHQqtj2G5',
+            amount: '1000000'
+        );
+
+        $response = $this->blindpay->wallets->blockchain->mintUsdbSolana($input);
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->error);
+        $this->assertTrue($response->data->success);
+        $this->assertEquals('4wceVEQeJG4vpS4k2o1dHU5cFWeWTQU8iaCEpRaV5KkqSxPfbdAc8hzXa7nNYG6rvqgAmDkzBycbcXkKKAeK8Jtu', $response->data->signature);
+        $this->assertEquals('', $response->data->error);
+    }
+
+    #[Test]
+    public function it_prepares_a_solana_delegation_transaction(): void
+    {
+        $mockedResponse = [
+            'success' => true,
+            'transaction' => 'AAGBf4K95Gp5i6f0BAEYAgABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIw==',
+        ];
+
+        $this->mockResponse($mockedResponse);
+
+        $input = new PrepareSolanaDelegationTransactionInput(
+            tokenAddress: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+            amount: '1000000',
+            ownerAddress: '7YttLkHDoNj9wyDur5pM1ejNaAvT9X4eqaYcHQqtj2G5'
+        );
+
+        $response = $this->blindpay->wallets->blockchain->prepareSolanaDelegationTransaction($input);
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->error);
+        $this->assertTrue($response->data->success);
+        $this->assertEquals('AAGBf4K95Gp5i6f0BAEYAgABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIw==', $response->data->transaction);
     }
 }
