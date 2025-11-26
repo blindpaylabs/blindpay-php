@@ -13,3 +13,10 @@ permissions:
 jobs:
   lint:
     uses: ./.github/workflows/lint.yaml
+  tests:
+    uses: ./.github/workflows/tests.yaml
+    needs: lint
+  snyk: 
+    uses: ./.github/workflows/snyk.yaml
+    needs: [lint, tests]
+    secrets: inherit
