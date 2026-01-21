@@ -1,6 +1,6 @@
 # Blindpay PHP SDK
 
-The official PHP SDK for [Blindpay](https://blindpay.com) - Global payments infrastructure made simple.
+The official PHP SDK for [Blindpay](https://blindpay.com) - Stablecoin API for global payments.
 
 ## Requirements
 
