@@ -71,6 +71,100 @@ enum OwnerRole: string
     case CONTROLLING_PERSON = 'controlling_person';
 }
 
+enum AccountPurpose: string
+{
+    case CHARITABLE_DONATIONS = 'charitable_donations';
+    case ECOMMERCE_RETAIL_PAYMENTS = 'ecommerce_retail_payments';
+    case INVESTMENT_PURPOSES = 'investment_purposes';
+    case BUSINESS_EXPENSES = 'business_expenses';
+    case PAYMENTS_TO_FRIENDS_OR_FAMILY_ABROAD = 'payments_to_friends_or_family_abroad';
+    case PERSONAL_OR_LIVING_EXPENSES = 'personal_or_living_expenses';
+    case PROTECT_WEALTH = 'protect_wealth';
+    case PURCHASE_GOODS_AND_SERVICES = 'purchase_goods_and_services';
+    case RECEIVE_PAYMENTS_FOR_GOODS_AND_SERVICES = 'receive_payments_for_goods_and_services';
+    case TAX_OPTIMIZATION = 'tax_optimization';
+    case THIRD_PARTY_MONEY_TRANSMISSION = 'third_party_money_transmission';
+    case OTHER = 'other';
+    case PAYROLL = 'payroll';
+    case TREASURY_MANAGEMENT = 'treasury_management';
+}
+
+enum ReceiverBusinessType: string
+{
+    case CORPORATION = 'corporation';
+    case LLC = 'llc';
+    case PARTNERSHIP = 'partnership';
+    case SOLE_PROPRIETORSHIP = 'sole_proprietorship';
+    case TRUST = 'trust';
+    case NON_PROFIT = 'non_profit';
+}
+
+enum BusinessIndustry: string
+{
+    case NAICS_541511 = '541511';
+    case NAICS_541512 = '541512';
+    case NAICS_541519 = '541519';
+    case NAICS_518210 = '518210';
+    case NAICS_511210 = '511210';
+    case NAICS_541611 = '541611';
+    case NAICS_541618 = '541618';
+    case NAICS_541330 = '541330';
+    case NAICS_541990 = '541990';
+    case NAICS_522110 = '522110';
+    case NAICS_523110 = '523110';
+    case NAICS_523920 = '523920';
+    case NAICS_423430 = '423430';
+    case NAICS_423690 = '423690';
+    case NAICS_423110 = '423110';
+    case NAICS_423830 = '423830';
+    case NAICS_423840 = '423840';
+    case NAICS_423510 = '423510';
+    case NAICS_424210 = '424210';
+    case NAICS_424690 = '424690';
+    case NAICS_424990 = '424990';
+    case NAICS_454110 = '454110';
+    case NAICS_334111 = '334111';
+    case NAICS_334118 = '334118';
+    case NAICS_325412 = '325412';
+    case NAICS_339112 = '339112';
+    case NAICS_336111 = '336111';
+    case NAICS_336390 = '336390';
+    case NAICS_551112 = '551112';
+    case NAICS_561499 = '561499';
+    case NAICS_488510 = '488510';
+    case NAICS_484121 = '484121';
+    case NAICS_493110 = '493110';
+    case NAICS_424410 = '424410';
+    case NAICS_424480 = '424480';
+    case NAICS_315990 = '315990';
+    case NAICS_313110 = '313110';
+    case NAICS_213112 = '213112';
+    case NAICS_517110 = '517110';
+    case NAICS_541214 = '541214';
+}
+
+enum EstimatedAnnualRevenue: string
+{
+    case RANGE_0_99999 = '0_99999';
+    case RANGE_100000_999999 = '100000_999999';
+    case RANGE_1000000_9999999 = '1000000_9999999';
+    case RANGE_10000000_49999999 = '10000000_49999999';
+    case RANGE_50000000_249999999 = '50000000_249999999';
+    case RANGE_2500000000_PLUS = '2500000000_plus';
+}
+
+enum SourceOfWealth: string
+{
+    case BUSINESS_DIVIDENDS_OR_PROFITS = 'business_dividends_or_profits';
+    case INVESTMENTS = 'investments';
+    case ASSET_SALES = 'asset_sales';
+    case CLIENT_INVESTOR_CONTRIBUTIONS = 'client_investor_contributions';
+    case GAMBLING = 'gambling';
+    case CHARITABLE_CONTRIBUTIONS = 'charitable_contributions';
+    case INHERITANCE = 'inheritance';
+    case AFFILIATE_OR_ROYALTY_INCOME = 'affiliate_or_royalty_income';
+}
+
 enum LimitIncreaseRequestStatus: string
 {
     case IN_REVIEW = 'in_review';
@@ -110,7 +204,9 @@ readonly class Owner
         public string $idDocFrontFile,
         public ?string $idDocBackFile,
         public ProofOfAddressDocType $proofOfAddressDocType,
-        public string $proofOfAddressDocFile
+        public ?string $proofOfAddressDocFile,
+        public ?float $ownershipPercentage,
+        public ?string $title
     ) {}
 
     public static function fromArray(array $data): self
@@ -135,7 +231,9 @@ readonly class Owner
             idDocFrontFile: $data['id_doc_front_file'],
             idDocBackFile: $data['id_doc_back_file'] ?? null,
             proofOfAddressDocType: ProofOfAddressDocType::from($data['proof_of_address_doc_type']),
-            proofOfAddressDocFile: $data['proof_of_address_doc_file']
+            proofOfAddressDocFile: $data['proof_of_address_doc_file'] ?? null,
+            ownershipPercentage: isset($data['ownership_percentage']) ? (float) $data['ownership_percentage'] : null,
+            title: $data['title'] ?? null
         );
     }
 
@@ -160,6 +258,8 @@ readonly class Owner
             'id_doc_back_file' => $this->idDocBackFile,
             'proof_of_address_doc_type' => $this->proofOfAddressDocType->value,
             'proof_of_address_doc_file' => $this->proofOfAddressDocFile,
+            'ownership_percentage' => $this->ownershipPercentage,
+            'title' => $this->title,
         ];
     }
 }
@@ -549,197 +649,216 @@ readonly class BusinessWithStandardKYB extends BaseReceiver
 readonly class CreateIndividualWithStandardKYCInput
 {
     public function __construct(
-        public string $addressLine1,
-        public string $city,
         public Country $country,
-        public string $dateOfBirth,
         public string $email,
-        public string $firstName,
-        public ?string $phoneNumber,
-        public Country $idDocCountry,
-        public string $idDocFrontFile,
-        public IdentificationDocument $idDocType,
-        public ?string $idDocBackFile,
-        public string $lastName,
-        public string $postalCode,
-        public string $proofOfAddressDocFile,
-        public ProofOfAddressDocType $proofOfAddressDocType,
-        public string $stateProvinceRegion,
-        public string $taxId,
-        public string $tosId,
+        public ?string $addressLine1 = null,
         public ?string $addressLine2 = null,
-        public ?string $externalId = null
+        public ?string $city = null,
+        public ?string $dateOfBirth = null,
+        public ?string $firstName = null,
+        public ?string $phoneNumber = null,
+        public ?Country $idDocCountry = null,
+        public ?string $idDocFrontFile = null,
+        public ?IdentificationDocument $idDocType = null,
+        public ?string $idDocBackFile = null,
+        public ?string $lastName = null,
+        public ?string $postalCode = null,
+        public ?string $proofOfAddressDocFile = null,
+        public ?ProofOfAddressDocType $proofOfAddressDocType = null,
+        public ?string $stateProvinceRegion = null,
+        public ?string $taxId = null,
+        public ?string $tosId = null,
+        public ?string $externalId = null,
+        public ?AccountPurpose $accountPurpose = null,
+        public ?string $selfieFile = null,
+        public ?SourceOfWealth $sourceOfWealth = null,
+        public ?string $imageUrl = null,
+        public ?string $ipAddress = null,
+        public ?string $sourceOfFundsDocFile = null,
+        public ?SourceOfFundsDocType $sourceOfFundsDocType = null
     ) {}
 
     public function toArray(): array
     {
-        $data = [
+        return array_filter([
             'kyc_type' => 'standard',
             'type' => 'individual',
-            'address_line_1' => $this->addressLine1,
-            'city' => $this->city,
             'country' => $this->country->value,
-            'date_of_birth' => $this->dateOfBirth,
             'email' => $this->email,
+            'address_line_1' => $this->addressLine1,
+            'address_line_2' => $this->addressLine2,
+            'city' => $this->city,
+            'date_of_birth' => $this->dateOfBirth,
             'first_name' => $this->firstName,
             'phone_number' => $this->phoneNumber,
-            'id_doc_country' => $this->idDocCountry->value,
+            'id_doc_country' => $this->idDocCountry?->value,
             'id_doc_front_file' => $this->idDocFrontFile,
-            'id_doc_type' => $this->idDocType->value,
+            'id_doc_type' => $this->idDocType?->value,
             'id_doc_back_file' => $this->idDocBackFile,
             'last_name' => $this->lastName,
             'postal_code' => $this->postalCode,
             'proof_of_address_doc_file' => $this->proofOfAddressDocFile,
-            'proof_of_address_doc_type' => $this->proofOfAddressDocType->value,
+            'proof_of_address_doc_type' => $this->proofOfAddressDocType?->value,
             'state_province_region' => $this->stateProvinceRegion,
             'tax_id' => $this->taxId,
             'tos_id' => $this->tosId,
-        ];
-
-        if ($this->addressLine2 !== null) {
-            $data['address_line_2'] = $this->addressLine2;
-        }
-
-        if ($this->externalId !== null) {
-            $data['external_id'] = $this->externalId;
-        }
-
-        return $data;
+            'external_id' => $this->externalId,
+            'account_purpose' => $this->accountPurpose?->value,
+            'selfie_file' => $this->selfieFile,
+            'source_of_wealth' => $this->sourceOfWealth?->value,
+            'image_url' => $this->imageUrl,
+            'ip_address' => $this->ipAddress,
+            'source_of_funds_doc_file' => $this->sourceOfFundsDocFile,
+            'source_of_funds_doc_type' => $this->sourceOfFundsDocType?->value,
+        ], fn ($value) => $value !== null);
     }
 }
 
 readonly class CreateIndividualWithEnhancedKYCInput
 {
     public function __construct(
-        public string $addressLine1,
-        public string $city,
         public Country $country,
-        public string $dateOfBirth,
         public string $email,
-        public string $firstName,
-        public Country $idDocCountry,
-        public string $idDocFrontFile,
-        public IdentificationDocument $idDocType,
-        public ?string $idDocBackFile,
-        public string $individualHoldingDocFrontFile,
-        public string $lastName,
-        public string $postalCode,
-        public ?string $phoneNumber,
-        public string $proofOfAddressDocFile,
-        public ProofOfAddressDocType $proofOfAddressDocType,
-        public PurposeOfTransactions $purposeOfTransactions,
-        public string $sourceOfFundsDocFile,
-        public SourceOfFundsDocType $sourceOfFundsDocType,
-        public ?string $purposeOfTransactionsExplanation,
-        public string $stateProvinceRegion,
-        public string $taxId,
-        public string $tosId,
+        public ?string $addressLine1 = null,
         public ?string $addressLine2 = null,
-        public ?string $externalId = null
+        public ?string $city = null,
+        public ?string $dateOfBirth = null,
+        public ?string $firstName = null,
+        public ?Country $idDocCountry = null,
+        public ?string $idDocFrontFile = null,
+        public ?IdentificationDocument $idDocType = null,
+        public ?string $idDocBackFile = null,
+        public ?string $lastName = null,
+        public ?string $postalCode = null,
+        public ?string $phoneNumber = null,
+        public ?string $proofOfAddressDocFile = null,
+        public ?ProofOfAddressDocType $proofOfAddressDocType = null,
+        public ?PurposeOfTransactions $purposeOfTransactions = null,
+        public ?string $sourceOfFundsDocFile = null,
+        public ?SourceOfFundsDocType $sourceOfFundsDocType = null,
+        public ?string $purposeOfTransactionsExplanation = null,
+        public ?string $stateProvinceRegion = null,
+        public ?string $taxId = null,
+        public ?string $tosId = null,
+        public ?string $externalId = null,
+        public ?AccountPurpose $accountPurpose = null,
+        public ?string $selfieFile = null,
+        public ?SourceOfWealth $sourceOfWealth = null,
+        public ?string $imageUrl = null,
+        public ?string $ipAddress = null
     ) {}
 
     public function toArray(): array
     {
-        $data = [
+        return array_filter([
             'kyc_type' => 'enhanced',
             'type' => 'individual',
-            'address_line_1' => $this->addressLine1,
-            'city' => $this->city,
             'country' => $this->country->value,
-            'date_of_birth' => $this->dateOfBirth,
             'email' => $this->email,
+            'address_line_1' => $this->addressLine1,
+            'address_line_2' => $this->addressLine2,
+            'city' => $this->city,
+            'date_of_birth' => $this->dateOfBirth,
             'first_name' => $this->firstName,
-            'id_doc_country' => $this->idDocCountry->value,
+            'id_doc_country' => $this->idDocCountry?->value,
             'id_doc_front_file' => $this->idDocFrontFile,
-            'id_doc_type' => $this->idDocType->value,
+            'id_doc_type' => $this->idDocType?->value,
             'id_doc_back_file' => $this->idDocBackFile,
-            'individual_holding_doc_front_file' => $this->individualHoldingDocFrontFile,
             'last_name' => $this->lastName,
             'postal_code' => $this->postalCode,
             'phone_number' => $this->phoneNumber,
             'proof_of_address_doc_file' => $this->proofOfAddressDocFile,
-            'proof_of_address_doc_type' => $this->proofOfAddressDocType->value,
-            'purpose_of_transactions' => $this->purposeOfTransactions->value,
+            'proof_of_address_doc_type' => $this->proofOfAddressDocType?->value,
+            'purpose_of_transactions' => $this->purposeOfTransactions?->value,
             'source_of_funds_doc_file' => $this->sourceOfFundsDocFile,
-            'source_of_funds_doc_type' => $this->sourceOfFundsDocType->value,
+            'source_of_funds_doc_type' => $this->sourceOfFundsDocType?->value,
             'purpose_of_transactions_explanation' => $this->purposeOfTransactionsExplanation,
             'state_province_region' => $this->stateProvinceRegion,
             'tax_id' => $this->taxId,
             'tos_id' => $this->tosId,
-        ];
-
-        if ($this->addressLine2 !== null) {
-            $data['address_line_2'] = $this->addressLine2;
-        }
-
-        if ($this->externalId !== null) {
-            $data['external_id'] = $this->externalId;
-        }
-
-        return $data;
+            'external_id' => $this->externalId,
+            'account_purpose' => $this->accountPurpose?->value,
+            'selfie_file' => $this->selfieFile,
+            'source_of_wealth' => $this->sourceOfWealth?->value,
+            'image_url' => $this->imageUrl,
+            'ip_address' => $this->ipAddress,
+        ], fn ($value) => $value !== null);
     }
 }
 
 readonly class CreateBusinessWithStandardKYBInput
 {
     public function __construct(
-        public string $addressLine1,
-        public string $city,
         public Country $country,
         public string $email,
-        public string $formationDate,
-        public string $incorporationDocFile,
-        public string $legalName,
-        public array $owners,
-        public string $postalCode,
-        public string $proofOfAddressDocFile,
-        public ProofOfAddressDocType $proofOfAddressDocType,
-        public string $proofOfOwnershipDocFile,
-        public string $stateProvinceRegion,
-        public string $taxId,
-        public string $tosId,
-        public ?string $website,
+        public ?string $addressLine1 = null,
         public ?string $addressLine2 = null,
+        public ?string $city = null,
+        public ?string $formationDate = null,
+        public ?string $incorporationDocFile = null,
+        public ?string $legalName = null,
+        public ?array $owners = null,
+        public ?string $postalCode = null,
+        public ?string $proofOfAddressDocFile = null,
+        public ?ProofOfAddressDocType $proofOfAddressDocType = null,
+        public ?string $proofOfOwnershipDocFile = null,
+        public ?string $stateProvinceRegion = null,
+        public ?string $taxId = null,
+        public ?string $tosId = null,
+        public ?string $website = null,
         public ?string $alternateName = null,
-        public ?string $externalId = null
+        public ?string $externalId = null,
+        public ?AccountPurpose $accountPurpose = null,
+        public ?string $businessDescription = null,
+        public ?BusinessIndustry $businessIndustry = null,
+        public ?ReceiverBusinessType $businessType = null,
+        public ?EstimatedAnnualRevenue $estimatedAnnualRevenue = null,
+        public ?bool $publiclyTraded = null,
+        public ?SourceOfWealth $sourceOfWealth = null,
+        public ?string $imageUrl = null,
+        public ?string $ipAddress = null,
+        public ?string $phoneNumber = null,
+        public ?string $sourceOfFundsDocFile = null,
+        public ?SourceOfFundsDocType $sourceOfFundsDocType = null
     ) {}
 
     public function toArray(): array
     {
-        $data = [
+        return array_filter([
             'kyc_type' => 'standard',
             'type' => 'business',
-            'address_line_1' => $this->addressLine1,
-            'city' => $this->city,
             'country' => $this->country->value,
             'email' => $this->email,
+            'address_line_1' => $this->addressLine1,
+            'address_line_2' => $this->addressLine2,
+            'city' => $this->city,
             'formation_date' => $this->formationDate,
             'incorporation_doc_file' => $this->incorporationDocFile,
             'legal_name' => $this->legalName,
-            'owners' => array_map(fn ($o) => $o->toArray(), $this->owners),
+            'owners' => $this->owners !== null ? array_map(fn ($o) => $o->toArray(), $this->owners) : null,
             'postal_code' => $this->postalCode,
             'proof_of_address_doc_file' => $this->proofOfAddressDocFile,
-            'proof_of_address_doc_type' => $this->proofOfAddressDocType->value,
+            'proof_of_address_doc_type' => $this->proofOfAddressDocType?->value,
             'proof_of_ownership_doc_file' => $this->proofOfOwnershipDocFile,
             'state_province_region' => $this->stateProvinceRegion,
             'tax_id' => $this->taxId,
             'tos_id' => $this->tosId,
             'website' => $this->website,
-        ];
-
-        if ($this->addressLine2 !== null) {
-            $data['address_line_2'] = $this->addressLine2;
-        }
-
-        if ($this->alternateName !== null) {
-            $data['alternate_name'] = $this->alternateName;
-        }
-
-        if ($this->externalId !== null) {
-            $data['external_id'] = $this->externalId;
-        }
-
-        return $data;
+            'alternate_name' => $this->alternateName,
+            'external_id' => $this->externalId,
+            'account_purpose' => $this->accountPurpose?->value,
+            'business_description' => $this->businessDescription,
+            'business_industry' => $this->businessIndustry?->value,
+            'business_type' => $this->businessType?->value,
+            'estimated_annual_revenue' => $this->estimatedAnnualRevenue?->value,
+            'publicly_traded' => $this->publiclyTraded,
+            'source_of_wealth' => $this->sourceOfWealth?->value,
+            'image_url' => $this->imageUrl,
+            'ip_address' => $this->ipAddress,
+            'phone_number' => $this->phoneNumber,
+            'source_of_funds_doc_file' => $this->sourceOfFundsDocFile,
+            'source_of_funds_doc_type' => $this->sourceOfFundsDocType?->value,
+        ], fn ($value) => $value !== null);
     }
 }
 
@@ -790,11 +909,18 @@ readonly class UpdateReceiverInput
         public ?string $proofOfOwnershipDocFile = null,
         public ?SourceOfFundsDocType $sourceOfFundsDocType = null,
         public ?string $sourceOfFundsDocFile = null,
-        public ?string $individualHoldingDocFrontFile = null,
         public ?PurposeOfTransactions $purposeOfTransactions = null,
         public ?string $purposeOfTransactionsExplanation = null,
         public ?string $externalId = null,
-        public ?string $tosId = null
+        public ?string $tosId = null,
+        public ?AccountPurpose $accountPurpose = null,
+        public ?string $businessDescription = null,
+        public ?BusinessIndustry $businessIndustry = null,
+        public ?ReceiverBusinessType $businessType = null,
+        public ?EstimatedAnnualRevenue $estimatedAnnualRevenue = null,
+        public ?bool $publiclyTraded = null,
+        public ?string $selfieFile = null,
+        public ?SourceOfWealth $sourceOfWealth = null
     ) {}
 
     public function toArray(): array
@@ -829,11 +955,18 @@ readonly class UpdateReceiverInput
             'proof_of_ownership_doc_file' => $this->proofOfOwnershipDocFile,
             'source_of_funds_doc_type' => $this->sourceOfFundsDocType?->value,
             'source_of_funds_doc_file' => $this->sourceOfFundsDocFile,
-            'individual_holding_doc_front_file' => $this->individualHoldingDocFrontFile,
             'purpose_of_transactions' => $this->purposeOfTransactions?->value,
             'purpose_of_transactions_explanation' => $this->purposeOfTransactionsExplanation,
             'external_id' => $this->externalId,
             'tos_id' => $this->tosId,
+            'account_purpose' => $this->accountPurpose?->value,
+            'business_description' => $this->businessDescription,
+            'business_industry' => $this->businessIndustry?->value,
+            'business_type' => $this->businessType?->value,
+            'estimated_annual_revenue' => $this->estimatedAnnualRevenue?->value,
+            'publicly_traded' => $this->publiclyTraded,
+            'selfie_file' => $this->selfieFile,
+            'source_of_wealth' => $this->sourceOfWealth?->value,
         ], fn ($value) => $value !== null);
     }
 }
