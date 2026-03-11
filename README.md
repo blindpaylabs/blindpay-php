@@ -64,7 +64,7 @@ For detailed API documentation, visit:
 
 ## Support
 
-- Email: [gabriel@blindpay.com](mailto:gabriel@blindpay.com)
+- Email: [alves@blindpay.com](mailto:alves@blindpay.com)
 - Issues: [GitHub Issues](https://github.com/blindpaylabs/blindpay-php/issues)
 
 ## License
