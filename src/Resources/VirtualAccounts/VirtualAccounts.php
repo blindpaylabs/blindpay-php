@@ -8,6 +8,13 @@ use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\StablecoinToken;
 
+enum BankingPartner: string
+{
+    case JPMORGAN = 'jpmorgan';
+    case CITI = 'citi';
+    case HSBC = 'hsbc';
+}
+
 readonly class VirtualAccountUsDetails
 {
     public function __construct(
@@ -207,16 +214,25 @@ readonly class CreateVirtualAccountInput
 {
     public function __construct(
         public string $receiverId,
+        public BankingPartner $bankingPartner,
         public string $blockchainWalletId,
-        public StablecoinToken $token
+        public StablecoinToken $token,
+        public ?string $signedAgreementId = null
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
+            'banking_partner' => $this->bankingPartner->value,
             'blockchain_wallet_id' => $this->blockchainWalletId,
             'token' => $this->token->value,
         ];
+
+        if ($this->signedAgreementId !== null) {
+            $data['signed_agreement_id'] = $this->signedAgreementId;
+        }
+
+        return $data;
     }
 }
 

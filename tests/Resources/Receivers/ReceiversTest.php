@@ -5,15 +5,20 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Tests\Resources;
 
 use BlindPay\SDK\BlindPay;
+use BlindPay\SDK\Resources\Receivers\AccountPurpose;
+use BlindPay\SDK\Resources\Receivers\BusinessIndustry;
 use BlindPay\SDK\Resources\Receivers\CreateBusinessWithStandardKYBInput;
 use BlindPay\SDK\Resources\Receivers\CreateIndividualWithEnhancedKYCInput;
 use BlindPay\SDK\Resources\Receivers\CreateIndividualWithStandardKYCInput;
+use BlindPay\SDK\Resources\Receivers\EstimatedAnnualRevenue;
 use BlindPay\SDK\Resources\Receivers\IdentificationDocument;
 use BlindPay\SDK\Resources\Receivers\LimitIncreaseRequestSupportingDocumentType;
 use BlindPay\SDK\Resources\Receivers\ProofOfAddressDocType;
 use BlindPay\SDK\Resources\Receivers\PurposeOfTransactions;
+use BlindPay\SDK\Resources\Receivers\ReceiverBusinessType;
 use BlindPay\SDK\Resources\Receivers\RequestLimitIncreaseInput;
 use BlindPay\SDK\Resources\Receivers\SourceOfFundsDocType;
+use BlindPay\SDK\Resources\Receivers\SourceOfWealth;
 use BlindPay\SDK\Resources\Receivers\UpdateReceiverInput;
 use BlindPay\SDK\Types\Country;
 use GuzzleHttp\Client;
@@ -195,6 +200,8 @@ class ReceiversTest extends TestCase
                         'id_doc_back_file' => 'https://example.com/image.png',
                         'proof_of_address_doc_type' => 'UTILITY_BILL',
                         'proof_of_address_doc_file' => 'https://example.com/image.png',
+                        'ownership_percentage' => 25,
+                        'title' => 'CEO',
                         'id' => 'ub_000000000000',
                         'instance_id' => 'in_000000000000',
                         'receiver_id' => 're_IOxAUL24LG7P',
@@ -239,25 +246,25 @@ class ReceiversTest extends TestCase
         $this->mockResponse($mockedReceiver);
 
         $input = new CreateIndividualWithStandardKYCInput(
-            addressLine1: 'Av. Paulista, 1000',
-            city: 'São Paulo',
             country: Country::BR,
-            dateOfBirth: '1998-02-02T00:00:00.000Z',
             email: 'bernardo.simonassi@gmail.com',
+            addressLine1: 'Av. Paulista, 1000',
+            addressLine2: 'Apto 101',
+            city: 'São Paulo',
+            dateOfBirth: '1998-02-02T00:00:00.000Z',
             firstName: 'Bernardo',
-            idDocBackFile: 'https://example.com/image.png',
+            phoneNumber: '+5511987654321',
             idDocCountry: Country::BR,
             idDocFrontFile: 'https://example.com/image.png',
             idDocType: IdentificationDocument::PASSPORT,
+            idDocBackFile: 'https://example.com/image.png',
             lastName: 'Simonassi',
-            phoneNumber: '+5511987654321',
             postalCode: '01310-100',
             proofOfAddressDocFile: 'https://example.com/image.png',
             proofOfAddressDocType: ProofOfAddressDocType::UTILITY_BILL,
             stateProvinceRegion: 'SP',
             taxId: '12345678900',
-            tosId: 'to_tPiz4bM2nh5K',
-            addressLine2: 'Apto 101'
+            tosId: 'to_tPiz4bM2nh5K'
         );
 
         $response = $this->blindpay->receivers->createIndividualWithStandardKYC($input);
@@ -277,30 +284,30 @@ class ReceiversTest extends TestCase
         $this->mockResponse($mockedReceiver);
 
         $input = new CreateIndividualWithEnhancedKYCInput(
-            addressLine1: 'Av. Paulista, 1000',
-            city: 'São Paulo',
             country: Country::BR,
-            dateOfBirth: '1998-02-02T00:00:00.000Z',
             email: 'bernardo.simonassi@gmail.com',
+            addressLine1: 'Av. Paulista, 1000',
+            addressLine2: 'Apto 101',
+            city: 'São Paulo',
+            dateOfBirth: '1998-02-02T00:00:00.000Z',
             firstName: 'Bernardo',
-            idDocBackFile: 'https://example.com/image.png',
             idDocCountry: Country::BR,
             idDocFrontFile: 'https://example.com/image.png',
             idDocType: IdentificationDocument::PASSPORT,
-            individualHoldingDocFrontFile: 'https://example.com/image.png',
+            idDocBackFile: 'https://example.com/image.png',
             lastName: 'Simonassi',
-            phoneNumber: '+5511987654321',
             postalCode: '01310-100',
+            phoneNumber: '+5511987654321',
             proofOfAddressDocFile: 'https://example.com/image.png',
             proofOfAddressDocType: ProofOfAddressDocType::UTILITY_BILL,
             purposeOfTransactions: PurposeOfTransactions::PERSONAL_OR_LIVING_EXPENSES,
-            purposeOfTransactionsExplanation: 'I am receiving salary payments from my employer',
             sourceOfFundsDocFile: 'https://example.com/image.png',
             sourceOfFundsDocType: SourceOfFundsDocType::SAVINGS,
+            purposeOfTransactionsExplanation: 'I am receiving salary payments from my employer',
             stateProvinceRegion: 'SP',
             taxId: '12345678900',
             tosId: 'to_3ZZhllJkvo5Z',
-            addressLine2: 'Apto 101'
+            selfieFile: 'https://example.com/image.png'
         );
 
         $response = $this->blindpay->receivers->createIndividualWithEnhancedKYC($input);
@@ -341,15 +348,18 @@ class ReceiversTest extends TestCase
                     'id_doc_back_file' => 'https://example.com/image.png',
                     'proof_of_address_doc_type' => 'UTILITY_BILL',
                     'proof_of_address_doc_file' => 'https://example.com/image.png',
+                    'ownership_percentage' => 25,
+                    'title' => 'CEO',
                 ];
             }
         };
 
         $input = new CreateBusinessWithStandardKYBInput(
-            addressLine1: 'Av. Brigadeiro Faria Lima, 400',
-            city: 'São Paulo',
             country: Country::BR,
             email: 'contato@empresa.com.br',
+            addressLine1: 'Av. Brigadeiro Faria Lima, 400',
+            addressLine2: 'Sala 1201',
+            city: 'São Paulo',
             formationDate: '2010-05-20T00:00:00.000Z',
             incorporationDocFile: 'https://example.com/image.png',
             legalName: 'Empresa Exemplo Ltda',
@@ -361,9 +371,15 @@ class ReceiversTest extends TestCase
             stateProvinceRegion: 'SP',
             taxId: '20096178000195',
             tosId: 'to_nppX66ntvtHs',
-            addressLine2: 'Sala 1201',
+            website: 'https://site.com/',
             alternateName: 'Exemplo',
-            website: 'https://site.com/'
+            businessType: ReceiverBusinessType::LLC,
+            businessDescription: 'Software development company',
+            businessIndustry: BusinessIndustry::NAICS_541511,
+            estimatedAnnualRevenue: EstimatedAnnualRevenue::RANGE_1000000_9999999,
+            sourceOfWealth: SourceOfWealth::AFFILIATE_OR_ROYALTY_INCOME,
+            publiclyTraded: false,
+            accountPurpose: AccountPurpose::TREASURY_MANAGEMENT
         );
 
         $response = $this->blindpay->receivers->createBusinessWithStandardKYB($input);
@@ -485,12 +501,15 @@ class ReceiversTest extends TestCase
                 'id_doc_type' => 'PASSPORT',
                 'id_doc_front_file' => 'https://example.com/image.png',
                 'id_doc_back_file' => 'https://example.com/image.png',
+                'proof_of_address_doc_type' => 'UTILITY_BILL',
+                'proof_of_address_doc_file' => 'https://example.com/image.png',
+                'ownership_percentage' => 25,
+                'title' => 'CEO',
             ]],
             incorporationDocFile: 'https://example.com/image.png',
             proofOfOwnershipDocFile: 'https://example.com/image.png',
             sourceOfFundsDocType: SourceOfFundsDocType::SAVINGS,
             sourceOfFundsDocFile: 'https://example.com/image.png',
-            individualHoldingDocFrontFile: 'https://example.com/image.png',
             purposeOfTransactions: PurposeOfTransactions::PERSONAL_OR_LIVING_EXPENSES,
             purposeOfTransactionsExplanation: 'I am receiving salary payments from my employer',
             externalId: 'some-external-id',

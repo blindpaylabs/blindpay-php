@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Tests\Resources;
 
 use BlindPay\SDK\BlindPay;
+use BlindPay\SDK\Resources\VirtualAccounts\BankingPartner;
 use BlindPay\SDK\Resources\VirtualAccounts\CreateVirtualAccountInput;
 use BlindPay\SDK\Resources\VirtualAccounts\UpdateVirtualAccountInput;
 use BlindPay\SDK\Types\StablecoinToken;
@@ -113,6 +114,7 @@ class VirtualAccountsTest extends TestCase
 
         $input = new CreateVirtualAccountInput(
             receiverId: 're_000000000000',
+            bankingPartner: BankingPartner::JPMORGAN,
             blockchainWalletId: 'bw_000000000000',
             token: StablecoinToken::USDC
         );
