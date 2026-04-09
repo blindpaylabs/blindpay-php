@@ -17,4 +17,6 @@ enum Network: string
     case STELLAR = 'stellar';
     case STELLAR_TESTNET = 'stellar_testnet';
     case TRON = 'tron';
+    case SOLANA = 'solana';
+    case SOLANA_DEVNET = 'solana_devnet';
 }

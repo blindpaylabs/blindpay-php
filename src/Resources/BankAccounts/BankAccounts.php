@@ -10,6 +10,7 @@ use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Rail;
+use BlindPay\SDK\Types\RecipientRelationship;
 use DateTimeImmutable;
 
 enum ArgentinaTransfers: string
@@ -441,12 +442,23 @@ readonly class CreateAchInput
         public string $accountNumber,
         public BankAccountType $accountType,
         public string $beneficiaryName,
-        public string $routingNumber
+        public string $routingNumber,
+        public RecipientRelationship $recipientRelationship,
+        public string $addressLine1,
+        public string $city,
+        public string $stateProvinceRegion,
+        public Country $country,
+        public string $postalCode,
+        public ?string $addressLine2 = null,
+        public ?string $businessIndustry = null,
+        public ?string $phoneNumber = null,
+        public ?string $taxId = null,
+        public ?string $dateOfBirth = null
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'type' => 'ach',
             'name' => $this->name,
             'account_class' => $this->accountClass->value,
@@ -454,7 +466,35 @@ readonly class CreateAchInput
             'account_type' => $this->accountType->value,
             'beneficiary_name' => $this->beneficiaryName,
             'routing_number' => $this->routingNumber,
+            'recipient_relationship' => $this->recipientRelationship->value,
+            'address_line_1' => $this->addressLine1,
+            'city' => $this->city,
+            'state_province_region' => $this->stateProvinceRegion,
+            'country' => $this->country->value,
+            'postal_code' => $this->postalCode,
         ];
+
+        if ($this->addressLine2 !== null) {
+            $data['address_line_2'] = $this->addressLine2;
+        }
+
+        if ($this->businessIndustry !== null) {
+            $data['business_industry'] = $this->businessIndustry;
+        }
+
+        if ($this->phoneNumber !== null) {
+            $data['phone_number'] = $this->phoneNumber;
+        }
+
+        if ($this->taxId !== null) {
+            $data['tax_id'] = $this->taxId;
+        }
+
+        if ($this->dateOfBirth !== null) {
+            $data['date_of_birth'] = $this->dateOfBirth;
+        }
+
+        return $data;
     }
 }
 
@@ -527,7 +567,13 @@ readonly class CreateWireInput
         public string $city,
         public string $stateProvinceRegion,
         public Country $country,
-        public string $postalCode
+        public string $postalCode,
+        public AccountClass $accountClass,
+        public RecipientRelationship $recipientRelationship,
+        public ?string $businessIndustry = null,
+        public ?string $phoneNumber = null,
+        public ?string $taxId = null,
+        public ?string $dateOfBirth = null
     ) {}
 
     public function toArray(): array
@@ -543,10 +589,28 @@ readonly class CreateWireInput
             'state_province_region' => $this->stateProvinceRegion,
             'country' => $this->country->value,
             'postal_code' => $this->postalCode,
+            'account_class' => $this->accountClass->value,
+            'recipient_relationship' => $this->recipientRelationship->value,
         ];
 
         if ($this->addressLine2 !== null) {
             $data['address_line_2'] = $this->addressLine2;
+        }
+
+        if ($this->businessIndustry !== null) {
+            $data['business_industry'] = $this->businessIndustry;
+        }
+
+        if ($this->phoneNumber !== null) {
+            $data['phone_number'] = $this->phoneNumber;
+        }
+
+        if ($this->taxId !== null) {
+            $data['tax_id'] = $this->taxId;
+        }
+
+        if ($this->dateOfBirth !== null) {
+            $data['date_of_birth'] = $this->dateOfBirth;
         }
 
         return $data;
@@ -615,7 +679,14 @@ readonly class CreateInternationalSwiftInput
         public ?string $swiftIntermediaryBankAccountNumberIban,
         public ?Country $swiftIntermediaryBankCountry,
         public ?string $swiftIntermediaryBankName,
-        public ?string $swiftIntermediaryBankSwiftCodeBic
+        public ?string $swiftIntermediaryBankSwiftCodeBic,
+        public AccountClass $accountClass,
+        public RecipientRelationship $recipientRelationship,
+        public ?string $swiftPaymentCode = null,
+        public ?string $businessIndustry = null,
+        public ?string $phoneNumber = null,
+        public ?string $taxId = null,
+        public ?string $dateOfBirth = null
     ) {}
 
     public function toArray(): array
@@ -641,6 +712,8 @@ readonly class CreateInternationalSwiftInput
             'swift_intermediary_bank_country' => $this->swiftIntermediaryBankCountry?->value,
             'swift_intermediary_bank_name' => $this->swiftIntermediaryBankName,
             'swift_intermediary_bank_swift_code_bic' => $this->swiftIntermediaryBankSwiftCodeBic,
+            'account_class' => $this->accountClass->value,
+            'recipient_relationship' => $this->recipientRelationship->value,
         ];
 
         if ($this->swiftBankAddressLine2 !== null) {
@@ -649,6 +722,26 @@ readonly class CreateInternationalSwiftInput
 
         if ($this->swiftBeneficiaryAddressLine2 !== null) {
             $data['swift_beneficiary_address_line_2'] = $this->swiftBeneficiaryAddressLine2;
+        }
+
+        if ($this->swiftPaymentCode !== null) {
+            $data['swift_payment_code'] = $this->swiftPaymentCode;
+        }
+
+        if ($this->businessIndustry !== null) {
+            $data['business_industry'] = $this->businessIndustry;
+        }
+
+        if ($this->phoneNumber !== null) {
+            $data['phone_number'] = $this->phoneNumber;
+        }
+
+        if ($this->taxId !== null) {
+            $data['tax_id'] = $this->taxId;
+        }
+
+        if ($this->dateOfBirth !== null) {
+            $data['date_of_birth'] = $this->dateOfBirth;
         }
 
         return $data;
@@ -742,7 +835,13 @@ readonly class CreateRtpInput
         public string $city,
         public string $stateProvinceRegion,
         public Country $country,
-        public string $postalCode
+        public string $postalCode,
+        public AccountClass $accountClass,
+        public RecipientRelationship $recipientRelationship,
+        public ?string $businessIndustry = null,
+        public ?string $phoneNumber = null,
+        public ?string $taxId = null,
+        public ?string $dateOfBirth = null
     ) {}
 
     public function toArray(): array
@@ -758,13 +857,87 @@ readonly class CreateRtpInput
             'state_province_region' => $this->stateProvinceRegion,
             'country' => $this->country->value,
             'postal_code' => $this->postalCode,
+            'account_class' => $this->accountClass->value,
+            'recipient_relationship' => $this->recipientRelationship->value,
         ];
 
         if ($this->addressLine2 !== null) {
             $data['address_line_2'] = $this->addressLine2;
         }
 
+        if ($this->businessIndustry !== null) {
+            $data['business_industry'] = $this->businessIndustry;
+        }
+
+        if ($this->phoneNumber !== null) {
+            $data['phone_number'] = $this->phoneNumber;
+        }
+
+        if ($this->taxId !== null) {
+            $data['tax_id'] = $this->taxId;
+        }
+
+        if ($this->dateOfBirth !== null) {
+            $data['date_of_birth'] = $this->dateOfBirth;
+        }
+
         return $data;
+    }
+}
+
+readonly class CreatePixSafeInput
+{
+    public function __construct(
+        public string $receiverId,
+        public string $name,
+        public string $accountNumber,
+        public BankAccountType $accountType,
+        public string $pixSafeBankCode,
+        public string $pixSafeBranchCode,
+        public string $pixSafeCpfCnpj
+    ) {}
+
+    public function toArray(): array
+    {
+        return [
+            'type' => 'pix_safe',
+            'name' => $this->name,
+            'account_number' => $this->accountNumber,
+            'account_type' => $this->accountType->value,
+            'pix_safe_bank_code' => $this->pixSafeBankCode,
+            'pix_safe_branch_code' => $this->pixSafeBranchCode,
+            'pix_safe_cpf_cnpj' => $this->pixSafeCpfCnpj,
+        ];
+    }
+}
+
+readonly class CreatePixSafeResponse
+{
+    public function __construct(
+        public string $id,
+        public string $type,
+        public string $name,
+        public string $accountNumber,
+        public BankAccountType $accountType,
+        public string $pixSafeBankCode,
+        public string $pixSafeBranchCode,
+        public string $pixSafeCpfCnpj,
+        public DateTimeImmutable $createdAt
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'],
+            type: $data['type'],
+            name: $data['name'],
+            accountNumber: $data['account_number'],
+            accountType: BankAccountType::from($data['account_type']),
+            pixSafeBankCode: $data['pix_safe_bank_code'],
+            pixSafeBranchCode: $data['pix_safe_branch_code'],
+            pixSafeCpfCnpj: $data['pix_safe_cpf_cnpj'],
+            createdAt: new DateTimeImmutable($data['created_at'])
+        );
     }
 }
 
@@ -1056,6 +1229,28 @@ class BankAccounts
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
                 CreateRtpResponse::fromArray($response->data)
+            );
+        }
+
+        return $response;
+    }
+
+    /*
+     * Create PIX Safe bank account
+     *
+     * @param CreatePixSafeInput $input
+     * @return BlindPayApiResponse<CreatePixSafeResponse>
+     */
+    public function createPixSafe(CreatePixSafeInput $input): BlindPayApiResponse
+    {
+        $response = $this->client->post(
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            $input->toArray()
+        );
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            return BlindPayApiResponse::success(
+                CreatePixSafeResponse::fromArray($response->data)
             );
         }
 

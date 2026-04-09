@@ -1087,7 +1087,7 @@ class Receivers
             );
         }
 
-        return $this->client->patch(
+        return $this->client->put(
             "instances/{$this->instanceId}/receivers/{$input->receiverId}",
             $input->toArray()
         );

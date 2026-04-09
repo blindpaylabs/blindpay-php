@@ -13,7 +13,7 @@ readonly class PaginationParams
         public ?string $endingBefore = null
     ) {
         if ($this->limit !== null) {
-            $validLimits = [10, 50, 100, 200, 1000];
+            $validLimits = [10, 50, 100, 200, 500, 1000];
             if (! in_array($this->limit, $validLimits, true)) {
                 throw new \InvalidArgumentException(
                     'Invalid limit. Must be one of: '.implode(', ', $validLimits)
@@ -22,7 +22,7 @@ readonly class PaginationParams
         }
 
         if ($this->offset !== null) {
-            $validOffsets = [0, 10, 50, 100, 200, 1000];
+            $validOffsets = [0, 10, 50, 100, 200, 500, 1000];
             if (! in_array($this->offset, $validOffsets, true)) {
                 throw new \InvalidArgumentException(
                     'Invalid offset. Must be one of: '.implode(', ', $validOffsets)
