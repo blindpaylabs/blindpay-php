@@ -11,4 +11,5 @@ enum TransactionStatus: string
     case COMPLETED = 'completed';
     case FAILED = 'failed';
     case ON_HOLD = 'on_hold';
+    case PENDING_REVIEW = 'pending_review';
 }

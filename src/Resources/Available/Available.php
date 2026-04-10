@@ -104,6 +104,22 @@ readonly class SwiftCodeBankDetails
     }
 }
 
+readonly class NaicsCode
+{
+    public function __construct(
+        public string $code,
+        public string $title
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            code: $data['code'],
+            title: $data['title']
+        );
+    }
+}
+
 class Available
 {
     public function __construct(
@@ -170,6 +186,27 @@ class Available
             );
 
             return BlindPayApiResponse::success($swiftCodeBankDetails);
+        }
+
+        return $response;
+    }
+
+    /*
+     * Get available NAICS business industry codes
+     *
+     * @return BlindPayApiResponse<NaicsCode[]>
+     */
+    public function getNaicsCodes(): BlindPayApiResponse
+    {
+        $response = $this->client->get('available/naics');
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            $naicsCodes = array_map(
+                fn (array $item) => NaicsCode::fromArray($item),
+                $response->data
+            );
+
+            return BlindPayApiResponse::success($naicsCodes);
         }
 
         return $response;

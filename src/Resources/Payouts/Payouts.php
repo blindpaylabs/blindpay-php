@@ -381,6 +381,46 @@ readonly class CreateEvmPayoutResponse
     }
 }
 
+readonly class SubmitPayoutDocumentsInput
+{
+    public function __construct(
+        public string $payoutId,
+        public TransactionDocumentType $transactionDocumentType,
+        public string $transactionDocumentId,
+        public string $transactionDocumentFile,
+        public ?string $description = null
+    ) {}
+
+    public function toArray(): array
+    {
+        $data = [
+            'transaction_document_type' => $this->transactionDocumentType->value,
+            'transaction_document_id' => $this->transactionDocumentId,
+            'transaction_document_file' => $this->transactionDocumentFile,
+        ];
+
+        if ($this->description !== null) {
+            $data['description'] = $this->description;
+        }
+
+        return $data;
+    }
+}
+
+readonly class SubmitPayoutDocumentsResponse
+{
+    public function __construct(
+        public bool $success
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            success: $data['success']
+        );
+    }
+}
+
 class Payouts
 {
     public function __construct(
@@ -541,6 +581,34 @@ class Payouts
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
                 CreateEvmPayoutResponse::fromArray($response->data)
+            );
+        }
+
+        return $response;
+    }
+
+    /*
+     * Submit payout documents (required for SWIFT payouts)
+     *
+     * @param SubmitPayoutDocumentsInput $input
+     * @return BlindPayApiResponse<SubmitPayoutDocumentsResponse>
+     */
+    public function submitDocuments(SubmitPayoutDocumentsInput $input): BlindPayApiResponse
+    {
+        if (empty($input->payoutId)) {
+            return BlindPayApiResponse::error(
+                new \BlindPay\SDK\Types\ErrorResponse('Payout ID cannot be empty')
+            );
+        }
+
+        $response = $this->client->post(
+            "instances/{$this->instanceId}/payouts/{$input->payoutId}/documents",
+            $input->toArray()
+        );
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            return BlindPayApiResponse::success(
+                SubmitPayoutDocumentsResponse::fromArray($response->data)
             );
         }
 

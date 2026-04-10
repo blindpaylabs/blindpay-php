@@ -21,6 +21,7 @@ use BlindPay\SDK\Resources\BankAccounts\SpeiProtocol;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\Country;
+use BlindPay\SDK\Types\RecipientRelationship;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -256,7 +257,13 @@ class BankAccountsTest extends TestCase
             accountNumber: '1001001234',
             accountType: BankAccountType::CHECKING,
             beneficiaryName: 'Individual full name or business name',
-            routingNumber: '012345678'
+            routingNumber: '012345678',
+            recipientRelationship: RecipientRelationship::FIRST_PARTY,
+            addressLine1: '123 Main St',
+            city: 'New York',
+            stateProvinceRegion: 'NY',
+            country: Country::US,
+            postalCode: '10001'
         );
 
         $response = $this->blindpay->receivers->bankAccounts->createAch($input);
@@ -311,7 +318,9 @@ class BankAccountsTest extends TestCase
             city: 'City',
             stateProvinceRegion: 'State/Province/Region',
             country: Country::US,
-            postalCode: 'Postal code'
+            postalCode: 'Postal code',
+            accountClass: AccountClass::INDIVIDUAL,
+            recipientRelationship: RecipientRelationship::FIRST_PARTY
         );
 
         $response = $this->blindpay->receivers->bankAccounts->createWire($input);
@@ -393,7 +402,9 @@ class BankAccountsTest extends TestCase
             swiftIntermediaryBankAccountNumberIban: null,
             swiftIntermediaryBankCountry: null,
             swiftIntermediaryBankName: null,
-            swiftIntermediaryBankSwiftCodeBic: null
+            swiftIntermediaryBankSwiftCodeBic: null,
+            accountClass: AccountClass::INDIVIDUAL,
+            recipientRelationship: RecipientRelationship::FIRST_PARTY
         );
 
         $response = $this->blindpay->receivers->bankAccounts->createInternationalSwift($input);
@@ -458,7 +469,9 @@ class BankAccountsTest extends TestCase
             city: 'Fools City',
             stateProvinceRegion: 'FL',
             country: Country::US,
-            postalCode: '22599'
+            postalCode: '22599',
+            accountClass: AccountClass::INDIVIDUAL,
+            recipientRelationship: RecipientRelationship::FIRST_PARTY
         );
 
         $response = $this->blindpay->receivers->bankAccounts->createRtp($input);

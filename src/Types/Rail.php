@@ -14,4 +14,5 @@ enum Rail: string
     case ACH_COP_BITSO = 'ach_cop_bitso';
     case INTERNATIONAL_SWIFT = 'international_swift';
     case RTP = 'rtp';
+    case PIX_SAFE = 'pix_safe';
 }

@@ -9,6 +9,8 @@ use BlindPay\SDK\Internal\BlindPayException;
 use BlindPay\SDK\Resources\ApiKeys\ApiKeys;
 use BlindPay\SDK\Resources\Available\Available;
 use BlindPay\SDK\Resources\BankAccounts\BankAccounts;
+use BlindPay\SDK\Resources\CustodialWallets\CustodialWallets;
+use BlindPay\SDK\Resources\Fees\Fees;
 use BlindPay\SDK\Resources\Instances\Instances;
 use BlindPay\SDK\Resources\Instances\InstancesWrapper;
 use BlindPay\SDK\Resources\PartnerFees\PartnerFees;
@@ -20,6 +22,7 @@ use BlindPay\SDK\Resources\Quotes\Quotes;
 use BlindPay\SDK\Resources\Receivers\Receivers;
 use BlindPay\SDK\Resources\Receivers\ReceiversWrapper;
 use BlindPay\SDK\Resources\TermsOfService\TermsOfService;
+use BlindPay\SDK\Resources\Transfers\Transfers;
 use BlindPay\SDK\Resources\VirtualAccounts\VirtualAccounts;
 use BlindPay\SDK\Resources\Wallets\BlockchainWallets;
 use BlindPay\SDK\Resources\Wallets\OfframpWallets;
@@ -35,7 +38,7 @@ class BlindPay implements ApiClientInterface
 {
     private const BASE_URL = 'https://api.blindpay.com/v1/';
 
-    private const VERSION = '1.0.0';
+    private const VERSION = '1.1.0';
 
     private Client $httpClient;
 
@@ -58,6 +61,10 @@ class BlindPay implements ApiClientInterface
     public readonly ReceiversWrapper $receivers;
 
     public readonly WalletsWrapper $wallets;
+
+    public readonly Transfers $transfers;
+
+    public readonly Fees $fees;
 
     public function __construct(
         private readonly string $apiKey,
@@ -89,6 +96,8 @@ class BlindPay implements ApiClientInterface
         $this->quotes = new Quotes($this->instanceId, $this);
         $this->payouts = new Payouts($this->instanceId, $this);
         $this->virtualAccounts = new VirtualAccounts($this->instanceId, $this);
+        $this->transfers = new Transfers($this->instanceId, $this);
+        $this->fees = new Fees($this->instanceId, $this);
 
         $this->initializeInstances();
         $this->initializePayins();
@@ -131,8 +140,9 @@ class BlindPay implements ApiClientInterface
     {
         $blockchainResource = new BlockchainWallets($this->instanceId, $this);
         $offrampResource = new OfframpWallets($this->instanceId, $this);
+        $custodialResource = new CustodialWallets($this->instanceId, $this);
 
-        $this->wallets = new WalletsWrapper($blockchainResource, $offrampResource);
+        $this->wallets = new WalletsWrapper($blockchainResource, $offrampResource, $custodialResource);
     }
 
     private function request(string $method, string $path, ?array $body = null): BlindPayApiResponse
