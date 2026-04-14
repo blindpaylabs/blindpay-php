@@ -21,6 +21,7 @@ use BlindPay\SDK\Resources\Payouts\Payouts;
 use BlindPay\SDK\Resources\Quotes\Quotes;
 use BlindPay\SDK\Resources\Receivers\Receivers;
 use BlindPay\SDK\Resources\Receivers\ReceiversWrapper;
+use BlindPay\SDK\Resources\Sandbox\Sandbox;
 use BlindPay\SDK\Resources\TermsOfService\TermsOfService;
 use BlindPay\SDK\Resources\Transfers\Transfers;
 use BlindPay\SDK\Resources\VirtualAccounts\VirtualAccounts;
@@ -38,7 +39,7 @@ class BlindPay implements ApiClientInterface
 {
     private const BASE_URL = 'https://api.blindpay.com/v1/';
 
-    private const VERSION = '1.4.0';
+    private const VERSION = '1.5.0';
 
     private Client $httpClient;
 
@@ -65,6 +66,8 @@ class BlindPay implements ApiClientInterface
     public readonly Transfers $transfers;
 
     public readonly Fees $fees;
+
+    public readonly Sandbox $sandbox;
 
     public function __construct(
         private readonly string $apiKey,
@@ -98,6 +101,7 @@ class BlindPay implements ApiClientInterface
         $this->virtualAccounts = new VirtualAccounts($this->instanceId, $this);
         $this->transfers = new Transfers($this->instanceId, $this);
         $this->fees = new Fees($this->instanceId, $this);
+        $this->sandbox = new Sandbox($this->instanceId, $this);
 
         $this->initializeInstances();
         $this->initializePayins();
