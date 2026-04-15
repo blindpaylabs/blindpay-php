@@ -61,10 +61,10 @@ class CustodialWalletsTest extends TestCase
     {
         $mockedWallet = [
             'id' => 'cw_000000000000',
-            'receiver_id' => 're_000000000000',
-            'instance_id' => 'in_000000000000',
+            'name' => 'My Solana Wallet',
             'network' => 'solana',
-            'address' => 'So1ana1234567890',
+            'address' => 'So1ana1234567890abcdefghijklmnopqrstuvwxyz12',
+            'external_id' => null,
             'created_at' => '2025-01-01T00:00:00Z',
         ];
 
@@ -72,7 +72,8 @@ class CustodialWalletsTest extends TestCase
 
         $input = new CreateCustodialWalletInput(
             receiverId: 're_000000000000',
-            network: Network::SOLANA
+            network: Network::SOLANA,
+            name: 'My Solana Wallet'
         );
 
         $response = $this->blindpay->wallets->custodial->create($input);
@@ -80,9 +81,9 @@ class CustodialWalletsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('cw_000000000000', $response->data->id);
-        $this->assertEquals('re_000000000000', $response->data->receiverId);
+        $this->assertEquals('My Solana Wallet', $response->data->name);
         $this->assertEquals(Network::SOLANA, $response->data->network);
-        $this->assertEquals('So1ana1234567890', $response->data->address);
+        $this->assertEquals('So1ana1234567890abcdefghijklmnopqrstuvwxyz12', $response->data->address);
     }
 
     #[Test]
@@ -91,10 +92,10 @@ class CustodialWalletsTest extends TestCase
         $mockedWallets = [
             [
                 'id' => 'cw_000000000000',
-                'receiver_id' => 're_000000000000',
-                'instance_id' => 'in_000000000000',
+                'name' => 'My Solana Wallet',
                 'network' => 'solana',
-                'address' => 'So1ana1234567890',
+                'address' => 'So1ana1234567890abcdefghijklmnopqrstuvwxyz12',
+                'external_id' => null,
                 'created_at' => '2025-01-01T00:00:00Z',
             ],
         ];
@@ -108,6 +109,7 @@ class CustodialWalletsTest extends TestCase
         $this->assertIsArray($response->data);
         $this->assertCount(1, $response->data);
         $this->assertEquals('cw_000000000000', $response->data[0]->id);
+        $this->assertEquals('My Solana Wallet', $response->data[0]->name);
     }
 
     #[Test]
@@ -115,10 +117,10 @@ class CustodialWalletsTest extends TestCase
     {
         $mockedWallet = [
             'id' => 'cw_000000000000',
-            'receiver_id' => 're_000000000000',
-            'instance_id' => 'in_000000000000',
+            'name' => 'My Solana Wallet',
             'network' => 'solana',
-            'address' => 'So1ana1234567890',
+            'address' => 'So1ana1234567890abcdefghijklmnopqrstuvwxyz12',
+            'external_id' => 'ext-123',
             'created_at' => '2025-01-01T00:00:00Z',
         ];
 
@@ -134,6 +136,8 @@ class CustodialWalletsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('cw_000000000000', $response->data->id);
+        $this->assertEquals('My Solana Wallet', $response->data->name);
+        $this->assertEquals('ext-123', $response->data->externalId);
     }
 
     #[Test]
@@ -142,15 +146,22 @@ class CustodialWalletsTest extends TestCase
         $mockedBalance = [
             'USDC' => [
                 'amount' => 150.50,
-                'token' => 'USDC',
-                'address' => 'So1ana1234567890',
+                'symbol' => 'USDC',
+                'address' => 'So1ana1234567890abcdefghijklmnopqrstuvwxyz12',
+                'id' => 'token_usdc_001',
             ],
             'USDT' => [
                 'amount' => 0.0,
-                'token' => 'USDT',
-                'address' => 'So1ana1234567890',
+                'symbol' => 'USDT',
+                'address' => 'So1ana1234567890abcdefghijklmnopqrstuvwxyz12',
+                'id' => 'token_usdt_001',
             ],
-            'USDB' => null,
+            'USDB' => [
+                'amount' => 0.0,
+                'symbol' => 'USDB',
+                'address' => 'So1ana1234567890abcdefghijklmnopqrstuvwxyz12',
+                'id' => 'token_usdb_001',
+            ],
         ];
 
         $this->mockResponse($mockedBalance);
@@ -166,10 +177,11 @@ class CustodialWalletsTest extends TestCase
         $this->assertNull($response->error);
         $this->assertNotNull($response->data->usdc);
         $this->assertEquals(150.50, $response->data->usdc->amount);
-        $this->assertEquals('USDC', $response->data->usdc->token);
+        $this->assertEquals('token_usdc_001', $response->data->usdc->id);
         $this->assertNotNull($response->data->usdt);
         $this->assertEquals(0.0, $response->data->usdt->amount);
-        $this->assertNull($response->data->usdb);
+        $this->assertNotNull($response->data->usdb);
+        $this->assertEquals(0.0, $response->data->usdb->amount);
     }
 
     #[Test]

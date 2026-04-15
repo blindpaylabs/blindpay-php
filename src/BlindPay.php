@@ -23,6 +23,7 @@ use BlindPay\SDK\Resources\Receivers\Receivers;
 use BlindPay\SDK\Resources\Receivers\ReceiversWrapper;
 use BlindPay\SDK\Resources\TermsOfService\TermsOfService;
 use BlindPay\SDK\Resources\Transfers\Transfers;
+use BlindPay\SDK\Resources\Upload\Upload;
 use BlindPay\SDK\Resources\VirtualAccounts\VirtualAccounts;
 use BlindPay\SDK\Resources\Wallets\BlockchainWallets;
 use BlindPay\SDK\Resources\Wallets\OfframpWallets;
@@ -38,7 +39,7 @@ class BlindPay implements ApiClientInterface
 {
     private const BASE_URL = 'https://api.blindpay.com/v1/';
 
-    private const VERSION = '1.4.0';
+    private const VERSION = '1.5.0';
 
     private Client $httpClient;
 
@@ -65,6 +66,8 @@ class BlindPay implements ApiClientInterface
     public readonly Transfers $transfers;
 
     public readonly Fees $fees;
+
+    public readonly Upload $upload;
 
     public function __construct(
         private readonly string $apiKey,
@@ -98,6 +101,7 @@ class BlindPay implements ApiClientInterface
         $this->virtualAccounts = new VirtualAccounts($this->instanceId, $this);
         $this->transfers = new Transfers($this->instanceId, $this);
         $this->fees = new Fees($this->instanceId, $this);
+        $this->upload = new Upload($this->instanceId, $this);
 
         $this->initializeInstances();
         $this->initializePayins();
@@ -207,6 +211,48 @@ class BlindPay implements ApiClientInterface
     public function delete(string $path, ?array $body = null): BlindPayApiResponse
     {
         return $this->request('DELETE', $path, $body);
+    }
+
+    public function multipart(string $path, array $parts): BlindPayApiResponse
+    {
+        try {
+            $response = $this->httpClient->request('POST', $path, [
+                'multipart' => $parts,
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'User-Agent' => 'blindpay-php/'.self::VERSION,
+                    'Authorization' => 'Bearer '.$this->apiKey,
+                ],
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            $content = $response->getBody()->getContents();
+            $data = json_decode($content, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return BlindPayApiResponse::error(
+                    new ErrorResponse('JSON decode error: '.json_last_error_msg().' | Raw response: '.substr($content, 0, 200))
+                );
+            }
+
+            if ($statusCode >= 400) {
+                $errorMessage = $data['message'] ?? 'Unknown error';
+
+                return BlindPayApiResponse::error(
+                    new ErrorResponse($errorMessage)
+                );
+            }
+
+            return BlindPayApiResponse::success($data);
+        } catch (GuzzleException $e) {
+            return BlindPayApiResponse::error(
+                new ErrorResponse($e->getMessage())
+            );
+        } catch (Throwable $e) {
+            return BlindPayApiResponse::error(
+                new ErrorResponse($e->getMessage())
+            );
+        }
     }
 
     /*

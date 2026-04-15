@@ -7,28 +7,29 @@ namespace BlindPay\SDK\Resources\CustodialWallets;
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Network;
+use BlindPay\SDK\Types\StablecoinToken;
 use DateTimeImmutable;
 
 readonly class CustodialWallet
 {
     public function __construct(
         public string $id,
-        public string $receiverId,
-        public string $instanceId,
+        public string $name,
         public Network $network,
-        public string $address,
-        public DateTimeImmutable $createdAt
+        public ?string $externalId = null,
+        public ?string $address = null,
+        public ?DateTimeImmutable $createdAt = null
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
             id: $data['id'],
-            receiverId: $data['receiver_id'],
-            instanceId: $data['instance_id'],
+            name: $data['name'],
             network: Network::from($data['network']),
-            address: $data['address'],
-            createdAt: new DateTimeImmutable($data['created_at'])
+            externalId: $data['external_id'] ?? null,
+            address: $data['address'] ?? null,
+            createdAt: isset($data['created_at']) ? new DateTimeImmutable($data['created_at']) : null
         );
     }
 }
@@ -36,17 +37,19 @@ readonly class CustodialWallet
 readonly class WalletTokenBalance
 {
     public function __construct(
-        public float $amount,
-        public string $token,
-        public string $address
+        public string $address,
+        public string $id,
+        public StablecoinToken $symbol,
+        public float $amount
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
-            amount: (float) $data['amount'],
-            token: $data['token'],
-            address: $data['address']
+            address: $data['address'],
+            id: $data['id'],
+            symbol: StablecoinToken::from($data['symbol']),
+            amount: (float) $data['amount']
         );
     }
 }
@@ -54,17 +57,17 @@ readonly class WalletTokenBalance
 readonly class CustodialWalletBalanceResponse
 {
     public function __construct(
-        public ?WalletTokenBalance $usdc,
-        public ?WalletTokenBalance $usdt,
-        public ?WalletTokenBalance $usdb
+        public WalletTokenBalance $usdc,
+        public WalletTokenBalance $usdt,
+        public WalletTokenBalance $usdb
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
-            usdc: isset($data['USDC']) ? WalletTokenBalance::fromArray($data['USDC']) : null,
-            usdt: isset($data['USDT']) ? WalletTokenBalance::fromArray($data['USDT']) : null,
-            usdb: isset($data['USDB']) ? WalletTokenBalance::fromArray($data['USDB']) : null
+            usdc: WalletTokenBalance::fromArray($data['USDC']),
+            usdt: WalletTokenBalance::fromArray($data['USDT']),
+            usdb: WalletTokenBalance::fromArray($data['USDB'])
         );
     }
 }
@@ -73,14 +76,23 @@ readonly class CreateCustodialWalletInput
 {
     public function __construct(
         public string $receiverId,
-        public Network $network
+        public Network $network,
+        public string $name,
+        public ?string $externalId = null
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'network' => $this->network->value,
+            'name' => $this->name,
         ];
+
+        if ($this->externalId !== null) {
+            $data['external_id'] = $this->externalId;
+        }
+
+        return $data;
     }
 }
 

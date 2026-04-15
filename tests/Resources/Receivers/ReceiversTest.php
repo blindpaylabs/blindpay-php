@@ -542,10 +542,10 @@ class ReceiversTest extends TestCase
         $this->assertNull($response->error);
         $this->assertIsObject($response->data);
         $this->assertObjectHasProperty('limits', $response->data);
-        $this->assertEquals(10000.0, $response->data->limits['payin']['daily']);
-        $this->assertEquals(50000.0, $response->data->limits['payin']['monthly']);
-        $this->assertEquals(20000.0, $response->data->limits['payout']['daily']);
-        $this->assertEquals(100000.0, $response->data->limits['payout']['monthly']);
+        $this->assertEquals(10000.0, $response->data->limits->payin->daily);
+        $this->assertEquals(50000.0, $response->data->limits->payin->monthly);
+        $this->assertEquals(20000.0, $response->data->limits->payout->daily);
+        $this->assertEquals(100000.0, $response->data->limits->payout->monthly);
     }
 
     #[Test]

@@ -335,6 +335,29 @@ readonly class CreateStellarPayoutResponse
     }
 }
 
+readonly class CreateSolanaPayoutInput
+{
+    public function __construct(
+        public string $quoteId,
+        public string $senderWalletAddress,
+        public ?string $signedTransaction = null
+    ) {}
+
+    public function toArray(): array
+    {
+        $data = [
+            'quote_id' => $this->quoteId,
+            'sender_wallet_address' => $this->senderWalletAddress,
+        ];
+
+        if ($this->signedTransaction !== null) {
+            $data['signed_transaction'] = $this->signedTransaction;
+        }
+
+        return $data;
+    }
+}
+
 readonly class CreateEvmPayoutInput
 {
     public function __construct(
@@ -559,6 +582,28 @@ class Payouts
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
                 CreateStellarPayoutResponse::fromArray($response->data)
+            );
+        }
+
+        return $response;
+    }
+
+    /*
+     * Create Solana payout
+     *
+     * @param CreateSolanaPayoutInput $input
+     * @return BlindPayApiResponse<CreateEvmPayoutResponse>
+     */
+    public function createSolana(CreateSolanaPayoutInput $input): BlindPayApiResponse
+    {
+        $response = $this->client->post(
+            "instances/{$this->instanceId}/payouts/solana",
+            $input->toArray()
+        );
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            return BlindPayApiResponse::success(
+                CreateEvmPayoutResponse::fromArray($response->data)
             );
         }
 

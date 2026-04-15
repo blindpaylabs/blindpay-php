@@ -838,19 +838,51 @@ readonly class UpdateReceiverInput
     }
 }
 
+readonly class ReceiverTransactionLimits
+{
+    public function __construct(
+        public float $daily,
+        public float $monthly
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            daily: (float) $data['daily'],
+            monthly: (float) $data['monthly']
+        );
+    }
+}
+
+readonly class ReceiverLimitsDetail
+{
+    public function __construct(
+        public ReceiverTransactionLimits $payin,
+        public ReceiverTransactionLimits $payout
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            payin: ReceiverTransactionLimits::fromArray($data['payin']),
+            payout: ReceiverTransactionLimits::fromArray($data['payout'])
+        );
+    }
+}
+
 /*
  * Get receiver limits response
  */
 readonly class GetReceiverLimitsResponse
 {
     public function __construct(
-        public array $limits
+        public ReceiverLimitsDetail $limits
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
-            limits: $data['limits']
+            limits: ReceiverLimitsDetail::fromArray($data['limits'])
         );
     }
 }
@@ -861,13 +893,16 @@ readonly class LimitIncreaseRequest
         public string $id,
         public string $receiverId,
         public LimitIncreaseRequestStatus $status,
-        public float $daily,
-        public float $monthly,
-        public float $perTransaction,
-        public string $supportingDocumentFile,
-        public LimitIncreaseRequestSupportingDocumentType $supportingDocumentType,
-        public DateTimeImmutable $createdAt,
-        public DateTimeImmutable $updatedAt
+        public ?int $daily = null,
+        public ?int $monthly = null,
+        public ?int $perTransaction = null,
+        public ?int $approvedDaily = null,
+        public ?int $approvedMonthly = null,
+        public ?int $approvedPerTransaction = null,
+        public ?string $supportingDocumentFile = null,
+        public ?LimitIncreaseRequestSupportingDocumentType $supportingDocumentType = null,
+        public ?DateTimeImmutable $createdAt = null,
+        public ?DateTimeImmutable $updatedAt = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -876,13 +911,18 @@ readonly class LimitIncreaseRequest
             id: $data['id'],
             receiverId: $data['receiver_id'],
             status: LimitIncreaseRequestStatus::from($data['status']),
-            daily: (float) $data['daily'],
-            monthly: (float) $data['monthly'],
-            perTransaction: (float) $data['per_transaction'],
-            supportingDocumentFile: $data['supporting_document_file'],
-            supportingDocumentType: LimitIncreaseRequestSupportingDocumentType::from($data['supporting_document_type']),
-            createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at'])
+            daily: isset($data['daily']) ? (int) $data['daily'] : null,
+            monthly: isset($data['monthly']) ? (int) $data['monthly'] : null,
+            perTransaction: isset($data['per_transaction']) ? (int) $data['per_transaction'] : null,
+            approvedDaily: isset($data['approved_daily']) ? (int) $data['approved_daily'] : null,
+            approvedMonthly: isset($data['approved_monthly']) ? (int) $data['approved_monthly'] : null,
+            approvedPerTransaction: isset($data['approved_per_transaction']) ? (int) $data['approved_per_transaction'] : null,
+            supportingDocumentFile: $data['supporting_document_file'] ?? null,
+            supportingDocumentType: isset($data['supporting_document_type'])
+                ? LimitIncreaseRequestSupportingDocumentType::from($data['supporting_document_type'])
+                : null,
+            createdAt: isset($data['created_at']) ? new DateTimeImmutable($data['created_at']) : null,
+            updatedAt: isset($data['updated_at']) ? new DateTimeImmutable($data['updated_at']) : null
         );
     }
 }
@@ -891,9 +931,9 @@ readonly class RequestLimitIncreaseInput
 {
     public function __construct(
         public string $receiverId,
-        public float $daily,
-        public float $monthly,
-        public float $perTransaction,
+        public ?int $daily,
+        public ?int $monthly,
+        public ?int $perTransaction,
         public string $supportingDocumentFile,
         public LimitIncreaseRequestSupportingDocumentType $supportingDocumentType
     ) {}

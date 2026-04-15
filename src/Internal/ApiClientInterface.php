@@ -17,4 +17,6 @@ interface ApiClientInterface
     public function patch(string $path, array $body): BlindPayApiResponse;
 
     public function delete(string $path, ?array $body = null): BlindPayApiResponse;
+
+    public function multipart(string $path, array $parts): BlindPayApiResponse;
 }
