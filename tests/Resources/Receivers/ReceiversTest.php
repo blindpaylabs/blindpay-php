@@ -5,16 +5,22 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Tests\Resources;
 
 use BlindPay\SDK\BlindPay;
-use BlindPay\SDK\Resources\Receivers\CreateBusinessWithStandardKYBInput;
-use BlindPay\SDK\Resources\Receivers\CreateIndividualWithEnhancedKYCInput;
-use BlindPay\SDK\Resources\Receivers\CreateIndividualWithStandardKYCInput;
+use BlindPay\SDK\Resources\Receivers\AccountPurpose;
+use BlindPay\SDK\Resources\Receivers\BusinessType;
+use BlindPay\SDK\Resources\Receivers\CreateReceiverInput;
 use BlindPay\SDK\Resources\Receivers\IdentificationDocument;
+use BlindPay\SDK\Resources\Receivers\KycStatus;
+use BlindPay\SDK\Resources\Receivers\KycType;
+use BlindPay\SDK\Resources\Receivers\LimitIncreaseRequest;
 use BlindPay\SDK\Resources\Receivers\LimitIncreaseRequestSupportingDocumentType;
+use BlindPay\SDK\Resources\Receivers\ListReceiversInput;
+use BlindPay\SDK\Resources\Receivers\ListReceiversResponse;
 use BlindPay\SDK\Resources\Receivers\ProofOfAddressDocType;
-use BlindPay\SDK\Resources\Receivers\PurposeOfTransactions;
+use BlindPay\SDK\Resources\Receivers\ReceiverOut;
 use BlindPay\SDK\Resources\Receivers\RequestLimitIncreaseInput;
 use BlindPay\SDK\Resources\Receivers\SourceOfFundsDocType;
 use BlindPay\SDK\Resources\Receivers\UpdateReceiverInput;
+use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\Country;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -63,15 +69,165 @@ class ReceiversTest extends TestCase
         );
     }
 
+    private function receiverOutFixture(string $id, string $type = 'individual', string $kycType = 'standard', string $kycStatus = 'verifying'): array
+    {
+        return [
+            'id' => $id,
+            'type' => $type,
+            'kyc_type' => $kycType,
+            'kyc_status' => $kycStatus,
+            'kyc_warnings' => null,
+            'fraud_warnings' => null,
+            'email' => 'test@example.com',
+            'country' => 'BR',
+            'instance_id' => 'in_000000000000',
+            'limit' => [
+                'per_transaction' => 100000,
+                'daily' => 200000,
+                'monthly' => 1000000,
+            ],
+        ];
+    }
+
     #[Test]
     public function it_lists_receivers(): void
     {
-        $mockedReceivers = [
+        $mockedResponse = [
+            'data' => [
+                $this->receiverOutFixture('re_Euw7HN4OdxPn'),
+                $this->receiverOutFixture('re_YuaMcI2B8zbQ', 'individual', 'enhanced', 'approved'),
+                $this->receiverOutFixture('re_IOxAUL24LG7P', 'business', 'standard', 'verifying'),
+            ],
+            'pagination' => [
+                'has_more' => false,
+                'next_page' => null,
+                'prev_page' => null,
+            ],
+        ];
+
+        $this->mockResponse($mockedResponse);
+
+        $response = $this->blindpay->receivers->list();
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->error);
+        $this->assertInstanceOf(ListReceiversResponse::class, $response->data);
+        $this->assertCount(3, $response->data->data);
+        $this->assertEquals('re_Euw7HN4OdxPn', $response->data->data[0]->id);
+        $this->assertEquals('re_YuaMcI2B8zbQ', $response->data->data[1]->id);
+        $this->assertEquals('re_IOxAUL24LG7P', $response->data->data[2]->id);
+    }
+
+    #[Test]
+    public function it_lists_receivers_with_filters(): void
+    {
+        $mockedResponse = [
+            'data' => [
+                $this->receiverOutFixture('re_Euw7HN4OdxPn'),
+            ],
+            'pagination' => [
+                'has_more' => false,
+                'next_page' => null,
+                'prev_page' => null,
+            ],
+        ];
+
+        $this->mockResponse($mockedResponse);
+
+        $params = new ListReceiversInput(
+            status: KycStatus::VERIFYING,
+            country: Country::BR
+        );
+
+        $response = $this->blindpay->receivers->list($params);
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->error);
+        $this->assertInstanceOf(ListReceiversResponse::class, $response->data);
+        $this->assertCount(1, $response->data->data);
+        $this->assertEquals('re_Euw7HN4OdxPn', $response->data->data[0]->id);
+    }
+
+    #[Test]
+    public function it_creates_a_receiver(): void
+    {
+        $mockedReceiver = [
+            'id' => 're_Euw7HN4OdxPn',
+        ];
+
+        $this->mockResponse($mockedReceiver);
+
+        $input = new CreateReceiverInput(
+            type: AccountClass::INDIVIDUAL,
+            kycType: KycType::STANDARD,
+            email: 'bernardo.simonassi@gmail.com',
+            country: Country::BR,
+            firstName: 'Bernardo',
+            lastName: 'Simonassi',
+            dateOfBirth: '1998-02-02T00:00:00.000Z',
+            taxId: '12345678900',
+            addressLine1: 'Av. Paulista, 1000',
+            addressLine2: 'Apto 101',
+            city: 'São Paulo',
+            stateProvinceRegion: 'SP',
+            postalCode: '01310-100',
+            phoneNumber: '+5511987654321',
+            idDocCountry: Country::BR,
+            idDocType: IdentificationDocument::PASSPORT,
+            idDocFrontFile: 'https://example.com/image.png',
+            proofOfAddressDocType: ProofOfAddressDocType::UTILITY_BILL,
+            proofOfAddressDocFile: 'https://example.com/image.png',
+            tosId: 'to_tPiz4bM2nh5K'
+        );
+
+        $response = $this->blindpay->receivers->create($input);
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->error);
+        $this->assertEquals('re_Euw7HN4OdxPn', $response->data->id);
+    }
+
+    #[Test]
+    public function it_creates_a_business_receiver(): void
+    {
+        $mockedReceiver = [
+            'id' => 're_IOxAUL24LG7P',
+        ];
+
+        $this->mockResponse($mockedReceiver);
+
+        $input = new CreateReceiverInput(
+            type: AccountClass::BUSINESS,
+            kycType: KycType::STANDARD,
+            email: 'contato@empresa.com.br',
+            country: Country::BR,
+            legalName: 'Empresa Exemplo Ltda',
+            alternateName: 'Exemplo',
+            taxId: '20096178000195',
+            addressLine1: 'Av. Brigadeiro Faria Lima, 400',
+            addressLine2: 'Sala 1201',
+            city: 'São Paulo',
+            stateProvinceRegion: 'SP',
+            postalCode: '04538-132',
+            website: 'https://site.com/',
+            businessType: BusinessType::LLC,
+            accountPurpose: AccountPurpose::BUSINESS_EXPENSES,
+            tosId: 'to_nppX66ntvtHs'
+        );
+
+        $response = $this->blindpay->receivers->create($input);
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->error);
+        $this->assertEquals('re_IOxAUL24LG7P', $response->data->id);
+    }
+
+    #[Test]
+    public function it_gets_a_receiver(): void
+    {
+        $mockedReceiver = array_merge(
+            $this->receiverOutFixture('re_YuaMcI2B8zbQ', 'individual', 'enhanced', 'verifying'),
             [
-                'id' => 're_Euw7HN4OdxPn',
-                'type' => 'individual',
-                'kyc_type' => 'standard',
-                'kyc_status' => 'verifying',
                 'kyc_warnings' => [
                     [
                         'code' => null,
@@ -80,7 +236,7 @@ class ReceiversTest extends TestCase
                         'warning_id' => null,
                     ],
                 ],
-                'email' => 'bernardo@gmail.com',
+                'email' => 'bernardo.simonassi@gmail.com',
                 'tax_id' => '12345678900',
                 'address_line_1' => 'Av. Paulista, 1000',
                 'address_line_2' => 'Apto 101',
@@ -100,331 +256,15 @@ class ReceiversTest extends TestCase
                 'id_doc_type' => 'PASSPORT',
                 'id_doc_front_file' => 'https://example.com/image.png',
                 'id_doc_back_file' => 'https://example.com/image.png',
-                'aiprise_validation_key' => '',
-                'instance_id' => 'in_000000000000',
+                'source_of_funds_doc_type' => 'savings',
+                'source_of_funds_doc_file' => 'https://example.com/image.png',
+                'purpose_of_transactions' => 'personal_or_living_expenses',
+                'purpose_of_transactions_explanation' => 'I am receiving salary payments from my employer',
                 'tos_id' => 'to_3ZZhllJkvo5Z',
                 'created_at' => '2021-01-01T00:00:00.000Z',
                 'updated_at' => '2021-01-01T00:00:00.000Z',
-                'limit' => [
-                    'per_transaction' => 100000,
-                    'daily' => 200000,
-                    'monthly' => 1000000,
-                ],
-            ],
-            [
-                'id' => 're_YuaMcI2B8zbQ',
-                'type' => 'individual',
-                'kyc_type' => 'enhanced',
-                'kyc_status' => 'approved',
-                'kyc_warnings' => null,
-                'email' => 'alice.johnson@example.com',
-                'tax_id' => '98765432100',
-                'address_line_1' => '123 Main St',
-                'address_line_2' => null,
-                'city' => 'New York',
-                'state_province_region' => 'NY',
-                'country' => 'US',
-                'postal_code' => '10001',
-                'ip_address' => '192.168.1.1',
-                'image_url' => null,
-                'phone_number' => '+15555555555',
-                'proof_of_address_doc_type' => 'BANK_STATEMENT',
-                'proof_of_address_doc_file' => 'https://example.com/image.png',
-                'first_name' => 'Alice',
-                'last_name' => 'Johnson',
-                'date_of_birth' => '1990-05-10T00:00:00.000Z',
-                'id_doc_country' => 'US',
-                'id_doc_type' => 'PASSPORT',
-                'id_doc_front_file' => 'https://example.com/image.png',
-                'id_doc_back_file' => null,
-                'aiprise_validation_key' => 'enhanced-key',
-                'instance_id' => 'in_000000000001',
-                'source_of_funds_doc_type' => 'salary',
-                'source_of_funds_doc_file' => 'https://example.com/image.png',
-                'individual_holding_doc_front_file' => 'https://example.com/image.png',
-                'purpose_of_transactions' => 'investment_purposes',
-                'purpose_of_transactions_explanation' => 'Investing in stocks',
-                'tos_id' => 'to_nppX66ntvtHs',
-                'created_at' => '2022-02-02T00:00:00.000Z',
-                'updated_at' => '2022-02-02T00:00:00.000Z',
-                'limit' => [
-                    'per_transaction' => 50000,
-                    'daily' => 100000,
-                    'monthly' => 500000,
-                ],
-            ],
-            [
-                'id' => 're_IOxAUL24LG7P',
-                'type' => 'business',
-                'kyc_type' => 'standard',
-                'kyc_status' => 'pending',
-                'kyc_warnings' => null,
-                'email' => 'business@example.com',
-                'tax_id' => '20096178000195',
-                'address_line_1' => '1 King St W',
-                'address_line_2' => 'Suite 100',
-                'city' => 'Toronto',
-                'state_province_region' => 'ON',
-                'country' => 'CA',
-                'postal_code' => 'M5H 1A1',
-                'ip_address' => null,
-                'image_url' => null,
-                'phone_number' => '+14165555555',
-                'proof_of_address_doc_type' => 'UTILITY_BILL',
-                'proof_of_address_doc_file' => 'https://example.com/image.png',
-                'legal_name' => 'Business Corp',
-                'alternate_name' => 'BizCo',
-                'formation_date' => '2010-01-01T00:00:00.000Z',
-                'website' => 'https://businesscorp.com',
-                'owners' => [
-                    [
-                        'role' => 'beneficial_owner',
-                        'first_name' => 'Carlos',
-                        'last_name' => 'Silva',
-                        'date_of_birth' => '1995-05-15T00:00:00.000Z',
-                        'tax_id' => '12345678901',
-                        'address_line_1' => 'Rua Augusta, 1500',
-                        'address_line_2' => null,
-                        'city' => 'São Paulo',
-                        'state_province_region' => 'SP',
-                        'country' => 'BR',
-                        'postal_code' => '01304-001',
-                        'id_doc_country' => 'BR',
-                        'id_doc_type' => 'PASSPORT',
-                        'id_doc_front_file' => 'https://example.com/image.png',
-                        'id_doc_back_file' => 'https://example.com/image.png',
-                        'proof_of_address_doc_type' => 'UTILITY_BILL',
-                        'proof_of_address_doc_file' => 'https://example.com/image.png',
-                        'id' => 'ub_000000000000',
-                        'instance_id' => 'in_000000000000',
-                        'receiver_id' => 're_IOxAUL24LG7P',
-                    ],
-                ],
-                'incorporation_doc_file' => 'https://example.com/image.png',
-                'proof_of_ownership_doc_file' => 'https://example.com/image.png',
-                'external_id' => null,
-                'instance_id' => 'in_000000000002',
-                'tos_id' => 'to_nppX66ntvtHs',
-                'aiprise_validation_key' => '',
-                'created_at' => '2015-03-15T00:00:00.000Z',
-                'updated_at' => '2015-03-15T00:00:00.000Z',
-                'limit' => [
-                    'per_transaction' => 200000,
-                    'daily' => 400000,
-                    'monthly' => 2000000,
-                ],
-            ],
-        ];
-
-        $this->mockResponse($mockedReceivers);
-
-        $response = $this->blindpay->receivers->list();
-
-        $this->assertTrue($response->isSuccess());
-        $this->assertNull($response->error);
-        $this->assertIsArray($response->data);
-        $this->assertCount(3, $response->data);
-        $this->assertEquals('re_Euw7HN4OdxPn', $response->data[0]->id);
-        $this->assertEquals('re_YuaMcI2B8zbQ', $response->data[1]->id);
-        $this->assertEquals('re_IOxAUL24LG7P', $response->data[2]->id);
-    }
-
-    #[Test]
-    public function it_creates_an_individual_receiver_with_standard_kyc(): void
-    {
-        $mockedReceiver = [
-            'id' => 're_Euw7HN4OdxPn',
-        ];
-
-        $this->mockResponse($mockedReceiver);
-
-        $input = new CreateIndividualWithStandardKYCInput(
-            addressLine1: 'Av. Paulista, 1000',
-            city: 'São Paulo',
-            country: Country::BR,
-            dateOfBirth: '1998-02-02T00:00:00.000Z',
-            email: 'bernardo.simonassi@gmail.com',
-            firstName: 'Bernardo',
-            idDocBackFile: 'https://example.com/image.png',
-            idDocCountry: Country::BR,
-            idDocFrontFile: 'https://example.com/image.png',
-            idDocType: IdentificationDocument::PASSPORT,
-            lastName: 'Simonassi',
-            phoneNumber: '+5511987654321',
-            postalCode: '01310-100',
-            proofOfAddressDocFile: 'https://example.com/image.png',
-            proofOfAddressDocType: ProofOfAddressDocType::UTILITY_BILL,
-            stateProvinceRegion: 'SP',
-            taxId: '12345678900',
-            tosId: 'to_tPiz4bM2nh5K',
-            addressLine2: 'Apto 101'
+            ]
         );
-
-        $response = $this->blindpay->receivers->createIndividualWithStandardKYC($input);
-
-        $this->assertTrue($response->isSuccess());
-        $this->assertNull($response->error);
-        $this->assertEquals('re_Euw7HN4OdxPn', $response->data->id);
-    }
-
-    #[Test]
-    public function it_creates_an_individual_receiver_with_enhanced_kyc(): void
-    {
-        $mockedReceiver = [
-            'id' => 're_YuaMcI2B8zbQ',
-        ];
-
-        $this->mockResponse($mockedReceiver);
-
-        $input = new CreateIndividualWithEnhancedKYCInput(
-            addressLine1: 'Av. Paulista, 1000',
-            city: 'São Paulo',
-            country: Country::BR,
-            dateOfBirth: '1998-02-02T00:00:00.000Z',
-            email: 'bernardo.simonassi@gmail.com',
-            firstName: 'Bernardo',
-            idDocBackFile: 'https://example.com/image.png',
-            idDocCountry: Country::BR,
-            idDocFrontFile: 'https://example.com/image.png',
-            idDocType: IdentificationDocument::PASSPORT,
-            individualHoldingDocFrontFile: 'https://example.com/image.png',
-            lastName: 'Simonassi',
-            phoneNumber: '+5511987654321',
-            postalCode: '01310-100',
-            proofOfAddressDocFile: 'https://example.com/image.png',
-            proofOfAddressDocType: ProofOfAddressDocType::UTILITY_BILL,
-            purposeOfTransactions: PurposeOfTransactions::PERSONAL_OR_LIVING_EXPENSES,
-            purposeOfTransactionsExplanation: 'I am receiving salary payments from my employer',
-            sourceOfFundsDocFile: 'https://example.com/image.png',
-            sourceOfFundsDocType: SourceOfFundsDocType::SAVINGS,
-            stateProvinceRegion: 'SP',
-            taxId: '12345678900',
-            tosId: 'to_3ZZhllJkvo5Z',
-            addressLine2: 'Apto 101'
-        );
-
-        $response = $this->blindpay->receivers->createIndividualWithEnhancedKYC($input);
-
-        $this->assertTrue($response->isSuccess());
-        $this->assertNull($response->error);
-        $this->assertEquals('re_YuaMcI2B8zbQ', $response->data->id);
-    }
-
-    #[Test]
-    public function it_creates_a_business_receiver_with_standard_kyb(): void
-    {
-        $mockedReceiver = [
-            'id' => 're_IOxAUL24LG7P',
-        ];
-
-        $this->mockResponse($mockedReceiver);
-
-        $owner = new class
-        {
-            public function toArray(): array
-            {
-                return [
-                    'role' => 'beneficial_owner',
-                    'first_name' => 'Carlos',
-                    'last_name' => 'Silva',
-                    'date_of_birth' => '1995-05-15T00:00:00.000Z',
-                    'tax_id' => '12345678901',
-                    'address_line_1' => 'Rua Augusta, 1500',
-                    'address_line_2' => null,
-                    'city' => 'São Paulo',
-                    'state_province_region' => 'SP',
-                    'country' => 'BR',
-                    'postal_code' => '01304-001',
-                    'id_doc_country' => 'BR',
-                    'id_doc_type' => 'PASSPORT',
-                    'id_doc_front_file' => 'https://example.com/image.png',
-                    'id_doc_back_file' => 'https://example.com/image.png',
-                    'proof_of_address_doc_type' => 'UTILITY_BILL',
-                    'proof_of_address_doc_file' => 'https://example.com/image.png',
-                ];
-            }
-        };
-
-        $input = new CreateBusinessWithStandardKYBInput(
-            addressLine1: 'Av. Brigadeiro Faria Lima, 400',
-            city: 'São Paulo',
-            country: Country::BR,
-            email: 'contato@empresa.com.br',
-            formationDate: '2010-05-20T00:00:00.000Z',
-            incorporationDocFile: 'https://example.com/image.png',
-            legalName: 'Empresa Exemplo Ltda',
-            owners: [$owner],
-            postalCode: '04538-132',
-            proofOfAddressDocFile: 'https://example.com/image.png',
-            proofOfAddressDocType: ProofOfAddressDocType::UTILITY_BILL,
-            proofOfOwnershipDocFile: 'https://example.com/image.png',
-            stateProvinceRegion: 'SP',
-            taxId: '20096178000195',
-            tosId: 'to_nppX66ntvtHs',
-            addressLine2: 'Sala 1201',
-            alternateName: 'Exemplo',
-            website: 'https://site.com/'
-        );
-
-        $response = $this->blindpay->receivers->createBusinessWithStandardKYB($input);
-
-        $this->assertTrue($response->isSuccess());
-        $this->assertNull($response->error);
-        $this->assertEquals('re_IOxAUL24LG7P', $response->data->id);
-    }
-
-    #[Test]
-    public function it_gets_a_receiver(): void
-    {
-        $mockedReceiver = [
-            'id' => 're_YuaMcI2B8zbQ',
-            'type' => 'individual',
-            'kyc_type' => 'enhanced',
-            'kyc_status' => 'verifying',
-            'kyc_warnings' => [
-                [
-                    'code' => null,
-                    'message' => null,
-                    'resolution_status' => null,
-                    'warning_id' => null,
-                ],
-            ],
-            'email' => 'bernardo.simonassi@gmail.com',
-            'tax_id' => '12345678900',
-            'address_line_1' => 'Av. Paulista, 1000',
-            'address_line_2' => 'Apto 101',
-            'city' => 'São Paulo',
-            'state_province_region' => 'SP',
-            'country' => 'BR',
-            'postal_code' => '01310-100',
-            'ip_address' => '127.0.0.1',
-            'image_url' => 'https://example.com/image.png',
-            'phone_number' => '+5511987654321',
-            'proof_of_address_doc_type' => 'UTILITY_BILL',
-            'proof_of_address_doc_file' => 'https://example.com/image.png',
-            'first_name' => 'Bernardo',
-            'last_name' => 'Simonassi',
-            'date_of_birth' => '1998-02-02T00:00:00.000Z',
-            'id_doc_country' => 'BR',
-            'id_doc_type' => 'PASSPORT',
-            'id_doc_front_file' => 'https://example.com/image.png',
-            'id_doc_back_file' => 'https://example.com/image.png',
-            'aiprise_validation_key' => '',
-            'source_of_funds_doc_type' => 'savings',
-            'source_of_funds_doc_file' => 'https://example.com/image.png',
-            'individual_holding_doc_front_file' => 'https://example.com/image.png',
-            'purpose_of_transactions' => 'personal_or_living_expenses',
-            'purpose_of_transactions_explanation' => 'I am receiving salary payments from my employer',
-            'instance_id' => 'in_000000000000',
-            'tos_id' => 'to_3ZZhllJkvo5Z',
-            'created_at' => '2021-01-01T00:00:00.000Z',
-            'updated_at' => '2021-01-01T00:00:00.000Z',
-            'limit' => [
-                'per_transaction' => 100000,
-                'daily' => 200000,
-                'monthly' => 1000000,
-            ],
-        ];
 
         $this->mockResponse($mockedReceiver);
 
@@ -432,10 +272,14 @@ class ReceiversTest extends TestCase
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
+        $this->assertInstanceOf(ReceiverOut::class, $response->data);
         $this->assertEquals('re_YuaMcI2B8zbQ', $response->data->id);
         $this->assertEquals('bernardo.simonassi@gmail.com', $response->data->email);
         $this->assertEquals('Bernardo', $response->data->firstName);
         $this->assertEquals('Simonassi', $response->data->lastName);
+        $this->assertEquals(KycType::ENHANCED, $response->data->kycType);
+        $this->assertEquals(KycStatus::VERIFYING, $response->data->kycStatus);
+        $this->assertEquals(AccountClass::INDIVIDUAL, $response->data->type);
     }
 
     #[Test]
@@ -446,12 +290,12 @@ class ReceiversTest extends TestCase
         $input = new UpdateReceiverInput(
             receiverId: 're_YuaMcI2B8zbQ',
             email: 'bernardo.simonassi@gmail.com',
+            country: Country::BR,
             taxId: '12345678900',
             addressLine1: 'Av. Paulista, 1000',
             addressLine2: 'Apto 101',
             city: 'São Paulo',
             stateProvinceRegion: 'SP',
-            country: Country::BR,
             postalCode: '01310-100',
             ipAddress: '127.0.0.1',
             imageUrl: 'https://example.com/image.png',
@@ -490,8 +334,7 @@ class ReceiversTest extends TestCase
             proofOfOwnershipDocFile: 'https://example.com/image.png',
             sourceOfFundsDocType: SourceOfFundsDocType::SAVINGS,
             sourceOfFundsDocFile: 'https://example.com/image.png',
-            individualHoldingDocFrontFile: 'https://example.com/image.png',
-            purposeOfTransactions: PurposeOfTransactions::PERSONAL_OR_LIVING_EXPENSES,
+            purposeOfTransactions: \BlindPay\SDK\Resources\Receivers\PurposeOfTransactions::PERSONAL_OR_LIVING_EXPENSES,
             purposeOfTransactionsExplanation: 'I am receiving salary payments from my employer',
             externalId: 'some-external-id',
             tosId: 'to_3ZZhllJkvo5Z'
@@ -565,12 +408,15 @@ class ReceiversTest extends TestCase
                 'updated_at' => '2025-01-15T10:30:00.000Z',
             ],
             [
-                'id' => 'rl_000000000000',
+                'id' => 'rl_000000000001',
                 'receiver_id' => 're_YuaMcI2B8zbQ',
                 'status' => 'approved',
                 'daily' => 30000,
                 'monthly' => 150000,
                 'per_transaction' => 15000,
+                'approved_per_transaction' => 15000,
+                'approved_daily' => 30000,
+                'approved_monthly' => 150000,
                 'supporting_document_file' => 'https://example.com/proof-of-income.pdf',
                 'supporting_document_type' => 'individual_proof_of_income',
                 'created_at' => '2024-12-10T14:20:00.000Z',
@@ -586,9 +432,13 @@ class ReceiversTest extends TestCase
         $this->assertNull($response->error);
         $this->assertIsArray($response->data);
         $this->assertCount(2, $response->data);
+        $this->assertInstanceOf(LimitIncreaseRequest::class, $response->data[0]);
         $this->assertEquals('rl_000000000000', $response->data[0]->id);
         $this->assertEquals('in_review', $response->data[0]->status->value);
         $this->assertEquals('approved', $response->data[1]->status->value);
+        $this->assertEquals(30000, $response->data[1]->approvedDaily);
+        $this->assertEquals(150000, $response->data[1]->approvedMonthly);
+        $this->assertEquals(15000, $response->data[1]->approvedPerTransaction);
     }
 
     #[Test]
@@ -602,9 +452,9 @@ class ReceiversTest extends TestCase
 
         $input = new RequestLimitIncreaseInput(
             receiverId: 're_YuaMcI2B8zbQ',
+            perTransaction: 50000,
             daily: 100000,
             monthly: 500000,
-            perTransaction: 50000,
             supportingDocumentFile: 'https://example.com/tax-return.pdf',
             supportingDocumentType: LimitIncreaseRequestSupportingDocumentType::INDIVIDUAL_TAX_RETURN
         );

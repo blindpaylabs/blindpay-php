@@ -15,53 +15,32 @@ readonly class ReceiversWrapper
     ) {}
 
     /*
-     * List all receivers
+     * List receivers with optional filters and pagination
      *
-     * @return BlindPayApiResponse<array<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>>
+     * @param ListReceiversInput|null $params Optional filters and pagination
+     * @return BlindPayApiResponse<ListReceiversResponse>
      */
-    public function list(): BlindPayApiResponse
+    public function list(?ListReceiversInput $params = null): BlindPayApiResponse
     {
-        return $this->base->list();
+        return $this->base->list($params);
     }
 
     /*
-     * Create individual with standard KYC
+     * Create a receiver
      *
-     * @param CreateIndividualWithStandardKYCInput $data
+     * @param CreateReceiverInput $input
      * @return BlindPayApiResponse<CreateReceiverResponse>
      */
-    public function createIndividualWithStandardKYC(CreateIndividualWithStandardKYCInput $data): BlindPayApiResponse
+    public function create(CreateReceiverInput $input): BlindPayApiResponse
     {
-        return $this->base->createIndividualWithStandardKYC($data);
-    }
-
-    /*
-     * Create individual with enhanced KYC
-     *
-     * @param CreateIndividualWithEnhancedKYCInput $data
-     * @return BlindPayApiResponse<CreateReceiverResponse>
-     */
-    public function createIndividualWithEnhancedKYC(CreateIndividualWithEnhancedKYCInput $data): BlindPayApiResponse
-    {
-        return $this->base->createIndividualWithEnhancedKYC($data);
-    }
-
-    /*
-     * Create business with standard KYB
-     *
-     * @param CreateBusinessWithStandardKYBInput $data
-     * @return BlindPayApiResponse<CreateReceiverResponse>
-     */
-    public function createBusinessWithStandardKYB(CreateBusinessWithStandardKYBInput $data): BlindPayApiResponse
-    {
-        return $this->base->createBusinessWithStandardKYB($data);
+        return $this->base->create($input);
     }
 
     /*
      * Get a receiver by ID
      *
      * @param string $receiverId
-     * @return BlindPayApiResponse<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>
+     * @return BlindPayApiResponse<ReceiverOut>
      */
     public function get(string $receiverId): BlindPayApiResponse
     {
