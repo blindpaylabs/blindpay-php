@@ -19,7 +19,8 @@ readonly class OfframpWallet
         public string $network,
         public string $address,
         public DateTimeImmutable $createdAt,
-        public DateTimeImmutable $updatedAt
+        public DateTimeImmutable $updatedAt,
+        public ?string $circleWalletId = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -33,7 +34,8 @@ readonly class OfframpWallet
             network: $data['network'],
             address: $data['address'],
             createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at'])
+            updatedAt: new DateTimeImmutable($data['updated_at']),
+            circleWalletId: $data['circle_wallet_id'] ?? null
         );
     }
 }
@@ -70,7 +72,8 @@ readonly class CreateOfframpWalletResponse
         public string $id,
         public string $externalId,
         public string $network,
-        public string $address
+        public string $address,
+        public ?string $circleWalletId = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -79,7 +82,8 @@ readonly class CreateOfframpWalletResponse
             id: $data['id'],
             externalId: $data['external_id'],
             network: $data['network'],
-            address: $data['address']
+            address: $data['address'],
+            circleWalletId: $data['circle_wallet_id'] ?? null
         );
     }
 }

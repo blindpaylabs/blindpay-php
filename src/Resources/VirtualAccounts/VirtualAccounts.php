@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\VirtualAccounts;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Types\BankingPartner;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\SoleProprietorDocType;
 use BlindPay\SDK\Types\StablecoinToken;
 
 readonly class VirtualAccountUsDetails
@@ -17,7 +19,9 @@ readonly class VirtualAccountUsDetails
         public string $swiftBicCode,
         public string $accountType,
         public VirtualAccountBeneficiary $beneficiary,
-        public VirtualAccountReceivingBank $receivingBank
+        public VirtualAccountReceivingBank $receivingBank,
+        public ?string $swiftAccountNumber = null,
+        public ?VirtualAccountSwiftReceivingBank $swiftReceivingBank = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -29,13 +33,15 @@ readonly class VirtualAccountUsDetails
             swiftBicCode: $data['swift_bic_code'],
             accountType: $data['account_type'],
             beneficiary: VirtualAccountBeneficiary::fromArray($data['beneficiary']),
-            receivingBank: VirtualAccountReceivingBank::fromArray($data['receiving_bank'])
+            receivingBank: VirtualAccountReceivingBank::fromArray($data['receiving_bank']),
+            swiftAccountNumber: $data['swift_account_number'] ?? null,
+            swiftReceivingBank: isset($data['swift_receiving_bank']) ? VirtualAccountSwiftReceivingBank::fromArray($data['swift_receiving_bank']) : null
         );
     }
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'ach' => $this->ach->toArray(),
             'wire' => $this->wire->toArray(),
             'rtp' => $this->rtp->toArray(),
@@ -44,6 +50,16 @@ readonly class VirtualAccountUsDetails
             'beneficiary' => $this->beneficiary->toArray(),
             'receiving_bank' => $this->receivingBank->toArray(),
         ];
+
+        if ($this->swiftAccountNumber !== null) {
+            $data['swift_account_number'] = $this->swiftAccountNumber;
+        }
+
+        if ($this->swiftReceivingBank !== null) {
+            $data['swift_receiving_bank'] = $this->swiftReceivingBank->toArray();
+        }
+
+        return $data;
     }
 }
 
@@ -173,13 +189,42 @@ readonly class VirtualAccountReceivingBank
     }
 }
 
+readonly class VirtualAccountSwiftReceivingBank
+{
+    public function __construct(
+        public ?string $name,
+        public ?string $addressLine1,
+        public ?string $addressLine2
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            name: $data['name'] ?? null,
+            addressLine1: $data['address_line_1'] ?? null,
+            addressLine2: $data['address_line_2'] ?? null
+        );
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'address_line_1' => $this->addressLine1,
+            'address_line_2' => $this->addressLine2,
+        ];
+    }
+}
+
 readonly class VirtualAccount
 {
     public function __construct(
         public string $id,
         public VirtualAccountUsDetails $us,
         public StablecoinToken $token,
-        public string $blockchainWalletId
+        public string $blockchainWalletId,
+        public ?BankingPartner $bankingPartner = null,
+        public ?string $kycStatus = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -188,18 +233,30 @@ readonly class VirtualAccount
             id: $data['id'],
             us: VirtualAccountUsDetails::fromArray($data['us']),
             token: StablecoinToken::from($data['token']),
-            blockchainWalletId: $data['blockchain_wallet_id']
+            blockchainWalletId: $data['blockchain_wallet_id'],
+            bankingPartner: isset($data['banking_partner']) ? BankingPartner::from($data['banking_partner']) : null,
+            kycStatus: $data['kyc_status'] ?? null
         );
     }
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'us' => $this->us->toArray(),
             'token' => $this->token->value,
             'blockchain_wallet_id' => $this->blockchainWalletId,
         ];
+
+        if ($this->bankingPartner !== null) {
+            $data['banking_partner'] = $this->bankingPartner->value;
+        }
+
+        if ($this->kycStatus !== null) {
+            $data['kyc_status'] = $this->kycStatus;
+        }
+
+        return $data;
     }
 }
 
@@ -208,15 +265,32 @@ readonly class CreateVirtualAccountInput
     public function __construct(
         public string $receiverId,
         public string $blockchainWalletId,
-        public StablecoinToken $token
+        public StablecoinToken $token,
+        public ?BankingPartner $bankingPartner = null,
+        public ?SoleProprietorDocType $soleProprietorDocType = null,
+        public ?string $soleProprietorDocFile = null
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'blockchain_wallet_id' => $this->blockchainWalletId,
             'token' => $this->token->value,
         ];
+
+        if ($this->bankingPartner !== null) {
+            $data['banking_partner'] = $this->bankingPartner->value;
+        }
+
+        if ($this->soleProprietorDocType !== null) {
+            $data['sole_proprietor_doc_type'] = $this->soleProprietorDocType->value;
+        }
+
+        if ($this->soleProprietorDocFile !== null) {
+            $data['sole_proprietor_doc_file'] = $this->soleProprietorDocFile;
+        }
+
+        return $data;
     }
 }
 
