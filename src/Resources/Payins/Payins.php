@@ -223,7 +223,13 @@ readonly class Payin
         public ?string $imageUrl = null,
         public ?string $firstName = null,
         public ?string $lastName = null,
-        public ?string $legalName = null
+        public ?string $legalName = null,
+        public ?bool $isOtc = null,
+        public ?string $billingFeeAmount = null,
+        public ?string $pseDocumentType = null,
+        public ?string $pseFullName = null,
+        public ?string $psePaymentLink = null,
+        public ?string $pseTaxId = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -261,7 +267,13 @@ readonly class Payin
             imageUrl: $data['image_url'] ?? null,
             firstName: $data['first_name'] ?? null,
             lastName: $data['last_name'] ?? null,
-            legalName: $data['legal_name'] ?? null
+            legalName: $data['legal_name'] ?? null,
+            isOtc: $data['is_otc'] ?? null,
+            billingFeeAmount: $data['billing_fee_amount'] ?? null,
+            pseDocumentType: $data['pse_document_type'] ?? null,
+            pseFullName: $data['pse_full_name'] ?? null,
+            psePaymentLink: $data['pse_payment_link'] ?? null,
+            pseTaxId: $data['pse_tax_id'] ?? null
         );
     }
 }

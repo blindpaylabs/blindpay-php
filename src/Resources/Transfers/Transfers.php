@@ -59,7 +59,11 @@ readonly class Transfer
         public TransferTrackingTransactionMonitoring $trackingTransactionMonitoring,
         public TransferTrackingStep $trackingComplete,
         public DateTimeImmutable $createdAt,
-        public DateTimeImmutable $updatedAt
+        public DateTimeImmutable $updatedAt,
+        public ?string $externalId = null,
+        public ?string $receiverNetwork = null,
+        public ?string $receiverToken = null,
+        public ?string $senderToken = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -77,7 +81,11 @@ readonly class Transfer
             trackingTransactionMonitoring: TransferTrackingTransactionMonitoring::fromArray($data['tracking_transaction_monitoring']),
             trackingComplete: TransferTrackingStep::fromArray($data['tracking_complete']),
             createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at'])
+            updatedAt: new DateTimeImmutable($data['updated_at']),
+            externalId: $data['external_id'] ?? null,
+            receiverNetwork: $data['receiver_network'] ?? null,
+            receiverToken: $data['receiver_token'] ?? null,
+            senderToken: $data['sender_token'] ?? null
         );
     }
 }
@@ -87,16 +95,33 @@ readonly class CreateTransferQuoteInput
     public function __construct(
         public string $sourceWalletId,
         public string $destinationWalletId,
-        public float $amount
+        public float $amount,
+        public ?string $amountReference = null,
+        public ?bool $coverFees = null,
+        public ?string $partnerFeeId = null
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'source_wallet_id' => $this->sourceWalletId,
             'destination_wallet_id' => $this->destinationWalletId,
             'amount' => $this->amount,
         ];
+
+        if ($this->amountReference !== null) {
+            $data['amount_reference'] = $this->amountReference;
+        }
+
+        if ($this->coverFees !== null) {
+            $data['cover_fees'] = $this->coverFees;
+        }
+
+        if ($this->partnerFeeId !== null) {
+            $data['partner_fee_id'] = $this->partnerFeeId;
+        }
+
+        return $data;
     }
 }
 

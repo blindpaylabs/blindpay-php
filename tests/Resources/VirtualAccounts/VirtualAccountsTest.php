@@ -62,6 +62,7 @@ class VirtualAccountsTest extends TestCase
 
         $input = new UpdateVirtualAccountInput(
             receiverId: 're_000000000000',
+            virtualAccountId: 'va_000000000000',
             blockchainWalletId: 'bw_000000000000',
             token: StablecoinToken::USDC
         );
@@ -177,7 +178,7 @@ class VirtualAccountsTest extends TestCase
 
         $this->mockResponse($mockedVirtualAccount);
 
-        $response = $this->blindpay->virtualAccounts->get('re_000000000000');
+        $response = $this->blindpay->virtualAccounts->get('re_000000000000', 'va_000000000000');
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
