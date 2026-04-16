@@ -298,6 +298,7 @@ readonly class UpdateVirtualAccountInput
 {
     public function __construct(
         public string $receiverId,
+        public string $virtualAccountId,
         public string $blockchainWalletId,
         public StablecoinToken $token
     ) {}
@@ -346,8 +347,14 @@ class VirtualAccounts
      */
     public function update(UpdateVirtualAccountInput $input): BlindPayApiResponse
     {
+        if (empty($input->virtualAccountId)) {
+            return BlindPayApiResponse::error(
+                new \BlindPay\SDK\Types\ErrorResponse('Virtual Account ID cannot be empty')
+            );
+        }
+
         return $this->client->put(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/virtual-accounts",
+            "instances/{$this->instanceId}/receivers/{$input->receiverId}/virtual-accounts/{$input->virtualAccountId}",
             $input->toArray()
         );
     }
@@ -357,7 +364,39 @@ class VirtualAccounts
      *
      * @return BlindPayApiResponse<VirtualAccount>
      */
-    public function get(string $receiverId): BlindPayApiResponse
+    public function get(string $receiverId, string $virtualAccountId): BlindPayApiResponse
+    {
+        if (empty($receiverId)) {
+            return BlindPayApiResponse::error(
+                new \BlindPay\SDK\Types\ErrorResponse('Receiver ID cannot be empty')
+            );
+        }
+
+        if (empty($virtualAccountId)) {
+            return BlindPayApiResponse::error(
+                new \BlindPay\SDK\Types\ErrorResponse('Virtual Account ID cannot be empty')
+            );
+        }
+
+        $response = $this->client->get(
+            "instances/{$this->instanceId}/receivers/{$receiverId}/virtual-accounts/{$virtualAccountId}"
+        );
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            return BlindPayApiResponse::success(
+                VirtualAccount::fromArray($response->data)
+            );
+        }
+
+        return $response;
+    }
+
+    /**
+     * List virtual accounts for a receiver
+     *
+     * @return BlindPayApiResponse<VirtualAccount[]>
+     */
+    public function list(string $receiverId): BlindPayApiResponse
     {
         if (empty($receiverId)) {
             return BlindPayApiResponse::error(
@@ -370,9 +409,12 @@ class VirtualAccounts
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                VirtualAccount::fromArray($response->data)
+            $items = array_map(
+                fn (array $item) => VirtualAccount::fromArray($item),
+                $response->data
             );
+
+            return BlindPayApiResponse::success($items);
         }
 
         return $response;

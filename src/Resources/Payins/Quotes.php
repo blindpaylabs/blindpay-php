@@ -49,7 +49,9 @@ readonly class CreatePayinQuoteInput
         public StablecoinToken $token,
         public bool $coverFees,
         public PayerRules $payerRules,
-        public ?string $partnerFeeId = null
+        public ?string $partnerFeeId = null,
+        public ?bool $isOtc = null,
+        public ?string $walletId = null
     ) {}
 
     public function toArray(): array
@@ -66,6 +68,14 @@ readonly class CreatePayinQuoteInput
 
         if ($this->partnerFeeId !== null) {
             $data['partner_fee_id'] = $this->partnerFeeId;
+        }
+
+        if ($this->isOtc !== null) {
+            $data['is_otc'] = $this->isOtc;
+        }
+
+        if ($this->walletId !== null) {
+            $data['wallet_id'] = $this->walletId;
         }
 
         return $data;

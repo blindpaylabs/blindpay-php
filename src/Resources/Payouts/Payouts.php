@@ -381,6 +381,52 @@ readonly class CreateEvmPayoutResponse
     }
 }
 
+readonly class CreateSolanaPayoutInput
+{
+    public function __construct(
+        public string $quoteId,
+        public string $senderWalletAddress
+    ) {}
+
+    public function toArray(): array
+    {
+        return [
+            'quote_id' => $this->quoteId,
+            'sender_wallet_address' => $this->senderWalletAddress,
+        ];
+    }
+}
+
+readonly class CreateSolanaPayoutResponse
+{
+    public function __construct(
+        public string $id,
+        public TransactionStatus $status,
+        public string $senderWalletAddress,
+        public string $receiverId,
+        public ?TrackingComplete $trackingComplete = null,
+        public ?TrackingPayment $trackingPayment = null,
+        public ?TrackingTransaction $trackingTransaction = null,
+        public ?TrackingPartnerFee $trackingPartnerFee = null,
+        public ?TrackingLiquidity $trackingLiquidity = null
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'],
+            status: TransactionStatus::from($data['status']),
+            senderWalletAddress: $data['sender_wallet_address'],
+            receiverId: $data['receiver_id'],
+            trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
+            trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
+            trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
+            trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
+            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null
+        );
+    }
+}
+
 readonly class SubmitPayoutDocumentsInput
 {
     public function __construct(
@@ -581,6 +627,28 @@ class Payouts
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
                 CreateEvmPayoutResponse::fromArray($response->data)
+            );
+        }
+
+        return $response;
+    }
+
+    /*
+     * Create Solana payout
+     *
+     * @param CreateSolanaPayoutInput $input
+     * @return BlindPayApiResponse<CreateSolanaPayoutResponse>
+     */
+    public function createSolana(CreateSolanaPayoutInput $input): BlindPayApiResponse
+    {
+        $response = $this->client->post(
+            "instances/{$this->instanceId}/payouts/solana",
+            $input->toArray()
+        );
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            return BlindPayApiResponse::success(
+                CreateSolanaPayoutResponse::fromArray($response->data)
             );
         }
 

@@ -65,7 +65,9 @@ readonly class UpdateInstanceInput
 {
     public function __construct(
         public string $name,
-        public ?string $receiverInviteRedirectUrl = null
+        public ?string $receiverInviteRedirectUrl = null,
+        public ?bool $emailNotifications = null,
+        public ?bool $requirePasskey = null
     ) {}
 
     public function toArray(): array
@@ -76,6 +78,14 @@ readonly class UpdateInstanceInput
 
         if ($this->receiverInviteRedirectUrl !== null) {
             $data['receiver_invite_redirect_url'] = $this->receiverInviteRedirectUrl;
+        }
+
+        if ($this->emailNotifications !== null) {
+            $data['email_notifications'] = $this->emailNotifications;
+        }
+
+        if ($this->requirePasskey !== null) {
+            $data['require_passkey'] = $this->requirePasskey;
         }
 
         return $data;
