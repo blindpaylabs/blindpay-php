@@ -15,6 +15,8 @@ use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\EstimatedAnnualRevenue;
 use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
+use BlindPay\SDK\Types\RecipientRelationship;
+use BlindPay\SDK\Types\SoleProprietorDocType;
 use BlindPay\SDK\Types\SourceOfWealth;
 use DateTimeImmutable;
 
@@ -314,7 +316,9 @@ abstract readonly class BaseReceiver
         public ?string $accountPurposeOther = null,
         public ?AmlStatus $amlStatus = null,
         public ?AmlHits $amlHits = null,
-        public ?bool $isTosAccepted = null
+        public ?bool $isTosAccepted = null,
+        public ?RecipientRelationship $recipientRelationship = null,
+        public ?SoleProprietorDocType $soleProprietorDocType = null
     ) {}
 }
 
@@ -357,6 +361,8 @@ readonly class IndividualWithStandardKYC extends BaseReceiver
         ?AmlStatus $amlStatus = null,
         ?AmlHits $amlHits = null,
         ?bool $isTosAccepted = null,
+        ?RecipientRelationship $recipientRelationship = null,
+        ?SoleProprietorDocType $soleProprietorDocType = null,
         public ?string $externalId = null,
         public ?string $selfieFile = null,
         public ?string $occupation = null
@@ -391,7 +397,9 @@ readonly class IndividualWithStandardKYC extends BaseReceiver
             $accountPurposeOther,
             $amlStatus,
             $amlHits,
-            $isTosAccepted
+            $isTosAccepted,
+            $recipientRelationship,
+            $soleProprietorDocType
         );
     }
 
@@ -440,6 +448,8 @@ readonly class IndividualWithStandardKYC extends BaseReceiver
             amlStatus: isset($data['aml_status']) ? AmlStatus::from($data['aml_status']) : null,
             amlHits: isset($data['aml_hits']) ? AmlHits::fromArray($data['aml_hits']) : null,
             isTosAccepted: $data['is_tos_accepted'] ?? null,
+            recipientRelationship: isset($data['recipient_relationship']) ? RecipientRelationship::from($data['recipient_relationship']) : null,
+            soleProprietorDocType: isset($data['sole_proprietor_doc_type']) ? SoleProprietorDocType::from($data['sole_proprietor_doc_type']) : null,
             externalId: $data['external_id'] ?? null,
             selfieFile: $data['selfie_file'] ?? null,
             occupation: $data['occupation'] ?? null
@@ -491,6 +501,8 @@ readonly class IndividualWithEnhancedKYC extends BaseReceiver
         ?AmlStatus $amlStatus = null,
         ?AmlHits $amlHits = null,
         ?bool $isTosAccepted = null,
+        ?RecipientRelationship $recipientRelationship = null,
+        ?SoleProprietorDocType $soleProprietorDocType = null,
         public ?string $externalId = null,
         public ?string $selfieFile = null,
         public ?string $occupation = null
@@ -525,7 +537,9 @@ readonly class IndividualWithEnhancedKYC extends BaseReceiver
             $accountPurposeOther,
             $amlStatus,
             $amlHits,
-            $isTosAccepted
+            $isTosAccepted,
+            $recipientRelationship,
+            $soleProprietorDocType
         );
     }
 
@@ -579,6 +593,8 @@ readonly class IndividualWithEnhancedKYC extends BaseReceiver
             amlStatus: isset($data['aml_status']) ? AmlStatus::from($data['aml_status']) : null,
             amlHits: isset($data['aml_hits']) ? AmlHits::fromArray($data['aml_hits']) : null,
             isTosAccepted: $data['is_tos_accepted'] ?? null,
+            recipientRelationship: isset($data['recipient_relationship']) ? RecipientRelationship::from($data['recipient_relationship']) : null,
+            soleProprietorDocType: isset($data['sole_proprietor_doc_type']) ? SoleProprietorDocType::from($data['sole_proprietor_doc_type']) : null,
             externalId: $data['external_id'] ?? null,
             selfieFile: $data['selfie_file'] ?? null,
             occupation: $data['occupation'] ?? null
@@ -629,6 +645,8 @@ readonly class BusinessWithStandardKYB extends BaseReceiver
         ?AmlStatus $amlStatus = null,
         ?AmlHits $amlHits = null,
         ?bool $isTosAccepted = null,
+        ?RecipientRelationship $recipientRelationship = null,
+        ?SoleProprietorDocType $soleProprietorDocType = null,
         public ?BusinessType $businessType = null,
         public ?string $businessDescription = null,
         public ?BusinessIndustry $businessIndustry = null,
@@ -666,7 +684,9 @@ readonly class BusinessWithStandardKYB extends BaseReceiver
             $accountPurposeOther,
             $amlStatus,
             $amlHits,
-            $isTosAccepted
+            $isTosAccepted,
+            $recipientRelationship,
+            $soleProprietorDocType
         );
     }
 
@@ -716,6 +736,8 @@ readonly class BusinessWithStandardKYB extends BaseReceiver
             amlStatus: isset($data['aml_status']) ? AmlStatus::from($data['aml_status']) : null,
             amlHits: isset($data['aml_hits']) ? AmlHits::fromArray($data['aml_hits']) : null,
             isTosAccepted: $data['is_tos_accepted'] ?? null,
+            recipientRelationship: isset($data['recipient_relationship']) ? RecipientRelationship::from($data['recipient_relationship']) : null,
+            soleProprietorDocType: isset($data['sole_proprietor_doc_type']) ? SoleProprietorDocType::from($data['sole_proprietor_doc_type']) : null,
             businessType: isset($data['business_type']) ? BusinessType::from($data['business_type']) : null,
             businessDescription: $data['business_description'] ?? null,
             businessIndustry: isset($data['business_industry']) ? BusinessIndustry::from($data['business_industry']) : null,
@@ -754,7 +776,9 @@ readonly class CreateIndividualWithStandardKYCInput
         public ?string $selfieFile = null,
         public ?string $occupation = null,
         public ?string $ipAddress = null,
-        public ?string $imageUrl = null
+        public ?string $imageUrl = null,
+        public ?RecipientRelationship $recipientRelationship = null,
+        public ?SoleProprietorDocType $soleProprietorDocType = null
     ) {}
 
     public function toArray(): array
@@ -814,6 +838,14 @@ readonly class CreateIndividualWithStandardKYCInput
             $data['image_url'] = $this->imageUrl;
         }
 
+        if ($this->recipientRelationship !== null) {
+            $data['recipient_relationship'] = $this->recipientRelationship->value;
+        }
+
+        if ($this->soleProprietorDocType !== null) {
+            $data['sole_proprietor_doc_type'] = $this->soleProprietorDocType->value;
+        }
+
         return $data;
     }
 }
@@ -851,7 +883,9 @@ readonly class CreateIndividualWithEnhancedKYCInput
         public ?string $selfieFile = null,
         public ?string $occupation = null,
         public ?string $ipAddress = null,
-        public ?string $imageUrl = null
+        public ?string $imageUrl = null,
+        public ?RecipientRelationship $recipientRelationship = null,
+        public ?SoleProprietorDocType $soleProprietorDocType = null
     ) {}
 
     public function toArray(): array
@@ -916,6 +950,14 @@ readonly class CreateIndividualWithEnhancedKYCInput
             $data['image_url'] = $this->imageUrl;
         }
 
+        if ($this->recipientRelationship !== null) {
+            $data['recipient_relationship'] = $this->recipientRelationship->value;
+        }
+
+        if ($this->soleProprietorDocType !== null) {
+            $data['sole_proprietor_doc_type'] = $this->soleProprietorDocType->value;
+        }
+
         return $data;
     }
 }
@@ -952,7 +994,9 @@ readonly class CreateBusinessWithStandardKYBInput
         public ?bool $publiclyTraded = null,
         public ?string $ipAddress = null,
         public ?string $imageUrl = null,
-        public ?string $phoneNumber = null
+        public ?string $phoneNumber = null,
+        public ?RecipientRelationship $recipientRelationship = null,
+        public ?SoleProprietorDocType $soleProprietorDocType = null
     ) {}
 
     public function toArray(): array
@@ -1034,6 +1078,14 @@ readonly class CreateBusinessWithStandardKYBInput
             $data['phone_number'] = $this->phoneNumber;
         }
 
+        if ($this->recipientRelationship !== null) {
+            $data['recipient_relationship'] = $this->recipientRelationship->value;
+        }
+
+        if ($this->soleProprietorDocType !== null) {
+            $data['sole_proprietor_doc_type'] = $this->soleProprietorDocType->value;
+        }
+
         return $data;
     }
 }
@@ -1099,7 +1151,9 @@ readonly class UpdateReceiverInput
         public ?SourceOfWealth $sourceOfWealth = null,
         public ?bool $publiclyTraded = null,
         public ?string $selfieFile = null,
-        public ?string $occupation = null
+        public ?string $occupation = null,
+        public ?RecipientRelationship $recipientRelationship = null,
+        public ?SoleProprietorDocType $soleProprietorDocType = null
     ) {}
 
     public function toArray(): array
@@ -1149,6 +1203,8 @@ readonly class UpdateReceiverInput
             'publicly_traded' => $this->publiclyTraded,
             'selfie_file' => $this->selfieFile,
             'occupation' => $this->occupation,
+            'recipient_relationship' => $this->recipientRelationship?->value,
+            'sole_proprietor_doc_type' => $this->soleProprietorDocType?->value,
         ], fn ($value) => $value !== null);
     }
 }
