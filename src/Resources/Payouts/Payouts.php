@@ -103,7 +103,14 @@ readonly class Payout
         public ?string $swiftAccountNumberIban,
         public ?string $transfersAccount,
         public ?ArgentinaTransferType $transfersType,
-        public bool $hasVirtualAccount
+        public bool $hasVirtualAccount,
+        public ?int $partnerFee = null,
+        public ?float $transactionFeeAmount = null,
+        public ?TrackingDocuments $trackingDocuments = null,
+        public ?JpmTrackData $jpmTrackData = null,
+        public ?string $pixSafeBankCode = null,
+        public ?string $pixSafeBranchCode = null,
+        public ?string $pixSafeCpfCnpj = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -171,7 +178,14 @@ readonly class Payout
             swiftAccountNumberIban: $data['swift_account_number_iban'] ?? null,
             transfersAccount: $data['transfers_account'] ?? null,
             transfersType: isset($data['transfers_type']) ? ArgentinaTransferType::from($data['transfers_type']) : null,
-            hasVirtualAccount: $data['has_virtual_account']
+            hasVirtualAccount: $data['has_virtual_account'],
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            trackingDocuments: isset($data['tracking_documents']) ? TrackingDocuments::fromArray($data['tracking_documents']) : null,
+            jpmTrackData: isset($data['jpm_track_data']) ? JpmTrackData::fromArray($data['jpm_track_data']) : null,
+            pixSafeBankCode: $data['pix_safe_bank_code'] ?? null,
+            pixSafeBranchCode: $data['pix_safe_branch_code'] ?? null,
+            pixSafeCpfCnpj: $data['pix_safe_cpf_cnpj'] ?? null
         );
     }
 }
@@ -180,6 +194,13 @@ readonly class ListPayoutsInput extends PaginationParams
 {
     public function __construct(
         public ?string $receiverId = null,
+        public ?TransactionStatus $status = null,
+        public ?string $receiverName = null,
+        public ?string $bankAccountId = null,
+        public ?string $country = null,
+        public ?Rail $paymentMethod = null,
+        public ?string $network = null,
+        public ?string $token = null,
         ?int $limit = null,
         ?int $offset = null,
         ?string $startingAfter = null,
@@ -194,6 +215,34 @@ readonly class ListPayoutsInput extends PaginationParams
 
         if ($this->receiverId !== null) {
             $params['receiver_id'] = $this->receiverId;
+        }
+
+        if ($this->status !== null) {
+            $params['status'] = $this->status->value;
+        }
+
+        if ($this->receiverName !== null) {
+            $params['receiver_name'] = $this->receiverName;
+        }
+
+        if ($this->bankAccountId !== null) {
+            $params['bank_account_id'] = $this->bankAccountId;
+        }
+
+        if ($this->country !== null) {
+            $params['country'] = $this->country;
+        }
+
+        if ($this->paymentMethod !== null) {
+            $params['payment_method'] = $this->paymentMethod->value;
+        }
+
+        if ($this->network !== null) {
+            $params['network'] = $this->network;
+        }
+
+        if ($this->token !== null) {
+            $params['token'] = $this->token;
         }
 
         return $params;
@@ -316,7 +365,10 @@ readonly class CreateStellarPayoutResponse
         public ?TrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
-        public ?TrackingLiquidity $trackingLiquidity = null
+        public ?TrackingLiquidity $trackingLiquidity = null,
+        public ?float $billingFeeAmount = null,
+        public ?float $transactionFeeAmount = null,
+        public ?int $partnerFee = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -330,7 +382,10 @@ readonly class CreateStellarPayoutResponse
             trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
             trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
-            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null
+            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null
         );
     }
 }
@@ -362,7 +417,10 @@ readonly class CreateEvmPayoutResponse
         public ?TrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
-        public ?TrackingLiquidity $trackingLiquidity = null
+        public ?TrackingLiquidity $trackingLiquidity = null,
+        public ?float $billingFeeAmount = null,
+        public ?float $transactionFeeAmount = null,
+        public ?int $partnerFee = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -376,7 +434,125 @@ readonly class CreateEvmPayoutResponse
             trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
             trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
-            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null
+            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null
+        );
+    }
+}
+
+readonly class CreateSolanaPayoutInput
+{
+    public function __construct(
+        public string $quoteId,
+        public string $senderWalletAddress,
+        public ?string $signedTransaction = null
+    ) {}
+
+    public function toArray(): array
+    {
+        $data = [
+            'quote_id' => $this->quoteId,
+            'sender_wallet_address' => $this->senderWalletAddress,
+        ];
+
+        if ($this->signedTransaction !== null) {
+            $data['signed_transaction'] = $this->signedTransaction;
+        }
+
+        return $data;
+    }
+}
+
+readonly class CreateSolanaPayoutResponse
+{
+    public function __construct(
+        public string $id,
+        public TransactionStatus $status,
+        public string $senderWalletAddress,
+        public string $receiverId,
+        public ?TrackingComplete $trackingComplete = null,
+        public ?TrackingPayment $trackingPayment = null,
+        public ?TrackingTransaction $trackingTransaction = null,
+        public ?TrackingPartnerFee $trackingPartnerFee = null,
+        public ?TrackingLiquidity $trackingLiquidity = null,
+        public ?float $billingFeeAmount = null,
+        public ?float $transactionFeeAmount = null,
+        public ?int $partnerFee = null
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'],
+            status: TransactionStatus::from($data['status']),
+            senderWalletAddress: $data['sender_wallet_address'],
+            receiverId: $data['receiver_id'],
+            trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
+            trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
+            trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
+            trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
+            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null
+        );
+    }
+}
+
+enum TrackingDocumentsStatus: string
+{
+    case WAITING_DOCUMENTS = 'waiting_documents';
+    case COMPLIANCE_REVIEWING = 'compliance_reviewing';
+}
+
+readonly class TrackingDocuments
+{
+    public function __construct(
+        public string $step,
+        public ?TrackingDocumentsStatus $status = null,
+        public ?string $reviewedBy = null,
+        public ?string $completedAt = null
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            step: $data['step'],
+            status: isset($data['status']) ? TrackingDocumentsStatus::from($data['status']) : null,
+            reviewedBy: $data['reviewed_by'] ?? null,
+            completedAt: $data['completed_at'] ?? null
+        );
+    }
+}
+
+readonly class JpmTrackData
+{
+    public function __construct(
+        public ?string $jpmTraceNumber = null,
+        public ?string $jpmProcessingStatus = null,
+        public ?string $extendedTrackingStatus = null,
+        public ?string $jpmReferenceNumber = null,
+        public ?string $uetr = null,
+        public ?string $fedImad = null,
+        public ?string $paymentDate = null,
+        public ?string $paymentAmount = null,
+        public ?string $paymentCurrency = null
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            jpmTraceNumber: $data['jpm_trace_number'] ?? null,
+            jpmProcessingStatus: $data['jpm_processing_status'] ?? null,
+            extendedTrackingStatus: $data['extended_tracking_status'] ?? null,
+            jpmReferenceNumber: $data['jpm_reference_number'] ?? null,
+            uetr: $data['uetr'] ?? null,
+            fedImad: $data['fed_imad'] ?? null,
+            paymentDate: $data['payment_date'] ?? null,
+            paymentAmount: $data['payment_amount'] ?? null,
+            paymentCurrency: $data['payment_currency'] ?? null
         );
     }
 }
@@ -581,6 +757,28 @@ class Payouts
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
                 CreateEvmPayoutResponse::fromArray($response->data)
+            );
+        }
+
+        return $response;
+    }
+
+    /*
+     * Create Solana payout
+     *
+     * @param CreateSolanaPayoutInput $input
+     * @return BlindPayApiResponse<CreateSolanaPayoutResponse>
+     */
+    public function createSolana(CreateSolanaPayoutInput $input): BlindPayApiResponse
+    {
+        $response = $this->client->post(
+            "instances/{$this->instanceId}/payouts/solana",
+            $input->toArray()
+        );
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            return BlindPayApiResponse::success(
+                CreateSolanaPayoutResponse::fromArray($response->data)
             );
         }
 

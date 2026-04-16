@@ -7,6 +7,7 @@ namespace BlindPay\SDK\Tests\Resources;
 use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\Resources\Payouts\AuthorizeStellarTokenInput;
 use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutInput;
+use BlindPay\SDK\Resources\Payouts\CreateSolanaPayoutInput;
 use BlindPay\SDK\Resources\Payouts\CreateStellarPayoutInput;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -405,5 +406,75 @@ class PayoutsTest extends TestCase
         $this->assertNotNull($response->data->trackingTransaction);
         $this->assertNotNull($response->data->trackingPartnerFee);
         $this->assertNotNull($response->data->trackingLiquidity);
+    }
+
+    #[Test]
+    public function it_creates_a_solana_payout(): void
+    {
+        $mockedSolanaPayout = [
+            'id' => 'pa_000000000000',
+            'status' => 'processing',
+            'sender_wallet_address' => '0x123...890',
+            'tracking_complete' => [
+                'step' => 'on_hold',
+                'status' => 'tokens_refunded',
+                'transaction_hash' => '0x123...890',
+                'completed_at' => '2011-10-05T14:48:00.000Z',
+            ],
+            'tracking_payment' => [
+                'step' => 'on_hold',
+                'provider_name' => 'blockchain',
+                'provider_transaction_id' => '0x123...890',
+                'provider_status' => 'canceled',
+                'estimated_time_of_arrival' => '5_min',
+                'completed_at' => '2011-10-05T14:48:00.000Z',
+            ],
+            'tracking_transaction' => [
+                'step' => 'processing',
+                'status' => 'failed',
+                'transaction_hash' => '0x123...890',
+                'completed_at' => '2011-10-05T14:48:00.000Z',
+            ],
+            'tracking_partner_fee' => [
+                'step' => 'on_hold',
+                'transaction_hash' => '0x123...890',
+                'completed_at' => '2011-10-05T14:48:00.000Z',
+            ],
+            'tracking_liquidity' => [
+                'step' => 'processing',
+                'provider_transaction_id' => '0x123...890',
+                'provider_status' => 'deposited',
+                'estimated_time_of_arrival' => '1_business_day',
+                'completed_at' => '2011-10-05T14:48:00.000Z',
+            ],
+            'receiver_id' => 're_000000000000',
+            'billing_fee_amount' => 50,
+            'transaction_fee_amount' => 100,
+            'partner_fee' => 25000,
+        ];
+
+        $this->mockResponse($mockedSolanaPayout);
+
+        $input = new CreateSolanaPayoutInput(
+            quoteId: 'qu_000000000000',
+            senderWalletAddress: '0x123...890'
+        );
+
+        $response = $this->blindpay->payouts->createSolana($input);
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->error);
+        $this->assertEquals('pa_000000000000', $response->data->id);
+        $this->assertEquals('processing', $response->data->status->value);
+        $this->assertEquals('0x123...890', $response->data->senderWalletAddress);
+        $this->assertEquals('re_000000000000', $response->data->receiverId);
+        $this->assertNotNull($response->data->trackingComplete);
+        $this->assertNotNull($response->data->trackingPayment);
+        $this->assertNotNull($response->data->trackingTransaction);
+        $this->assertNotNull($response->data->trackingPartnerFee);
+        $this->assertNotNull($response->data->trackingLiquidity);
+        $this->assertEquals(50.0, $response->data->billingFeeAmount);
+        $this->assertEquals(100.0, $response->data->transactionFeeAmount);
+        $this->assertEquals(25000, $response->data->partnerFee);
     }
 }
