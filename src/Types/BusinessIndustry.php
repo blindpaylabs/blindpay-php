@@ -149,4 +149,17 @@ enum BusinessIndustry: string
     case NAICS_541990 = '541990';
     case NAICS_541214 = '541214';
     case NAICS_561499 = '561499';
+
+    // Non-numeric industry categories
+    case DAPP = 'dapp';
+    case EXCHANGE = 'exchange';
+    case GAMBLING = 'gambling';
+    case GAMING = 'gaming';
+    case INFRA = 'infra';
+    case MARKETPLACE = 'marketplace';
+    case NEO_BANK = 'neo_bank';
+    case OTHER = 'other';
+    case SAAS = 'saas';
+    case SOCIAL = 'social';
+    case WALLET = 'wallet';
 }
