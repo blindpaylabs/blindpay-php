@@ -6,8 +6,16 @@ namespace BlindPay\SDK\Resources\Receivers;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Types\AccountClass;
+use BlindPay\SDK\Types\AccountPurpose;
+use BlindPay\SDK\Types\AmlStatus;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\BusinessIndustry;
+use BlindPay\SDK\Types\BusinessType;
 use BlindPay\SDK\Types\Country;
+use BlindPay\SDK\Types\EstimatedAnnualRevenue;
+use BlindPay\SDK\Types\PaginationMetadata;
+use BlindPay\SDK\Types\PaginationParams;
+use BlindPay\SDK\Types\SourceOfWealth;
 use DateTimeImmutable;
 
 enum ProofOfAddressDocType: string
@@ -88,6 +96,12 @@ enum LimitIncreaseRequestSupportingDocumentType: string
     case BUSINESS_TAX_RETURN = 'business_tax_return';
 }
 
+enum OwnerTaxType: string
+{
+    case SSN = 'SSN';
+    case ITIN = 'ITIN';
+}
+
 readonly class Owner
 {
     public function __construct(
@@ -110,7 +124,10 @@ readonly class Owner
         public string $idDocFrontFile,
         public ?string $idDocBackFile,
         public ProofOfAddressDocType $proofOfAddressDocType,
-        public string $proofOfAddressDocFile
+        public string $proofOfAddressDocFile,
+        public ?int $ownershipPercentage = null,
+        public ?string $title = null,
+        public ?OwnerTaxType $taxType = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -135,13 +152,16 @@ readonly class Owner
             idDocFrontFile: $data['id_doc_front_file'],
             idDocBackFile: $data['id_doc_back_file'] ?? null,
             proofOfAddressDocType: ProofOfAddressDocType::from($data['proof_of_address_doc_type']),
-            proofOfAddressDocFile: $data['proof_of_address_doc_file']
+            proofOfAddressDocFile: $data['proof_of_address_doc_file'],
+            ownershipPercentage: isset($data['ownership_percentage']) ? (int) $data['ownership_percentage'] : null,
+            title: $data['title'] ?? null,
+            taxType: isset($data['tax_type']) ? OwnerTaxType::from($data['tax_type']) : null
         );
     }
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'role' => $this->role->value,
             'first_name' => $this->firstName,
@@ -161,6 +181,20 @@ readonly class Owner
             'proof_of_address_doc_type' => $this->proofOfAddressDocType->value,
             'proof_of_address_doc_file' => $this->proofOfAddressDocFile,
         ];
+
+        if ($this->ownershipPercentage !== null) {
+            $data['ownership_percentage'] = $this->ownershipPercentage;
+        }
+
+        if ($this->title !== null) {
+            $data['title'] = $this->title;
+        }
+
+        if ($this->taxType !== null) {
+            $data['tax_type'] = $this->taxType->value;
+        }
+
+        return $data;
     }
 }
 
@@ -180,6 +214,48 @@ readonly class KycWarning
             message: $data['message'] ?? null,
             resolutionStatus: $data['resolution_status'] ?? null,
             warningId: $data['warning_id'] ?? null
+        );
+    }
+}
+
+readonly class FraudWarning
+{
+    public function __construct(
+        public ?string $id,
+        public ?string $name,
+        public ?string $operation,
+        public ?float $score
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'] ?? null,
+            name: $data['name'] ?? null,
+            operation: $data['operation'] ?? null,
+            score: isset($data['score']) ? (float) $data['score'] : null
+        );
+    }
+}
+
+readonly class AmlHits
+{
+    public function __construct(
+        public bool $hasSanctionMatch,
+        public bool $hasPepMatch,
+        public bool $hasWatchlistMatch,
+        public bool $hasCrimelistMatch,
+        public bool $hasAdversemediaMatch
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            hasSanctionMatch: $data['has_sanction_match'] ?? false,
+            hasPepMatch: $data['has_pep_match'] ?? false,
+            hasWatchlistMatch: $data['has_watchlist_match'] ?? false,
+            hasCrimelistMatch: $data['has_crimelist_match'] ?? false,
+            hasAdversemediaMatch: $data['has_adversemedia_match'] ?? false
         );
     }
 }
@@ -206,6 +282,7 @@ abstract readonly class BaseReceiver
 {
     /**
      * @param  KycWarning[]|null  $kycWarnings
+     * @param  FraudWarning[]|null  $fraudWarnings
      */
     public function __construct(
         public string $id,
@@ -230,7 +307,14 @@ abstract readonly class BaseReceiver
         public ?string $tosId,
         public DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
-        public Limit $limit
+        public Limit $limit,
+        public ?array $fraudWarnings = null,
+        public ?bool $isFbo = null,
+        public ?AccountPurpose $accountPurpose = null,
+        public ?string $accountPurposeOther = null,
+        public ?AmlStatus $amlStatus = null,
+        public ?AmlHits $amlHits = null,
+        public ?bool $isTosAccepted = null
     ) {}
 }
 
@@ -265,7 +349,17 @@ readonly class IndividualWithStandardKYC extends BaseReceiver
         public IdentificationDocument $idDocType,
         public string $idDocFrontFile,
         public string $idDocBackFile,
-        public string $aipriseValidationKey
+        public string $aipriseValidationKey,
+        ?array $fraudWarnings = null,
+        ?bool $isFbo = null,
+        ?AccountPurpose $accountPurpose = null,
+        ?string $accountPurposeOther = null,
+        ?AmlStatus $amlStatus = null,
+        ?AmlHits $amlHits = null,
+        ?bool $isTosAccepted = null,
+        public ?string $externalId = null,
+        public ?string $selfieFile = null,
+        public ?string $occupation = null
     ) {
         parent::__construct(
             $id,
@@ -290,7 +384,14 @@ readonly class IndividualWithStandardKYC extends BaseReceiver
             $tosId,
             $createdAt,
             $updatedAt,
-            $limit
+            $limit,
+            $fraudWarnings,
+            $isFbo,
+            $accountPurpose,
+            $accountPurposeOther,
+            $amlStatus,
+            $amlHits,
+            $isTosAccepted
         );
     }
 
@@ -328,7 +429,20 @@ readonly class IndividualWithStandardKYC extends BaseReceiver
             idDocType: IdentificationDocument::from($data['id_doc_type']),
             idDocFrontFile: $data['id_doc_front_file'],
             idDocBackFile: $data['id_doc_back_file'],
-            aipriseValidationKey: $data['aiprise_validation_key']
+            aipriseValidationKey: $data['aiprise_validation_key'],
+            fraudWarnings: isset($data['fraud_warnings']) ? array_map(
+                fn ($w) => FraudWarning::fromArray($w),
+                $data['fraud_warnings']
+            ) : null,
+            isFbo: $data['is_fbo'] ?? null,
+            accountPurpose: isset($data['account_purpose']) ? AccountPurpose::from($data['account_purpose']) : null,
+            accountPurposeOther: $data['account_purpose_other'] ?? null,
+            amlStatus: isset($data['aml_status']) ? AmlStatus::from($data['aml_status']) : null,
+            amlHits: isset($data['aml_hits']) ? AmlHits::fromArray($data['aml_hits']) : null,
+            isTosAccepted: $data['is_tos_accepted'] ?? null,
+            externalId: $data['external_id'] ?? null,
+            selfieFile: $data['selfie_file'] ?? null,
+            occupation: $data['occupation'] ?? null
         );
     }
 }
@@ -369,7 +483,17 @@ readonly class IndividualWithEnhancedKYC extends BaseReceiver
         public string $sourceOfFundsDocFile,
         public string $individualHoldingDocFrontFile,
         public PurposeOfTransactions $purposeOfTransactions,
-        public ?string $purposeOfTransactionsExplanation
+        public ?string $purposeOfTransactionsExplanation,
+        ?array $fraudWarnings = null,
+        ?bool $isFbo = null,
+        ?AccountPurpose $accountPurpose = null,
+        ?string $accountPurposeOther = null,
+        ?AmlStatus $amlStatus = null,
+        ?AmlHits $amlHits = null,
+        ?bool $isTosAccepted = null,
+        public ?string $externalId = null,
+        public ?string $selfieFile = null,
+        public ?string $occupation = null
     ) {
         parent::__construct(
             $id,
@@ -394,7 +518,14 @@ readonly class IndividualWithEnhancedKYC extends BaseReceiver
             $tosId,
             $createdAt,
             $updatedAt,
-            $limit
+            $limit,
+            $fraudWarnings,
+            $isFbo,
+            $accountPurpose,
+            $accountPurposeOther,
+            $amlStatus,
+            $amlHits,
+            $isTosAccepted
         );
     }
 
@@ -437,7 +568,20 @@ readonly class IndividualWithEnhancedKYC extends BaseReceiver
             sourceOfFundsDocFile: $data['source_of_funds_doc_file'],
             individualHoldingDocFrontFile: $data['individual_holding_doc_front_file'],
             purposeOfTransactions: PurposeOfTransactions::from($data['purpose_of_transactions']),
-            purposeOfTransactionsExplanation: $data['purpose_of_transactions_explanation'] ?? null
+            purposeOfTransactionsExplanation: $data['purpose_of_transactions_explanation'] ?? null,
+            fraudWarnings: isset($data['fraud_warnings']) ? array_map(
+                fn ($w) => FraudWarning::fromArray($w),
+                $data['fraud_warnings']
+            ) : null,
+            isFbo: $data['is_fbo'] ?? null,
+            accountPurpose: isset($data['account_purpose']) ? AccountPurpose::from($data['account_purpose']) : null,
+            accountPurposeOther: $data['account_purpose_other'] ?? null,
+            amlStatus: isset($data['aml_status']) ? AmlStatus::from($data['aml_status']) : null,
+            amlHits: isset($data['aml_hits']) ? AmlHits::fromArray($data['aml_hits']) : null,
+            isTosAccepted: $data['is_tos_accepted'] ?? null,
+            externalId: $data['external_id'] ?? null,
+            selfieFile: $data['selfie_file'] ?? null,
+            occupation: $data['occupation'] ?? null
         );
     }
 }
@@ -477,7 +621,20 @@ readonly class BusinessWithStandardKYB extends BaseReceiver
         public string $incorporationDocFile,
         public string $proofOfOwnershipDocFile,
         public ?string $externalId,
-        public string $aipriseValidationKey
+        public string $aipriseValidationKey,
+        ?array $fraudWarnings = null,
+        ?bool $isFbo = null,
+        ?AccountPurpose $accountPurpose = null,
+        ?string $accountPurposeOther = null,
+        ?AmlStatus $amlStatus = null,
+        ?AmlHits $amlHits = null,
+        ?bool $isTosAccepted = null,
+        public ?BusinessType $businessType = null,
+        public ?string $businessDescription = null,
+        public ?BusinessIndustry $businessIndustry = null,
+        public ?EstimatedAnnualRevenue $estimatedAnnualRevenue = null,
+        public ?SourceOfWealth $sourceOfWealth = null,
+        public ?bool $publiclyTraded = null
     ) {
         parent::__construct(
             $id,
@@ -502,7 +659,14 @@ readonly class BusinessWithStandardKYB extends BaseReceiver
             $tosId,
             $createdAt,
             $updatedAt,
-            $limit
+            $limit,
+            $fraudWarnings,
+            $isFbo,
+            $accountPurpose,
+            $accountPurposeOther,
+            $amlStatus,
+            $amlHits,
+            $isTosAccepted
         );
     }
 
@@ -541,7 +705,23 @@ readonly class BusinessWithStandardKYB extends BaseReceiver
             incorporationDocFile: $data['incorporation_doc_file'],
             proofOfOwnershipDocFile: $data['proof_of_ownership_doc_file'],
             externalId: $data['external_id'] ?? null,
-            aipriseValidationKey: $data['aiprise_validation_key']
+            aipriseValidationKey: $data['aiprise_validation_key'],
+            fraudWarnings: isset($data['fraud_warnings']) ? array_map(
+                fn ($w) => FraudWarning::fromArray($w),
+                $data['fraud_warnings']
+            ) : null,
+            isFbo: $data['is_fbo'] ?? null,
+            accountPurpose: isset($data['account_purpose']) ? AccountPurpose::from($data['account_purpose']) : null,
+            accountPurposeOther: $data['account_purpose_other'] ?? null,
+            amlStatus: isset($data['aml_status']) ? AmlStatus::from($data['aml_status']) : null,
+            amlHits: isset($data['aml_hits']) ? AmlHits::fromArray($data['aml_hits']) : null,
+            isTosAccepted: $data['is_tos_accepted'] ?? null,
+            businessType: isset($data['business_type']) ? BusinessType::from($data['business_type']) : null,
+            businessDescription: $data['business_description'] ?? null,
+            businessIndustry: isset($data['business_industry']) ? BusinessIndustry::from($data['business_industry']) : null,
+            estimatedAnnualRevenue: isset($data['estimated_annual_revenue']) ? EstimatedAnnualRevenue::from($data['estimated_annual_revenue']) : null,
+            sourceOfWealth: isset($data['source_of_wealth']) ? SourceOfWealth::from($data['source_of_wealth']) : null,
+            publiclyTraded: $data['publicly_traded'] ?? null
         );
     }
 }
@@ -568,7 +748,13 @@ readonly class CreateIndividualWithStandardKYCInput
         public string $taxId,
         public string $tosId,
         public ?string $addressLine2 = null,
-        public ?string $externalId = null
+        public ?string $externalId = null,
+        public ?AccountPurpose $accountPurpose = null,
+        public ?string $accountPurposeOther = null,
+        public ?string $selfieFile = null,
+        public ?string $occupation = null,
+        public ?string $ipAddress = null,
+        public ?string $imageUrl = null
     ) {}
 
     public function toArray(): array
@@ -604,6 +790,30 @@ readonly class CreateIndividualWithStandardKYCInput
             $data['external_id'] = $this->externalId;
         }
 
+        if ($this->accountPurpose !== null) {
+            $data['account_purpose'] = $this->accountPurpose->value;
+        }
+
+        if ($this->accountPurposeOther !== null) {
+            $data['account_purpose_other'] = $this->accountPurposeOther;
+        }
+
+        if ($this->selfieFile !== null) {
+            $data['selfie_file'] = $this->selfieFile;
+        }
+
+        if ($this->occupation !== null) {
+            $data['occupation'] = $this->occupation;
+        }
+
+        if ($this->ipAddress !== null) {
+            $data['ip_address'] = $this->ipAddress;
+        }
+
+        if ($this->imageUrl !== null) {
+            $data['image_url'] = $this->imageUrl;
+        }
+
         return $data;
     }
 }
@@ -635,7 +845,13 @@ readonly class CreateIndividualWithEnhancedKYCInput
         public string $taxId,
         public string $tosId,
         public ?string $addressLine2 = null,
-        public ?string $externalId = null
+        public ?string $externalId = null,
+        public ?AccountPurpose $accountPurpose = null,
+        public ?string $accountPurposeOther = null,
+        public ?string $selfieFile = null,
+        public ?string $occupation = null,
+        public ?string $ipAddress = null,
+        public ?string $imageUrl = null
     ) {}
 
     public function toArray(): array
@@ -676,6 +892,30 @@ readonly class CreateIndividualWithEnhancedKYCInput
             $data['external_id'] = $this->externalId;
         }
 
+        if ($this->accountPurpose !== null) {
+            $data['account_purpose'] = $this->accountPurpose->value;
+        }
+
+        if ($this->accountPurposeOther !== null) {
+            $data['account_purpose_other'] = $this->accountPurposeOther;
+        }
+
+        if ($this->selfieFile !== null) {
+            $data['selfie_file'] = $this->selfieFile;
+        }
+
+        if ($this->occupation !== null) {
+            $data['occupation'] = $this->occupation;
+        }
+
+        if ($this->ipAddress !== null) {
+            $data['ip_address'] = $this->ipAddress;
+        }
+
+        if ($this->imageUrl !== null) {
+            $data['image_url'] = $this->imageUrl;
+        }
+
         return $data;
     }
 }
@@ -701,7 +941,18 @@ readonly class CreateBusinessWithStandardKYBInput
         public ?string $website,
         public ?string $addressLine2 = null,
         public ?string $alternateName = null,
-        public ?string $externalId = null
+        public ?string $externalId = null,
+        public ?AccountPurpose $accountPurpose = null,
+        public ?string $accountPurposeOther = null,
+        public ?BusinessType $businessType = null,
+        public ?string $businessDescription = null,
+        public ?BusinessIndustry $businessIndustry = null,
+        public ?EstimatedAnnualRevenue $estimatedAnnualRevenue = null,
+        public ?SourceOfWealth $sourceOfWealth = null,
+        public ?bool $publiclyTraded = null,
+        public ?string $ipAddress = null,
+        public ?string $imageUrl = null,
+        public ?string $phoneNumber = null
     ) {}
 
     public function toArray(): array
@@ -737,6 +988,50 @@ readonly class CreateBusinessWithStandardKYBInput
 
         if ($this->externalId !== null) {
             $data['external_id'] = $this->externalId;
+        }
+
+        if ($this->accountPurpose !== null) {
+            $data['account_purpose'] = $this->accountPurpose->value;
+        }
+
+        if ($this->accountPurposeOther !== null) {
+            $data['account_purpose_other'] = $this->accountPurposeOther;
+        }
+
+        if ($this->businessType !== null) {
+            $data['business_type'] = $this->businessType->value;
+        }
+
+        if ($this->businessDescription !== null) {
+            $data['business_description'] = $this->businessDescription;
+        }
+
+        if ($this->businessIndustry !== null) {
+            $data['business_industry'] = $this->businessIndustry->value;
+        }
+
+        if ($this->estimatedAnnualRevenue !== null) {
+            $data['estimated_annual_revenue'] = $this->estimatedAnnualRevenue->value;
+        }
+
+        if ($this->sourceOfWealth !== null) {
+            $data['source_of_wealth'] = $this->sourceOfWealth->value;
+        }
+
+        if ($this->publiclyTraded !== null) {
+            $data['publicly_traded'] = $this->publiclyTraded;
+        }
+
+        if ($this->ipAddress !== null) {
+            $data['ip_address'] = $this->ipAddress;
+        }
+
+        if ($this->imageUrl !== null) {
+            $data['image_url'] = $this->imageUrl;
+        }
+
+        if ($this->phoneNumber !== null) {
+            $data['phone_number'] = $this->phoneNumber;
         }
 
         return $data;
@@ -794,7 +1089,17 @@ readonly class UpdateReceiverInput
         public ?PurposeOfTransactions $purposeOfTransactions = null,
         public ?string $purposeOfTransactionsExplanation = null,
         public ?string $externalId = null,
-        public ?string $tosId = null
+        public ?string $tosId = null,
+        public ?AccountPurpose $accountPurpose = null,
+        public ?string $accountPurposeOther = null,
+        public ?BusinessType $businessType = null,
+        public ?string $businessDescription = null,
+        public ?BusinessIndustry $businessIndustry = null,
+        public ?EstimatedAnnualRevenue $estimatedAnnualRevenue = null,
+        public ?SourceOfWealth $sourceOfWealth = null,
+        public ?bool $publiclyTraded = null,
+        public ?string $selfieFile = null,
+        public ?string $occupation = null
     ) {}
 
     public function toArray(): array
@@ -834,6 +1139,16 @@ readonly class UpdateReceiverInput
             'purpose_of_transactions_explanation' => $this->purposeOfTransactionsExplanation,
             'external_id' => $this->externalId,
             'tos_id' => $this->tosId,
+            'account_purpose' => $this->accountPurpose?->value,
+            'account_purpose_other' => $this->accountPurposeOther,
+            'business_type' => $this->businessType?->value,
+            'business_description' => $this->businessDescription,
+            'business_industry' => $this->businessIndustry?->value,
+            'estimated_annual_revenue' => $this->estimatedAnnualRevenue?->value,
+            'source_of_wealth' => $this->sourceOfWealth?->value,
+            'publicly_traded' => $this->publiclyTraded,
+            'selfie_file' => $this->selfieFile,
+            'occupation' => $this->occupation,
         ], fn ($value) => $value !== null);
     }
 }
@@ -867,7 +1182,10 @@ readonly class LimitIncreaseRequest
         public string $supportingDocumentFile,
         public LimitIncreaseRequestSupportingDocumentType $supportingDocumentType,
         public DateTimeImmutable $createdAt,
-        public DateTimeImmutable $updatedAt
+        public DateTimeImmutable $updatedAt,
+        public ?int $approvedPerTransaction = null,
+        public ?int $approvedDaily = null,
+        public ?int $approvedMonthly = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -882,7 +1200,10 @@ readonly class LimitIncreaseRequest
             supportingDocumentFile: $data['supporting_document_file'],
             supportingDocumentType: LimitIncreaseRequestSupportingDocumentType::from($data['supporting_document_type']),
             createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at'])
+            updatedAt: new DateTimeImmutable($data['updated_at']),
+            approvedPerTransaction: isset($data['approved_per_transaction']) ? (int) $data['approved_per_transaction'] : null,
+            approvedDaily: isset($data['approved_daily']) ? (int) $data['approved_daily'] : null,
+            approvedMonthly: isset($data['approved_monthly']) ? (int) $data['approved_monthly'] : null
         );
     }
 }
@@ -924,6 +1245,71 @@ readonly class RequestLimitIncreaseResponse
     }
 }
 
+readonly class ListReceiversInput extends PaginationParams
+{
+    public function __construct(
+        public ?string $fullName = null,
+        public ?string $receiverName = null,
+        public ?string $status = null,
+        public ?string $receiverId = null,
+        public ?string $bankAccountId = null,
+        public ?string $country = null,
+        ?int $limit = null,
+        ?int $offset = null,
+        ?string $startingAfter = null,
+        ?string $endingBefore = null
+    ) {
+        parent::__construct($limit, $offset, $startingAfter, $endingBefore);
+    }
+
+    public function toArray(): array
+    {
+        $params = parent::toArray();
+
+        if ($this->fullName !== null) {
+            $params['full_name'] = $this->fullName;
+        }
+
+        if ($this->receiverName !== null) {
+            $params['receiver_name'] = $this->receiverName;
+        }
+
+        if ($this->status !== null) {
+            $params['status'] = $this->status;
+        }
+
+        if ($this->receiverId !== null) {
+            $params['receiver_id'] = $this->receiverId;
+        }
+
+        if ($this->bankAccountId !== null) {
+            $params['bank_account_id'] = $this->bankAccountId;
+        }
+
+        if ($this->country !== null) {
+            $params['country'] = $this->country;
+        }
+
+        return $params;
+    }
+}
+
+readonly class ListReceiversResponse
+{
+    public function __construct(
+        public array $data,
+        public PaginationMetadata $pagination
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            data: $data['data'],
+            pagination: PaginationMetadata::fromArray($data['pagination'])
+        );
+    }
+}
+
 class Receivers
 {
     public function __construct(
@@ -952,14 +1338,29 @@ class Receivers
     /*
      * List all receivers
      *
-     * @return BlindPayApiResponse<array<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>>
+     * @return BlindPayApiResponse<ListReceiversResponse|array<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>>
      */
-    public function list(): BlindPayApiResponse
+    public function list(?ListReceiversInput $params = null): BlindPayApiResponse
     {
-        $response = $this->client->get("instances/{$this->instanceId}/receivers");
+        $queryString = $params?->toQueryString() ?? '';
+        $response = $this->client->get("instances/{$this->instanceId}/receivers{$queryString}");
 
         if ($response->isSuccess() && is_array($response->data)) {
             try {
+                if (isset($response->data['data']) && isset($response->data['pagination'])) {
+                    $receivers = array_map(
+                        fn (array $item) => $this->mapReceiver($item),
+                        $response->data['data']
+                    );
+
+                    return BlindPayApiResponse::success(
+                        new ListReceiversResponse(
+                            data: $receivers,
+                            pagination: PaginationMetadata::fromArray($response->data['pagination'])
+                        )
+                    );
+                }
+
                 $receivers = array_map(
                     fn (array $item) => $this->mapReceiver($item),
                     $response->data

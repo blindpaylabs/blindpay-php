@@ -17,11 +17,11 @@ readonly class ReceiversWrapper
     /*
      * List all receivers
      *
-     * @return BlindPayApiResponse<array<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>>
+     * @return BlindPayApiResponse<ListReceiversResponse|array<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>>
      */
-    public function list(): BlindPayApiResponse
+    public function list(?ListReceiversInput $params = null): BlindPayApiResponse
     {
-        return $this->base->list();
+        return $this->base->list($params);
     }
 
     /*
