@@ -185,7 +185,7 @@ class Instances
 
         return $this->client->put(
             "instances/{$this->instanceId}/members/{$input->memberId}",
-            ['role' => $input->role->value]
+            ['user_role' => $input->role->value]
         );
     }
 }
