@@ -5,98 +5,112 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Transfers;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Types\BaseTracking;
 use BlindPay\SDK\Types\BlindPayApiResponse;
-use BlindPay\SDK\Types\Currency;
+use BlindPay\SDK\Types\CurrencyType;
+use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
+use BlindPay\SDK\Types\StablecoinToken;
+use BlindPay\SDK\Types\TrackingComplete;
+use BlindPay\SDK\Types\TrackingPartnerFee;
 use BlindPay\SDK\Types\TransactionStatus;
 use DateTimeImmutable;
 
-readonly class TransferTrackingStep
+readonly class TransferTrackingTransactionMonitoring extends BaseTracking
 {
     public function __construct(
-        public string $status,
-        public ?DateTimeImmutable $date = null
-    ) {}
+        string $step,
+        ?DateTimeImmutable $completedAt
+    ) {
+        parent::__construct($step, $completedAt);
+    }
 
     public static function fromArray(array $data): self
     {
         return new self(
-            status: $data['status'],
-            date: isset($data['date']) ? new DateTimeImmutable($data['date']) : null
+            step: $data['step'],
+            completedAt: isset($data['completed_at'])
+                ? new DateTimeImmutable($data['completed_at'])
+                : null
         );
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'step' => $this->step,
+            'completed_at' => $this->completedAt?->format('c'),
+        ];
     }
 }
 
-readonly class TransferTrackingTransactionMonitoring
+readonly class TransferTrackingPaymaster extends BaseTracking
 {
     public function __construct(
-        public string $status,
-        public ?DateTimeImmutable $date = null
-    ) {}
+        string $step,
+        ?DateTimeImmutable $completedAt
+    ) {
+        parent::__construct($step, $completedAt);
+    }
 
     public static function fromArray(array $data): self
     {
         return new self(
-            status: $data['status'],
-            date: isset($data['date']) ? new DateTimeImmutable($data['date']) : null
+            step: $data['step'],
+            completedAt: isset($data['completed_at'])
+                ? new DateTimeImmutable($data['completed_at'])
+                : null
         );
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'step' => $this->step,
+            'completed_at' => $this->completedAt?->format('c'),
+        ];
     }
 }
 
-readonly class Transfer
+readonly class TransferTrackingBridgeSwap extends BaseTracking
 {
     public function __construct(
-        public string $id,
-        public string $instanceId,
-        public TransactionStatus $status,
-        public string $quoteId,
-        public string $sourceWalletId,
-        public string $destinationWalletId,
-        public float $amount,
-        public Currency $currency,
-        public TransferTrackingStep $trackingTransaction,
-        public TransferTrackingTransactionMonitoring $trackingTransactionMonitoring,
-        public TransferTrackingStep $trackingComplete,
-        public DateTimeImmutable $createdAt,
-        public DateTimeImmutable $updatedAt,
-        public ?string $externalId = null,
-        public ?string $receiverNetwork = null,
-        public ?string $receiverToken = null,
-        public ?string $senderToken = null
-    ) {}
+        string $step,
+        ?DateTimeImmutable $completedAt
+    ) {
+        parent::__construct($step, $completedAt);
+    }
 
     public static function fromArray(array $data): self
     {
         return new self(
-            id: $data['id'],
-            instanceId: $data['instance_id'],
-            status: TransactionStatus::from($data['status']),
-            quoteId: $data['quote_id'],
-            sourceWalletId: $data['source_wallet_id'],
-            destinationWalletId: $data['destination_wallet_id'],
-            amount: (float) $data['amount'],
-            currency: Currency::from($data['currency']),
-            trackingTransaction: TransferTrackingStep::fromArray($data['tracking_transaction']),
-            trackingTransactionMonitoring: TransferTrackingTransactionMonitoring::fromArray($data['tracking_transaction_monitoring']),
-            trackingComplete: TransferTrackingStep::fromArray($data['tracking_complete']),
-            createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at']),
-            externalId: $data['external_id'] ?? null,
-            receiverNetwork: $data['receiver_network'] ?? null,
-            receiverToken: $data['receiver_token'] ?? null,
-            senderToken: $data['sender_token'] ?? null
+            step: $data['step'],
+            completedAt: isset($data['completed_at'])
+                ? new DateTimeImmutable($data['completed_at'])
+                : null
         );
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'step' => $this->step,
+            'completed_at' => $this->completedAt?->format('c'),
+        ];
     }
 }
 
 readonly class CreateTransferQuoteInput
 {
     public function __construct(
-        public string $sourceWalletId,
-        public string $destinationWalletId,
-        public float $amount,
-        public ?string $amountReference = null,
+        public string $walletId,
+        public StablecoinToken $senderToken,
+        public string $receiverWalletAddress,
+        public StablecoinToken $receiverToken,
+        public Network $receiverNetwork,
+        public int $requestAmount,
+        public CurrencyType $amountReference,
         public ?bool $coverFees = null,
         public ?string $partnerFeeId = null
     ) {}
@@ -104,14 +118,14 @@ readonly class CreateTransferQuoteInput
     public function toArray(): array
     {
         $data = [
-            'source_wallet_id' => $this->sourceWalletId,
-            'destination_wallet_id' => $this->destinationWalletId,
-            'amount' => $this->amount,
+            'wallet_id' => $this->walletId,
+            'sender_token' => $this->senderToken->value,
+            'receiver_wallet_address' => $this->receiverWalletAddress,
+            'receiver_token' => $this->receiverToken->value,
+            'receiver_network' => $this->receiverNetwork->value,
+            'request_amount' => $this->requestAmount,
+            'amount_reference' => $this->amountReference->value,
         ];
-
-        if ($this->amountReference !== null) {
-            $data['amount_reference'] = $this->amountReference;
-        }
 
         if ($this->coverFees !== null) {
             $data['cover_fees'] = $this->coverFees;
@@ -129,22 +143,26 @@ readonly class CreateTransferQuoteResponse
 {
     public function __construct(
         public string $id,
-        public float $amount,
-        public Currency $currency,
-        public float $feeAmount,
-        public string $sourceWalletId,
-        public string $destinationWalletId
+        public float $receiverAmount,
+        public float $senderAmount,
+        public float $flatFee,
+        public ?float $expiresAt = null,
+        public ?float $commercialQuotation = null,
+        public ?float $blindpayQuotation = null,
+        public ?float $partnerFeeAmount = null
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
             id: $data['id'],
-            amount: (float) $data['amount'],
-            currency: Currency::from($data['currency']),
-            feeAmount: (float) $data['fee_amount'],
-            sourceWalletId: $data['source_wallet_id'],
-            destinationWalletId: $data['destination_wallet_id']
+            receiverAmount: (float) $data['receiver_amount'],
+            senderAmount: (float) $data['sender_amount'],
+            flatFee: (float) $data['flat_fee'],
+            expiresAt: isset($data['expires_at']) ? (float) $data['expires_at'] : null,
+            commercialQuotation: isset($data['commercial_quotation']) ? (float) $data['commercial_quotation'] : null,
+            blindpayQuotation: isset($data['blindpay_quotation']) ? (float) $data['blindpay_quotation'] : null,
+            partnerFeeAmount: isset($data['partner_fee_amount']) ? (float) $data['partner_fee_amount'] : null
         );
     }
 }
@@ -152,14 +170,80 @@ readonly class CreateTransferQuoteResponse
 readonly class CreateTransferInput
 {
     public function __construct(
-        public string $quoteId
+        public string $transferQuoteId
     ) {}
 
     public function toArray(): array
     {
         return [
-            'quote_id' => $this->quoteId,
+            'transfer_quote_id' => $this->transferQuoteId,
         ];
+    }
+}
+
+readonly class Transfer
+{
+    public function __construct(
+        public string $id,
+        public string $instanceId,
+        public TransactionStatus $status,
+        public string $transferQuoteId,
+        public string $walletId,
+        public StablecoinToken $senderToken,
+        public float $senderAmount,
+        public float $receiverAmount,
+        public StablecoinToken $receiverToken,
+        public Network $receiverNetwork,
+        public string $receiverWalletAddress,
+        public string $receiverId,
+        public string $address,
+        public Network $network,
+        public TransferTrackingTransactionMonitoring $trackingTransactionMonitoring,
+        public TransferTrackingPaymaster $trackingPaymaster,
+        public TransferTrackingBridgeSwap $trackingBridgeSwap,
+        public TrackingComplete $trackingComplete,
+        public TrackingPartnerFee $trackingPartnerFee,
+        public DateTimeImmutable $createdAt,
+        public DateTimeImmutable $updatedAt,
+        public ?string $imageUrl = null,
+        public ?string $firstName = null,
+        public ?string $lastName = null,
+        public ?string $legalName = null,
+        public ?float $partnerFeeAmount = null,
+        public ?string $externalId = null
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'],
+            instanceId: $data['instance_id'],
+            status: TransactionStatus::from($data['status']),
+            transferQuoteId: $data['transfer_quote_id'],
+            walletId: $data['wallet_id'],
+            senderToken: StablecoinToken::from($data['sender_token']),
+            senderAmount: (float) $data['sender_amount'],
+            receiverAmount: (float) $data['receiver_amount'],
+            receiverToken: StablecoinToken::from($data['receiver_token']),
+            receiverNetwork: Network::from($data['receiver_network']),
+            receiverWalletAddress: $data['receiver_wallet_address'],
+            receiverId: $data['receiver_id'],
+            address: $data['address'],
+            network: Network::from($data['network']),
+            trackingTransactionMonitoring: TransferTrackingTransactionMonitoring::fromArray($data['tracking_transaction_monitoring']),
+            trackingPaymaster: TransferTrackingPaymaster::fromArray($data['tracking_paymaster']),
+            trackingBridgeSwap: TransferTrackingBridgeSwap::fromArray($data['tracking_bridge_swap']),
+            trackingComplete: TrackingComplete::fromArray($data['tracking_complete']),
+            trackingPartnerFee: TrackingPartnerFee::fromArray($data['tracking_partner_fee']),
+            createdAt: new DateTimeImmutable($data['created_at']),
+            updatedAt: new DateTimeImmutable($data['updated_at']),
+            imageUrl: $data['image_url'] ?? null,
+            firstName: $data['first_name'] ?? null,
+            lastName: $data['last_name'] ?? null,
+            legalName: $data['legal_name'] ?? null,
+            partnerFeeAmount: isset($data['partner_fee_amount']) ? (float) $data['partner_fee_amount'] : null,
+            externalId: $data['external_id'] ?? null
+        );
     }
 }
 
