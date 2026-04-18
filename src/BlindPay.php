@@ -21,6 +21,7 @@ use BlindPay\SDK\Resources\Payouts\Payouts;
 use BlindPay\SDK\Resources\Quotes\Quotes;
 use BlindPay\SDK\Resources\Receivers\Receivers;
 use BlindPay\SDK\Resources\Receivers\ReceiversWrapper;
+use BlindPay\SDK\Resources\TermsOfService\TermsOfService;
 use BlindPay\SDK\Resources\Transfers\Transfers;
 use BlindPay\SDK\Resources\Upload\Upload;
 use BlindPay\SDK\Resources\VirtualAccounts\VirtualAccounts;
@@ -38,7 +39,7 @@ class BlindPay implements ApiClientInterface
 {
     private const BASE_URL = 'https://api.blindpay.com/v1/';
 
-    private const VERSION = '2.1.0';
+    private const VERSION = '2.2.0';
 
     private Client $httpClient;
 
@@ -114,10 +115,13 @@ class BlindPay implements ApiClientInterface
         $apiKeysResource = new ApiKeys($this->instanceId, $this);
         $webhooksResource = new Webhooks($this->instanceId, $this);
 
+        $termsOfServiceResource = new TermsOfService($this->instanceId, $this);
+
         $this->instances = new InstancesWrapper(
             $instancesResource,
             $apiKeysResource,
-            $webhooksResource
+            $webhooksResource,
+            $termsOfServiceResource
         );
     }
 
