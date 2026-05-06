@@ -11,4 +11,6 @@ enum ReceiverStatus: string
     case REJECTED = 'rejected';
     case DEPRECATED = 'deprecated';
     case PENDING_REVIEW = 'pending_review';
+    case AWAITING_CONTRACT = 'awaiting_contract';
+    case COMPLIANCE_REQUEST = 'compliance_request';
 }

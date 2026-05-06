@@ -6,8 +6,6 @@ namespace BlindPay\SDK\Types;
 
 enum Currency: string
 {
-    case USDC = 'USDC';
-    case USDT = 'USDT';
     case USDB = 'USDB';
     case BRL = 'BRL';
     case USD = 'USD';
