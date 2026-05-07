@@ -13,4 +13,6 @@ enum PaymentMethod: string
     case TRANSFERS = 'transfers';
     case PSE = 'pse';
     case INTERNATIONAL_SWIFT = 'international_swift';
+    case RTP = 'rtp';
+    case TED = 'ted';
 }

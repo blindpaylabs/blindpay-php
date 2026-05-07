@@ -103,7 +103,11 @@ readonly class Payout
         public ?string $swiftAccountNumberIban,
         public ?string $transfersAccount,
         public ?ArgentinaTransferType $transfersType,
-        public bool $hasVirtualAccount
+        public bool $hasVirtualAccount,
+        public ?string $partnerFeeId = null,
+        public ?string $tedBankCode = null,
+        public ?string $tedBranchCode = null,
+        public ?string $tedCpfCnpj = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -171,7 +175,11 @@ readonly class Payout
             swiftAccountNumberIban: $data['swift_account_number_iban'] ?? null,
             transfersAccount: $data['transfers_account'] ?? null,
             transfersType: isset($data['transfers_type']) ? ArgentinaTransferType::from($data['transfers_type']) : null,
-            hasVirtualAccount: $data['has_virtual_account']
+            hasVirtualAccount: $data['has_virtual_account'],
+            partnerFeeId: $data['partner_fee_id'] ?? null,
+            tedBankCode: $data['ted_bank_code'] ?? null,
+            tedBranchCode: $data['ted_branch_code'] ?? null,
+            tedCpfCnpj: $data['ted_cpf_cnpj'] ?? null
         );
     }
 }

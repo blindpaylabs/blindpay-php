@@ -229,7 +229,8 @@ readonly class Payin
         public ?string $pseDocumentType = null,
         public ?string $pseFullName = null,
         public ?string $psePaymentLink = null,
-        public ?string $pseTaxId = null
+        public ?string $pseTaxId = null,
+        public ?string $partnerFeeId = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -273,7 +274,8 @@ readonly class Payin
             pseDocumentType: $data['pse_document_type'] ?? null,
             pseFullName: $data['pse_full_name'] ?? null,
             psePaymentLink: $data['pse_payment_link'] ?? null,
-            pseTaxId: $data['pse_tax_id'] ?? null
+            pseTaxId: $data['pse_tax_id'] ?? null,
+            partnerFeeId: $data['partner_fee_id'] ?? null
         );
     }
 }

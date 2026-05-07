@@ -93,7 +93,10 @@ readonly class BankAccountListItem
         public ?Country $swiftIntermediaryBankCountry,
         public ?string $tronWalletHash,
         public ?array $offrampWallets,
-        public DateTimeImmutable $createdAt
+        public DateTimeImmutable $createdAt,
+        public ?string $tedBankCode = null,
+        public ?string $tedBranchCode = null,
+        public ?string $tedCpfCnpj = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -148,7 +151,10 @@ readonly class BankAccountListItem
             swiftIntermediaryBankCountry: isset($data['swift_intermediary_bank_country']) ? Country::from($data['swift_intermediary_bank_country']) : null,
             tronWalletHash: $data['tron_wallet_hash'] ?? null,
             offrampWallets: $data['offramp_wallets'] ?? null,
-            createdAt: new DateTimeImmutable($data['created_at'])
+            createdAt: new DateTimeImmutable($data['created_at']),
+            tedBankCode: $data['ted_bank_code'] ?? null,
+            tedBranchCode: $data['ted_branch_code'] ?? null,
+            tedCpfCnpj: $data['ted_cpf_cnpj'] ?? null
         );
     }
 }
@@ -686,7 +692,10 @@ readonly class CreateInternationalSwiftInput
         public ?string $businessIndustry = null,
         public ?string $phoneNumber = null,
         public ?string $taxId = null,
-        public ?string $dateOfBirth = null
+        public ?string $dateOfBirth = null,
+        public ?string $tedBankCode = null,
+        public ?string $tedBranchCode = null,
+        public ?string $tedCpfCnpj = null
     ) {}
 
     public function toArray(): array
@@ -742,6 +751,18 @@ readonly class CreateInternationalSwiftInput
 
         if ($this->dateOfBirth !== null) {
             $data['date_of_birth'] = $this->dateOfBirth;
+        }
+
+        if ($this->tedBankCode !== null) {
+            $data['ted_bank_code'] = $this->tedBankCode;
+        }
+
+        if ($this->tedBranchCode !== null) {
+            $data['ted_branch_code'] = $this->tedBranchCode;
+        }
+
+        if ($this->tedCpfCnpj !== null) {
+            $data['ted_cpf_cnpj'] = $this->tedCpfCnpj;
         }
 
         return $data;
