@@ -149,6 +149,7 @@ enum BusinessIndustry: string
     case NAICS_541990 = '541990';
     case NAICS_541214 = '541214';
     case NAICS_561499 = '561499';
+    case NAICS_446120 = '446120';
 
     case DAPP = 'dapp';
     case EXCHANGE = 'exchange';

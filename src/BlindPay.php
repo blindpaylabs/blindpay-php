@@ -21,6 +21,7 @@ use BlindPay\SDK\Resources\Payouts\Payouts;
 use BlindPay\SDK\Resources\Quotes\Quotes;
 use BlindPay\SDK\Resources\Receivers\Receivers;
 use BlindPay\SDK\Resources\Receivers\ReceiversWrapper;
+use BlindPay\SDK\Resources\Rfi\Rfi;
 use BlindPay\SDK\Resources\TermsOfService\TermsOfService;
 use BlindPay\SDK\Resources\Transfers\Transfers;
 use BlindPay\SDK\Resources\Upload\Upload;
@@ -39,7 +40,7 @@ class BlindPay implements ApiClientInterface
 {
     private const BASE_URL = 'https://api.blindpay.com/v1/';
 
-    private const VERSION = '2.3.0';
+    private const VERSION = '2.4.0';
 
     private Client $httpClient;
 
@@ -137,8 +138,9 @@ class BlindPay implements ApiClientInterface
     {
         $receiversResource = new Receivers($this->instanceId, $this);
         $bankAccountsResource = new BankAccounts($this->instanceId, $this);
+        $rfiResource = new Rfi($this->instanceId, $this);
 
-        $this->receivers = new ReceiversWrapper($receiversResource, $bankAccountsResource);
+        $this->receivers = new ReceiversWrapper($receiversResource, $bankAccountsResource, $rfiResource);
     }
 
     private function initializeWallets(): void
