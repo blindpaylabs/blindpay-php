@@ -11,6 +11,7 @@ use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\RecipientRelationship;
+use BlindPay\SDK\Types\SwiftPaymentCode;
 use DateTimeImmutable;
 
 enum ArgentinaTransfers: string
@@ -91,6 +92,8 @@ readonly class BankAccountListItem
         public ?string $swiftIntermediaryBankAccountNumberIban,
         public ?string $swiftIntermediaryBankName,
         public ?Country $swiftIntermediaryBankCountry,
+        public ?SwiftPaymentCode $swiftPaymentCode,
+        public ?string $swiftIfscBranchCode,
         public ?string $tronWalletHash,
         public ?array $offrampWallets,
         public DateTimeImmutable $createdAt,
@@ -149,6 +152,8 @@ readonly class BankAccountListItem
             swiftIntermediaryBankAccountNumberIban: $data['swift_intermediary_bank_account_number_iban'] ?? null,
             swiftIntermediaryBankName: $data['swift_intermediary_bank_name'] ?? null,
             swiftIntermediaryBankCountry: isset($data['swift_intermediary_bank_country']) ? Country::from($data['swift_intermediary_bank_country']) : null,
+            swiftPaymentCode: isset($data['swift_payment_code']) ? SwiftPaymentCode::from($data['swift_payment_code']) : null,
+            swiftIfscBranchCode: $data['swift_ifsc_branch_code'] ?? null,
             tronWalletHash: $data['tron_wallet_hash'] ?? null,
             offrampWallets: $data['offramp_wallets'] ?? null,
             createdAt: new DateTimeImmutable($data['created_at']),
@@ -688,7 +693,8 @@ readonly class CreateInternationalSwiftInput
         public ?string $swiftIntermediaryBankSwiftCodeBic,
         public AccountClass $accountClass,
         public RecipientRelationship $recipientRelationship,
-        public ?string $swiftPaymentCode = null,
+        public ?SwiftPaymentCode $swiftPaymentCode = null,
+        public ?string $swiftIfscBranchCode = null,
         public ?string $businessIndustry = null,
         public ?string $phoneNumber = null,
         public ?string $taxId = null,
@@ -734,7 +740,11 @@ readonly class CreateInternationalSwiftInput
         }
 
         if ($this->swiftPaymentCode !== null) {
-            $data['swift_payment_code'] = $this->swiftPaymentCode;
+            $data['swift_payment_code'] = $this->swiftPaymentCode->value;
+        }
+
+        if ($this->swiftIfscBranchCode !== null) {
+            $data['swift_ifsc_branch_code'] = $this->swiftIfscBranchCode;
         }
 
         if ($this->businessIndustry !== null) {
@@ -802,6 +812,8 @@ readonly class CreateInternationalSwiftResponse
         public ?string $swiftIntermediaryBankAccountNumberIban,
         public ?string $swiftIntermediaryBankName,
         public ?Country $swiftIntermediaryBankCountry,
+        public ?SwiftPaymentCode $swiftPaymentCode,
+        public ?string $swiftIfscBranchCode,
         public DateTimeImmutable $createdAt
     ) {}
 
@@ -838,6 +850,8 @@ readonly class CreateInternationalSwiftResponse
             swiftIntermediaryBankAccountNumberIban: $data['swift_intermediary_bank_account_number_iban'] ?? null,
             swiftIntermediaryBankName: $data['swift_intermediary_bank_name'] ?? null,
             swiftIntermediaryBankCountry: isset($data['swift_intermediary_bank_country']) ? Country::from($data['swift_intermediary_bank_country']) : null,
+            swiftPaymentCode: isset($data['swift_payment_code']) ? SwiftPaymentCode::from($data['swift_payment_code']) : null,
+            swiftIfscBranchCode: $data['swift_ifsc_branch_code'] ?? null,
             createdAt: new DateTimeImmutable($data['created_at'])
         );
     }

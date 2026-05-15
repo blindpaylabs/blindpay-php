@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Receivers;
 
 use BlindPay\SDK\Resources\BankAccounts\BankAccounts;
+use BlindPay\SDK\Resources\Rfi\Rfi;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 
 readonly class ReceiversWrapper
 {
     public function __construct(
         private Receivers $base,
-        public BankAccounts $bankAccounts
+        public BankAccounts $bankAccounts,
+        public Rfi $rfi
     ) {}
 
     /*
