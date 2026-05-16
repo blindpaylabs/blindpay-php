@@ -220,7 +220,50 @@ readonly class ListExampleResponse
 }
 ```
 
-## 3. How To: Add a New Resource
+## 3. Decide: New Resource, or Method on an Existing One?
+
+Before adding files, decide whether a new endpoint deserves its own
+resource directory + class, or whether it belongs as a method on an
+existing class. Default to the second — methods on an existing
+resource are the right choice for most new endpoints.
+
+**Look at sibling endpoints first.** Find other endpoints whose URL
+path shares a prefix with the new one (e.g. `POST
+/receivers/{id}/rfi` is a sibling of `GET /receivers/{id}/limit-increase`,
+which is modeled as a method on an existing receivers-scoped class,
+not as a separate `Resources/LimitIncrease/LimitIncrease.php`).
+Match how those siblings are modeled.
+
+**Heuristics:**
+
+- 1–3 endpoints under an existing parent path → add as methods on the
+  parent's class (e.g. `$blindpay->receivers->getRfi($receiverId)`
+  and `$blindpay->receivers->submitRfi($receiverId, $body)`). **Do
+  not** create `src/Resources/Rfi/Rfi.php` for a 1–3-endpoint
+  extension of an existing resource.
+- 4+ endpoints with a distinct ID space, or a clearly separate
+  conceptual resource (`BankAccounts`, `BlockchainWallets`,
+  `VirtualAccounts`) → its own directory + class, wired under the
+  parent via the wrapper pattern (Section 7).
+- **Never** put a child of an existing resource at the top level of
+  `src/Resources/` (e.g. `src/Resources/Rfi/`). If it's nested in
+  the API URL under another resource, it's nested in the SDK.
+
+### Worked example: RFI
+
+`GET /receivers/{id}/rfi` and `POST /receivers/{id}/rfi` are two
+endpoints nested under `receivers`. Add them as methods on the
+existing Receivers class in `src/Resources/Receivers/Receivers.php`,
+alongside other receiver-scoped methods. NOT as a new top-level
+`src/Resources/Rfi/Rfi.php`.
+
+---
+
+## 4. How To: Add a New Resource
+
+(Use this section only when the heuristics above say the endpoint is
+a genuinely new top-level resource — not just a 1–3-endpoint
+extension of an existing one.)
 
 Suppose the API adds a new `invoices` resource at `instances/{instanceId}/invoices`.
 
