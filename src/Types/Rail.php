@@ -15,4 +15,6 @@ enum Rail: string
     case INTERNATIONAL_SWIFT = 'international_swift';
     case RTP = 'rtp';
     case PIX_SAFE = 'pix_safe';
+    case TED = 'ted';
+    case SEPA = 'sepa';
 }

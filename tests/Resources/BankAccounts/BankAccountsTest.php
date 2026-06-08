@@ -537,10 +537,9 @@ class BankAccountsTest extends TestCase
     public function it_lists_bank_accounts(): void
     {
         $mockedBankAccounts = [
-            'data' => [
-                [
-                    'id' => 'ba_000000000000',
-                    'type' => 'wire',
+            [
+                'id' => 'ba_000000000000',
+                'type' => 'wire',
                     'name' => 'Bank Account Name',
                     'pix_key' => '14947677768',
                     'beneficiary_name' => 'Individual full name or business name',
@@ -596,7 +595,6 @@ class BankAccountsTest extends TestCase
                         ],
                     ],
                     'created_at' => '2021-01-01T00:00:00Z',
-                ],
             ],
         ];
 

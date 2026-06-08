@@ -175,7 +175,7 @@ readonly class ListBankAccountsResponse
         return new self(
             data: array_map(
                 fn (array $item) => BankAccountListItem::fromArray($item),
-                $data['data']
+                $data
             )
         );
     }

@@ -349,7 +349,7 @@ readonly class IndividualWithStandardKYC extends BaseReceiver
         public IdentificationDocument $idDocType,
         public string $idDocFrontFile,
         public string $idDocBackFile,
-        public string $aipriseValidationKey,
+        public ?string $aipriseValidationKey,
         ?array $fraudWarnings = null,
         ?bool $isFbo = null,
         ?AccountPurpose $accountPurpose = null,
@@ -429,7 +429,7 @@ readonly class IndividualWithStandardKYC extends BaseReceiver
             idDocType: IdentificationDocument::from($data['id_doc_type']),
             idDocFrontFile: $data['id_doc_front_file'],
             idDocBackFile: $data['id_doc_back_file'],
-            aipriseValidationKey: $data['aiprise_validation_key'],
+            aipriseValidationKey: $data['aiprise_validation_key'] ?? null,
             fraudWarnings: isset($data['fraud_warnings']) ? array_map(
                 fn ($w) => FraudWarning::fromArray($w),
                 $data['fraud_warnings']
@@ -478,7 +478,7 @@ readonly class IndividualWithEnhancedKYC extends BaseReceiver
         public IdentificationDocument $idDocType,
         public string $idDocFrontFile,
         public ?string $idDocBackFile,
-        public string $aipriseValidationKey,
+        public ?string $aipriseValidationKey,
         public string $sourceOfFundsDocType,
         public string $sourceOfFundsDocFile,
         public string $individualHoldingDocFrontFile,
@@ -563,7 +563,7 @@ readonly class IndividualWithEnhancedKYC extends BaseReceiver
             idDocType: IdentificationDocument::from($data['id_doc_type']),
             idDocFrontFile: $data['id_doc_front_file'],
             idDocBackFile: $data['id_doc_back_file'] ?? null,
-            aipriseValidationKey: $data['aiprise_validation_key'],
+            aipriseValidationKey: $data['aiprise_validation_key'] ?? null,
             sourceOfFundsDocType: $data['source_of_funds_doc_type'],
             sourceOfFundsDocFile: $data['source_of_funds_doc_file'],
             individualHoldingDocFrontFile: $data['individual_holding_doc_front_file'],
@@ -621,7 +621,7 @@ readonly class BusinessWithStandardKYB extends BaseReceiver
         public string $incorporationDocFile,
         public string $proofOfOwnershipDocFile,
         public ?string $externalId,
-        public string $aipriseValidationKey,
+        public ?string $aipriseValidationKey,
         ?array $fraudWarnings = null,
         ?bool $isFbo = null,
         ?AccountPurpose $accountPurpose = null,
@@ -705,7 +705,7 @@ readonly class BusinessWithStandardKYB extends BaseReceiver
             incorporationDocFile: $data['incorporation_doc_file'],
             proofOfOwnershipDocFile: $data['proof_of_ownership_doc_file'],
             externalId: $data['external_id'] ?? null,
-            aipriseValidationKey: $data['aiprise_validation_key'],
+            aipriseValidationKey: $data['aiprise_validation_key'] ?? null,
             fraudWarnings: isset($data['fraud_warnings']) ? array_map(
                 fn ($w) => FraudWarning::fromArray($w),
                 $data['fraud_warnings']
