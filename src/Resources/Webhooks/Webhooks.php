@@ -137,6 +137,32 @@ readonly class GetPortalAccessUrlResponse
     }
 }
 
+readonly class ReceiverDeleteWebhookOut
+{
+    public function __construct(
+        public string $id,
+        public string $event,
+        public string $receiverId,
+        public string $instanceId,
+        public DateTimeImmutable $timestamp,
+        public string $type,
+        public array $data
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'],
+            event: $data['event'],
+            receiverId: $data['receiver_id'],
+            instanceId: $data['instance_id'],
+            timestamp: new DateTimeImmutable($data['timestamp']),
+            type: $data['type'],
+            data: $data['data']
+        );
+    }
+}
+
 class Webhooks
 {
     public function __construct(

@@ -15,6 +15,7 @@ use BlindPay\SDK\Resources\Customers\CustomersWrapper;
 use BlindPay\SDK\Resources\Fees\Fees;
 use BlindPay\SDK\Resources\Instances\Instances;
 use BlindPay\SDK\Resources\Instances\InstancesWrapper;
+use BlindPay\SDK\Resources\Ownership\Ownership;
 use BlindPay\SDK\Resources\PartnerFees\PartnerFees;
 use BlindPay\SDK\Resources\Payins\Payins;
 use BlindPay\SDK\Resources\Payins\PayinsWrapper;
@@ -58,6 +59,8 @@ class BlindPay implements ApiClientInterface
     public readonly VirtualAccounts $virtualAccounts;
 
     public readonly InstancesWrapper $instances;
+
+    public readonly Ownership $ownership;
 
     public readonly PayinsWrapper $payins;
 
@@ -109,6 +112,7 @@ class BlindPay implements ApiClientInterface
         $this->virtualAccounts = new VirtualAccounts($this->instanceId, $this);
         $this->transfers = new Transfers($this->instanceId, $this);
         $this->fees = new Fees($this->instanceId, $this);
+        $this->ownership = new Ownership($this->instanceId, $this);
         $this->upload = new Upload($this);
 
         $this->initializeInstances();

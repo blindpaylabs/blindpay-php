@@ -96,7 +96,8 @@ readonly class BankAccountListItem
         public DateTimeImmutable $createdAt,
         public ?string $tedBankCode = null,
         public ?string $tedBranchCode = null,
-        public ?string $tedCpfCnpj = null
+        public ?string $tedCpfCnpj = null,
+        public ?string $sepaBeneficiaryBic = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -154,7 +155,8 @@ readonly class BankAccountListItem
             createdAt: new DateTimeImmutable($data['created_at']),
             tedBankCode: $data['ted_bank_code'] ?? null,
             tedBranchCode: $data['ted_branch_code'] ?? null,
-            tedCpfCnpj: $data['ted_cpf_cnpj'] ?? null
+            tedCpfCnpj: $data['ted_cpf_cnpj'] ?? null,
+            sepaBeneficiaryBic: $data['sepa_beneficiary_bic'] ?? null
         );
     }
 }
@@ -201,7 +203,8 @@ readonly class BankAccountResponse
         public ?string $iban,
         public bool $isPrimary,
         public DateTimeImmutable $createdAt,
-        public DateTimeImmutable $updatedAt
+        public DateTimeImmutable $updatedAt,
+        public ?string $sepaBeneficiaryBic = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -218,7 +221,8 @@ readonly class BankAccountResponse
             iban: $data['iban'] ?? null,
             isPrimary: $data['is_primary'],
             createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at'])
+            updatedAt: new DateTimeImmutable($data['updated_at']),
+            sepaBeneficiaryBic: $data['sepa_beneficiary_bic'] ?? null
         );
     }
 }
@@ -695,7 +699,8 @@ readonly class CreateInternationalSwiftInput
         public ?string $dateOfBirth = null,
         public ?string $tedBankCode = null,
         public ?string $tedBranchCode = null,
-        public ?string $tedCpfCnpj = null
+        public ?string $tedCpfCnpj = null,
+        public ?string $sepaBeneficiaryBic = null
     ) {}
 
     public function toArray(): array
@@ -765,6 +770,10 @@ readonly class CreateInternationalSwiftInput
             $data['ted_cpf_cnpj'] = $this->tedCpfCnpj;
         }
 
+        if ($this->sepaBeneficiaryBic !== null) {
+            $data['sepa_beneficiary_bic'] = $this->sepaBeneficiaryBic;
+        }
+
         return $data;
     }
 }
@@ -802,7 +811,8 @@ readonly class CreateInternationalSwiftResponse
         public ?string $swiftIntermediaryBankAccountNumberIban,
         public ?string $swiftIntermediaryBankName,
         public ?Country $swiftIntermediaryBankCountry,
-        public DateTimeImmutable $createdAt
+        public DateTimeImmutable $createdAt,
+        public ?string $sepaBeneficiaryBic = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -838,7 +848,8 @@ readonly class CreateInternationalSwiftResponse
             swiftIntermediaryBankAccountNumberIban: $data['swift_intermediary_bank_account_number_iban'] ?? null,
             swiftIntermediaryBankName: $data['swift_intermediary_bank_name'] ?? null,
             swiftIntermediaryBankCountry: isset($data['swift_intermediary_bank_country']) ? Country::from($data['swift_intermediary_bank_country']) : null,
-            createdAt: new DateTimeImmutable($data['created_at'])
+            createdAt: new DateTimeImmutable($data['created_at']),
+            sepaBeneficiaryBic: $data['sepa_beneficiary_bic'] ?? null
         );
     }
 }
@@ -1276,5 +1287,112 @@ class BankAccounts
         }
 
         return $response;
+    }
+
+    /*
+     * Create SEPA bank account
+     *
+     * @param CreateSepaInput $input
+     * @return BlindPayApiResponse<CreateSepaResponse>
+     */
+    public function createSepa(CreateSepaInput $input): BlindPayApiResponse
+    {
+        $response = $this->client->post(
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
+            $input->toArray()
+        );
+
+        if ($response->isSuccess() && is_array($response->data)) {
+            return BlindPayApiResponse::success(
+                CreateSepaResponse::fromArray($response->data)
+            );
+        }
+
+        return $response;
+    }
+}
+
+readonly class CreateSepaInput
+{
+    public function __construct(
+        public string $customerId,
+        public string $name,
+        public AccountClass $accountClass,
+        public string $sepaIban,
+        public string $sepaBeneficiaryBic,
+        public string $sepaBeneficiaryLegalName,
+        public string $sepaBeneficiaryAddressLine1,
+        public string $sepaBeneficiaryCity,
+        public string $sepaBeneficiaryPostalCode,
+        public Country $sepaBeneficiaryCountry,
+        public ?string $sepaBeneficiaryAddressLine2 = null,
+        public ?string $sepaBeneficiaryStateProvinceRegion = null
+    ) {}
+
+    public function toArray(): array
+    {
+        $data = [
+            'type' => 'sepa',
+            'name' => $this->name,
+            'account_class' => $this->accountClass->value,
+            'sepa_iban' => $this->sepaIban,
+            'sepa_beneficiary_bic' => $this->sepaBeneficiaryBic,
+            'sepa_beneficiary_legal_name' => $this->sepaBeneficiaryLegalName,
+            'sepa_beneficiary_address_line_1' => $this->sepaBeneficiaryAddressLine1,
+            'sepa_beneficiary_city' => $this->sepaBeneficiaryCity,
+            'sepa_beneficiary_postal_code' => $this->sepaBeneficiaryPostalCode,
+            'sepa_beneficiary_country' => $this->sepaBeneficiaryCountry->value,
+        ];
+
+        if ($this->sepaBeneficiaryAddressLine2 !== null) {
+            $data['sepa_beneficiary_address_line_2'] = $this->sepaBeneficiaryAddressLine2;
+        }
+        if ($this->sepaBeneficiaryStateProvinceRegion !== null) {
+            $data['sepa_beneficiary_state_province_region'] = $this->sepaBeneficiaryStateProvinceRegion;
+        }
+
+        return $data;
+    }
+}
+
+readonly class CreateSepaResponse
+{
+    public function __construct(
+        public string $id,
+        public string $type,
+        public string $name,
+        public AccountClass $accountClass,
+        public ?RecipientRelationship $recipientRelationship,
+        public string $sepaIban,
+        public string $sepaBeneficiaryBic,
+        public string $sepaBeneficiaryLegalName,
+        public string $sepaBeneficiaryAddressLine1,
+        public ?string $sepaBeneficiaryAddressLine2,
+        public string $sepaBeneficiaryCity,
+        public ?string $sepaBeneficiaryStateProvinceRegion,
+        public string $sepaBeneficiaryPostalCode,
+        public Country $sepaBeneficiaryCountry,
+        public DateTimeImmutable $createdAt
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'],
+            type: $data['type'],
+            name: $data['name'],
+            accountClass: AccountClass::from($data['account_class']),
+            recipientRelationship: isset($data['recipient_relationship']) ? RecipientRelationship::from($data['recipient_relationship']) : null,
+            sepaIban: $data['sepa_iban'],
+            sepaBeneficiaryBic: $data['sepa_beneficiary_bic'],
+            sepaBeneficiaryLegalName: $data['sepa_beneficiary_legal_name'],
+            sepaBeneficiaryAddressLine1: $data['sepa_beneficiary_address_line_1'],
+            sepaBeneficiaryAddressLine2: $data['sepa_beneficiary_address_line_2'] ?? null,
+            sepaBeneficiaryCity: $data['sepa_beneficiary_city'],
+            sepaBeneficiaryStateProvinceRegion: $data['sepa_beneficiary_state_province_region'] ?? null,
+            sepaBeneficiaryPostalCode: $data['sepa_beneficiary_postal_code'],
+            sepaBeneficiaryCountry: Country::from($data['sepa_beneficiary_country']),
+            createdAt: new DateTimeImmutable($data['created_at'])
+        );
     }
 }
