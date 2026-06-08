@@ -15,7 +15,7 @@ readonly class BlockchainWallet
         public string $name,
         public Network $network,
         public bool $isAccountAbstraction,
-        public string $receiverId,
+        public string $customerId,
         public ?string $address = null,
         public ?string $signatureTxHash = null
     ) {}
@@ -27,7 +27,7 @@ readonly class BlockchainWallet
             name: $data['name'],
             network: Network::from($data['network']),
             isAccountAbstraction: $data['is_account_abstraction'],
-            receiverId: $data['receiver_id'],
+            customerId: $data['customer_id'],
             address: $data['address'] ?? null,
             signatureTxHash: $data['signature_tx_hash'] ?? null
         );
@@ -51,7 +51,7 @@ readonly class GetBlockchainWalletMessageResponse
 readonly class CreateBlockchainWalletWithAddressInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $name,
         public Network $network,
         public string $address
@@ -71,7 +71,7 @@ readonly class CreateBlockchainWalletWithAddressInput
 readonly class CreateBlockchainWalletWithHashInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $name,
         public Network $network,
         public string $signatureTxHash
@@ -91,7 +91,7 @@ readonly class CreateBlockchainWalletWithHashInput
 readonly class GetBlockchainWalletInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $id
     ) {}
 }
@@ -99,7 +99,7 @@ readonly class GetBlockchainWalletInput
 readonly class DeleteBlockchainWalletInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $id
     ) {}
 }
@@ -219,16 +219,16 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<BlockchainWallet[]>
      */
-    public function list(string $receiverId): BlindPayApiResponse
+    public function list(string $customerId): BlindPayApiResponse
     {
-        if (empty($receiverId)) {
+        if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Receiver ID cannot be empty')
+                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$receiverId}/blockchain-wallets"
+            "instances/{$this->instanceId}/customers/{$customerId}/blockchain-wallets"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -251,7 +251,7 @@ class BlockchainWallets
     public function createWithAddress(CreateBlockchainWalletWithAddressInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/blockchain-wallets",
             $input->toArray()
         );
 
@@ -272,7 +272,7 @@ class BlockchainWallets
     public function createWithHash(CreateBlockchainWalletWithHashInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/blockchain-wallets",
             $input->toArray()
         );
 
@@ -290,16 +290,16 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<GetBlockchainWalletMessageResponse>
      */
-    public function getMessage(string $receiverId): BlindPayApiResponse
+    public function getMessage(string $customerId): BlindPayApiResponse
     {
-        if (empty($receiverId)) {
+        if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Receiver ID cannot be empty')
+                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$receiverId}/blockchain-wallets/sign-message"
+            "instances/{$this->instanceId}/customers/{$customerId}/blockchain-wallets/sign-message"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -325,7 +325,7 @@ class BlockchainWallets
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets/{$input->id}"
+            "instances/{$this->instanceId}/customers/{$input->customerId}/blockchain-wallets/{$input->id}"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -351,7 +351,7 @@ class BlockchainWallets
         }
 
         return $this->client->delete(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/blockchain-wallets/{$input->id}"
+            "instances/{$this->instanceId}/customers/{$input->customerId}/blockchain-wallets/{$input->id}"
         );
     }
 

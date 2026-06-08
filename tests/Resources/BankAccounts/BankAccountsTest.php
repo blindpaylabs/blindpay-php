@@ -83,7 +83,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedPixAccount);
 
         $input = new CreatePixInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'PIX Account',
             pixKey: '14947677768'
         );
@@ -114,7 +114,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedArgentinaTransfersAccount);
 
         $input = new CreateArgentinaTransfersInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'Argentina Transfers Account',
             beneficiaryName: 'Individual full name or business name',
             transfersAccount: 'BM123123123123',
@@ -150,7 +150,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedSpeiAccount);
 
         $input = new CreateSpeiInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             beneficiaryName: 'Individual full name or business name',
             name: 'SPEI Account',
             speiClabe: '5482347403740546',
@@ -191,7 +191,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedColombiaAchAccount);
 
         $input = new CreateColombiaAchInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'Colombia ACH Account',
             accountType: BankAccountType::CHECKING,
             achCopBeneficiaryFirstName: 'Fernando',
@@ -251,7 +251,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedAchAccount);
 
         $input = new CreateAchInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'ACH Account',
             accountClass: AccountClass::INDIVIDUAL,
             accountNumber: '1001001234',
@@ -308,7 +308,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedWireAccount);
 
         $input = new CreateWireInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'Wire Account',
             accountNumber: '1001001234',
             beneficiaryName: 'Individual full name or business name',
@@ -381,7 +381,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedInternationalSwiftAccount);
 
         $input = new CreateInternationalSwiftInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'International Swift Account',
             swiftAccountHolderName: 'John Doe',
             swiftAccountNumberIban: '123456789',
@@ -459,7 +459,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedRtpAccount);
 
         $input = new CreateRtpInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'John Doe RTP',
             beneficiaryName: 'John Doe',
             routingNumber: '121000358',
@@ -497,7 +497,7 @@ class BankAccountsTest extends TestCase
     {
         $mockedBankAccount = [
             'id' => 'ba_000000000000',
-            'receiver_id' => 'rcv_123',
+            'customer_id' => 'rcv_123',
             'account_holder_name' => 'Individual full name or business name',
             'account_number' => '1001001234',
             'routing_number' => '012345678',
@@ -513,7 +513,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedBankAccount);
 
         $input = new GetBankAccountInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             id: 'ba_000000000000'
         );
 
@@ -522,7 +522,7 @@ class BankAccountsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('ba_000000000000', $response->data->id);
-        $this->assertEquals('rcv_123', $response->data->receiverId);
+        $this->assertEquals('rcv_123', $response->data->customerId);
         $this->assertEquals('Individual full name or business name', $response->data->accountHolderName);
         $this->assertEquals('1001001234', $response->data->accountNumber);
         $this->assertEquals('012345678', $response->data->routingNumber);
@@ -625,7 +625,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse(['data' => null]);
 
         $input = new DeleteBankAccountInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             id: 'ba_000000000000'
         );
 

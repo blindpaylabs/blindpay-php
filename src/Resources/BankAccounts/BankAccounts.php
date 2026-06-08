@@ -182,7 +182,7 @@ readonly class ListBankAccountsResponse
 readonly class GetBankAccountInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $id
     ) {}
 }
@@ -191,7 +191,7 @@ readonly class BankAccountResponse
 {
     public function __construct(
         public string $id,
-        public string $receiverId,
+        public string $customerId,
         public string $accountHolderName,
         public string $accountNumber,
         public string $routingNumber,
@@ -208,7 +208,7 @@ readonly class BankAccountResponse
     {
         return new self(
             id: $data['id'],
-            receiverId: $data['receiver_id'],
+            customerId: $data['customer_id'],
             accountHolderName: $data['account_holder_name'],
             accountNumber: $data['account_number'],
             routingNumber: $data['routing_number'],
@@ -226,7 +226,7 @@ readonly class BankAccountResponse
 readonly class DeleteBankAccountInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $id
     ) {}
 }
@@ -234,7 +234,7 @@ readonly class DeleteBankAccountInput
 readonly class CreatePixInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $name,
         public string $pixKey
     ) {}
@@ -274,7 +274,7 @@ readonly class CreatePixResponse
 readonly class CreateArgentinaTransfersInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $name,
         public string $beneficiaryName,
         public string $transfersAccount,
@@ -322,7 +322,7 @@ readonly class CreateArgentinaTransfersResponse
 readonly class CreateSpeiInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $beneficiaryName,
         public string $name,
         public string $speiClabe,
@@ -374,7 +374,7 @@ readonly class CreateSpeiResponse
 readonly class CreateColombiaAchInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $name,
         public BankAccountType $accountType,
         public string $achCopBeneficiaryFirstName,
@@ -442,7 +442,7 @@ readonly class CreateColombiaAchResponse
 readonly class CreateAchInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $name,
         public AccountClass $accountClass,
         public string $accountNumber,
@@ -563,7 +563,7 @@ readonly class CreateAchResponse
 readonly class CreateWireInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $name,
         public string $accountNumber,
         public string $beneficiaryName,
@@ -664,7 +664,7 @@ readonly class CreateWireResponse
 readonly class CreateInternationalSwiftInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $name,
         public string $swiftAccountHolderName,
         public string $swiftAccountNumberIban,
@@ -846,7 +846,7 @@ readonly class CreateInternationalSwiftResponse
 readonly class CreateRtpInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $name,
         public string $beneficiaryName,
         public string $routingNumber,
@@ -909,7 +909,7 @@ readonly class CreateRtpInput
 readonly class CreatePixSafeInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $name,
         public string $accountNumber,
         public BankAccountType $accountType,
@@ -1008,21 +1008,21 @@ class BankAccounts
     ) {}
 
     /*
-     * List bank accounts for a receiver
+     * List bank accounts for a customer
      *
-     * @param string $receiverId
+     * @param string $customerId
      * @return BlindPayApiResponse<ListBankAccountsResponse>
      */
-    public function list(string $receiverId): BlindPayApiResponse
+    public function list(string $customerId): BlindPayApiResponse
     {
-        if (empty($receiverId)) {
+        if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Receiver ID cannot be empty')
+                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$receiverId}/bank-accounts"
+            "instances/{$this->instanceId}/customers/{$customerId}/bank-accounts"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -1042,14 +1042,14 @@ class BankAccounts
      */
     public function get(GetBankAccountInput $input): BlindPayApiResponse
     {
-        if (empty($input->receiverId) || empty($input->id)) {
+        if (empty($input->customerId) || empty($input->id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Receiver ID and ID cannot be empty')
+                new \BlindPay\SDK\Types\ErrorResponse('Customer ID and ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts/{$input->id}"
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->id}"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -1069,14 +1069,14 @@ class BankAccounts
      */
     public function delete(DeleteBankAccountInput $input): BlindPayApiResponse
     {
-        if (empty($input->receiverId) || empty($input->id)) {
+        if (empty($input->customerId) || empty($input->id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Receiver ID and ID cannot be empty')
+                new \BlindPay\SDK\Types\ErrorResponse('Customer ID and ID cannot be empty')
             );
         }
 
         return $this->client->delete(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts/{$input->id}"
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->id}"
         );
     }
 
@@ -1089,7 +1089,7 @@ class BankAccounts
     public function createPix(CreatePixInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1111,7 +1111,7 @@ class BankAccounts
     public function createArgentinaTransfers(CreateArgentinaTransfersInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1133,7 +1133,7 @@ class BankAccounts
     public function createSpei(CreateSpeiInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1155,7 +1155,7 @@ class BankAccounts
     public function createColombiaAch(CreateColombiaAchInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1177,7 +1177,7 @@ class BankAccounts
     public function createAch(CreateAchInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1199,7 +1199,7 @@ class BankAccounts
     public function createWire(CreateWireInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1221,7 +1221,7 @@ class BankAccounts
     public function createInternationalSwift(CreateInternationalSwiftInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1243,7 +1243,7 @@ class BankAccounts
     public function createRtp(CreateRtpInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
             $input->toArray()
         );
 
@@ -1265,7 +1265,7 @@ class BankAccounts
     public function createPixSafe(CreatePixSafeInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
             $input->toArray()
         );
 
