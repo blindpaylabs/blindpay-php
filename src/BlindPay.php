@@ -22,8 +22,6 @@ use BlindPay\SDK\Resources\Payins\PayinsWrapper;
 use BlindPay\SDK\Resources\Payins\Quotes as PayinQuotes;
 use BlindPay\SDK\Resources\Payouts\Payouts;
 use BlindPay\SDK\Resources\Quotes\Quotes;
-use BlindPay\SDK\Resources\Receivers\Receivers;
-use BlindPay\SDK\Resources\Receivers\ReceiversWrapper;
 use BlindPay\SDK\Resources\TermsOfService\TermsOfService;
 use BlindPay\SDK\Resources\Transfers\Transfers;
 use BlindPay\SDK\Resources\Upload\Upload;
@@ -42,7 +40,7 @@ class BlindPay implements ApiClientInterface
 {
     private const BASE_URL = 'https://api.blindpay.com/v1/';
 
-    private const VERSION = '2.4.0';
+    private const VERSION = '3.0.0';
 
     private Client $httpClient;
 
@@ -65,12 +63,6 @@ class BlindPay implements ApiClientInterface
     public readonly PayinsWrapper $payins;
 
     public readonly CustomersWrapper $customers;
-
-    /**
-     * @deprecated 2.4.0 Use $customers instead. Will be removed in v3.0.0.
-     *             See https://www.blindpay.com/changelog/2026-06-04-customers-rename
-     */
-    public readonly ReceiversWrapper $receivers;
 
     public readonly WalletsWrapper $wallets;
 
@@ -118,7 +110,6 @@ class BlindPay implements ApiClientInterface
         $this->initializeInstances();
         $this->initializePayins();
         $this->initializeCustomers();
-        $this->initializeReceivers();
         $this->initializeWallets();
     }
 
@@ -152,14 +143,6 @@ class BlindPay implements ApiClientInterface
         $bankAccountsResource = new BankAccounts($this->instanceId, $this);
 
         $this->customers = new CustomersWrapper($customersResource, $bankAccountsResource);
-    }
-
-    private function initializeReceivers(): void
-    {
-        $receiversResource = new Receivers($this->instanceId, $this);
-        $bankAccountsResource = new BankAccounts($this->instanceId, $this);
-
-        $this->receivers = new ReceiversWrapper($receiversResource, $bankAccountsResource);
     }
 
     private function initializeWallets(): void

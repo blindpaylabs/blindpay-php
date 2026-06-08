@@ -88,7 +88,7 @@ class BankAccountsTest extends TestCase
             pixKey: '14947677768'
         );
 
-        $response = $this->blindpay->receivers->bankAccounts->createPix($input);
+        $response = $this->blindpay->customers->bankAccounts->createPix($input);
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
@@ -121,7 +121,7 @@ class BankAccountsTest extends TestCase
             transfersType: ArgentinaTransfers::CVU
         );
 
-        $response = $this->blindpay->receivers->bankAccounts->createArgentinaTransfers($input);
+        $response = $this->blindpay->customers->bankAccounts->createArgentinaTransfers($input);
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
@@ -158,7 +158,7 @@ class BankAccountsTest extends TestCase
             speiProtocol: SpeiProtocol::SPEI
         );
 
-        $response = $this->blindpay->receivers->bankAccounts->createSpei($input);
+        $response = $this->blindpay->customers->bankAccounts->createSpei($input);
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
@@ -203,7 +203,7 @@ class BankAccountsTest extends TestCase
             achCopBankAccount: '12345678'
         );
 
-        $response = $this->blindpay->receivers->bankAccounts->createColombiaAch($input);
+        $response = $this->blindpay->customers->bankAccounts->createColombiaAch($input);
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
@@ -266,7 +266,7 @@ class BankAccountsTest extends TestCase
             postalCode: '10001'
         );
 
-        $response = $this->blindpay->receivers->bankAccounts->createAch($input);
+        $response = $this->blindpay->customers->bankAccounts->createAch($input);
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
@@ -323,7 +323,7 @@ class BankAccountsTest extends TestCase
             recipientRelationship: RecipientRelationship::FIRST_PARTY
         );
 
-        $response = $this->blindpay->receivers->bankAccounts->createWire($input);
+        $response = $this->blindpay->customers->bankAccounts->createWire($input);
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
@@ -407,7 +407,7 @@ class BankAccountsTest extends TestCase
             recipientRelationship: RecipientRelationship::FIRST_PARTY
         );
 
-        $response = $this->blindpay->receivers->bankAccounts->createInternationalSwift($input);
+        $response = $this->blindpay->customers->bankAccounts->createInternationalSwift($input);
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
@@ -474,7 +474,7 @@ class BankAccountsTest extends TestCase
             recipientRelationship: RecipientRelationship::FIRST_PARTY
         );
 
-        $response = $this->blindpay->receivers->bankAccounts->createRtp($input);
+        $response = $this->blindpay->customers->bankAccounts->createRtp($input);
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
@@ -517,7 +517,7 @@ class BankAccountsTest extends TestCase
             id: 'ba_000000000000'
         );
 
-        $response = $this->blindpay->receivers->bankAccounts->get($input);
+        $response = $this->blindpay->customers->bankAccounts->get($input);
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
@@ -600,7 +600,7 @@ class BankAccountsTest extends TestCase
 
         $this->mockResponse($mockedBankAccounts);
 
-        $response = $this->blindpay->receivers->bankAccounts->list('re_000000000000');
+        $response = $this->blindpay->customers->bankAccounts->list('re_000000000000');
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
@@ -627,7 +627,7 @@ class BankAccountsTest extends TestCase
             id: 'ba_000000000000'
         );
 
-        $response = $this->blindpay->receivers->bankAccounts->delete($input);
+        $response = $this->blindpay->customers->bankAccounts->delete($input);
 
         $this->assertTrue($response->isSuccess());
         $this->assertIsArray($response->data);
