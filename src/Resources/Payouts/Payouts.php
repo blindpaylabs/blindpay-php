@@ -107,7 +107,10 @@ readonly class Payout
         public ?string $partnerFeeId = null,
         public ?string $tedBankCode = null,
         public ?string $tedBranchCode = null,
-        public ?string $tedCpfCnpj = null
+        public ?string $tedCpfCnpj = null,
+        public ?float $billingFeeAmount = null,
+        public ?string $cpnPaymentId = null,
+        public ?string $senderLegalName = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -179,7 +182,10 @@ readonly class Payout
             partnerFeeId: $data['partner_fee_id'] ?? null,
             tedBankCode: $data['ted_bank_code'] ?? null,
             tedBranchCode: $data['ted_branch_code'] ?? null,
-            tedCpfCnpj: $data['ted_cpf_cnpj'] ?? null
+            tedCpfCnpj: $data['ted_cpf_cnpj'] ?? null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
+            cpnPaymentId: $data['cpn_payment_id'] ?? null,
+            senderLegalName: $data['sender_legal_name'] ?? null
         );
     }
 }
