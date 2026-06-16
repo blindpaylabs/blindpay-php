@@ -61,7 +61,7 @@ class CustodialWalletsTest extends TestCase
     {
         $mockedWallet = [
             'id' => 'cw_000000000000',
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
             'instance_id' => 'in_000000000000',
             'network' => 'solana',
             'address' => 'So1ana1234567890',
@@ -71,7 +71,7 @@ class CustodialWalletsTest extends TestCase
         $this->mockResponse($mockedWallet);
 
         $input = new CreateCustodialWalletInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             network: Network::SOLANA
         );
 
@@ -80,7 +80,7 @@ class CustodialWalletsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('cw_000000000000', $response->data->id);
-        $this->assertEquals('re_000000000000', $response->data->receiverId);
+        $this->assertEquals('re_000000000000', $response->data->customerId);
         $this->assertEquals(Network::SOLANA, $response->data->network);
         $this->assertEquals('So1ana1234567890', $response->data->address);
     }
@@ -91,7 +91,7 @@ class CustodialWalletsTest extends TestCase
         $mockedWallets = [
             [
                 'id' => 'cw_000000000000',
-                'receiver_id' => 're_000000000000',
+                'customer_id' => 're_000000000000',
                 'instance_id' => 'in_000000000000',
                 'network' => 'solana',
                 'address' => 'So1ana1234567890',
@@ -115,7 +115,7 @@ class CustodialWalletsTest extends TestCase
     {
         $mockedWallet = [
             'id' => 'cw_000000000000',
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
             'instance_id' => 'in_000000000000',
             'network' => 'solana',
             'address' => 'So1ana1234567890',
@@ -125,7 +125,7 @@ class CustodialWalletsTest extends TestCase
         $this->mockResponse($mockedWallet);
 
         $input = new GetCustodialWalletInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             id: 'cw_000000000000'
         );
 
@@ -156,7 +156,7 @@ class CustodialWalletsTest extends TestCase
         $this->mockResponse($mockedBalance);
 
         $input = new GetCustodialWalletInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             id: 'cw_000000000000'
         );
 
@@ -178,7 +178,7 @@ class CustodialWalletsTest extends TestCase
         $this->mockResponse(['data' => null]);
 
         $input = new DeleteCustodialWalletInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             id: 'cw_000000000000'
         );
 

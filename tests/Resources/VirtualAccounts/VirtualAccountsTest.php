@@ -61,7 +61,7 @@ class VirtualAccountsTest extends TestCase
         $this->mockResponse(['data' => null]);
 
         $input = new UpdateVirtualAccountInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             virtualAccountId: 'va_000000000000',
             blockchainWalletId: 'bw_000000000000',
             token: StablecoinToken::USDC
@@ -113,7 +113,7 @@ class VirtualAccountsTest extends TestCase
         $this->mockResponse($mockedVirtualAccount);
 
         $input = new CreateVirtualAccountInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             blockchainWalletId: 'bw_000000000000',
             token: StablecoinToken::USDC
         );

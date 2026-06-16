@@ -8,6 +8,7 @@ enum WebhookEvent: string
 {
     case RECEIVER_NEW = 'receiver.new';
     case RECEIVER_UPDATE = 'receiver.update';
+    case RECEIVER_DELETE = 'receiver.delete';
     case BANK_ACCOUNT_NEW = 'bankAccount.new';
     case PAYOUT_NEW = 'payout.new';
     case PAYOUT_UPDATE = 'payout.update';

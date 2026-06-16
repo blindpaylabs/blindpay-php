@@ -86,7 +86,7 @@ class BlockchainWalletsTest extends TestCase
                 'address' => '0xDD6a3aD0949396e57C7738ba8FC1A46A5a1C372C',
                 'signature_tx_hash' => '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
                 'is_account_abstraction' => false,
-                'receiver_id' => 're_000000000000',
+                'customer_id' => 're_000000000000',
             ],
         ];
 
@@ -115,13 +115,13 @@ class BlockchainWalletsTest extends TestCase
             'address' => '0xDD6a3aD0949396e57C7738ba8FC1A46A5a1C372C',
             'signature_tx_hash' => null,
             'is_account_abstraction' => true,
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
         ];
 
         $this->mockResponse($mockedWallet);
 
         $input = new CreateBlockchainWalletWithAddressInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'Wallet Display Name',
             network: Network::POLYGON,
             address: '0xDD6a3aD0949396e57C7738ba8FC1A46A5a1C372C'
@@ -149,13 +149,13 @@ class BlockchainWalletsTest extends TestCase
             'address' => '0xDD6a3aD0949396e57C7738ba8FC1A46A5a1C372C',
             'signature_tx_hash' => '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
             'is_account_abstraction' => false,
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
         ];
 
         $this->mockResponse($mockedWallet);
 
         $input = new CreateBlockchainWalletWithHashInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'Wallet Display Name',
             network: Network::POLYGON,
             signatureTxHash: '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359'
@@ -183,13 +183,13 @@ class BlockchainWalletsTest extends TestCase
             'address' => '0xDD6a3aD0949396e57C7738ba8FC1A46A5a1C372C',
             'signature_tx_hash' => '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
             'is_account_abstraction' => false,
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
         ];
 
         $this->mockResponse($mockedWallet);
 
         $input = new GetBlockchainWalletInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             id: 'bw_000000000000'
         );
 
@@ -209,7 +209,7 @@ class BlockchainWalletsTest extends TestCase
         $this->mockResponse(['data' => null]);
 
         $input = new DeleteBlockchainWalletInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             id: 'bw_000000000000'
         );
 

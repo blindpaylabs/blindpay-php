@@ -13,7 +13,7 @@ readonly class CustodialWallet
 {
     public function __construct(
         public string $id,
-        public string $receiverId,
+        public string $customerId,
         public string $instanceId,
         public Network $network,
         public string $address,
@@ -24,7 +24,7 @@ readonly class CustodialWallet
     {
         return new self(
             id: $data['id'],
-            receiverId: $data['receiver_id'],
+            customerId: $data['customer_id'],
             instanceId: $data['instance_id'],
             network: Network::from($data['network']),
             address: $data['address'],
@@ -72,7 +72,7 @@ readonly class CustodialWalletBalanceResponse
 readonly class CreateCustodialWalletInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public Network $network
     ) {}
 
@@ -87,7 +87,7 @@ readonly class CreateCustodialWalletInput
 readonly class GetCustodialWalletInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $id
     ) {}
 }
@@ -95,7 +95,7 @@ readonly class GetCustodialWalletInput
 readonly class DeleteCustodialWalletInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $id
     ) {}
 }
@@ -108,21 +108,21 @@ class CustodialWallets
     ) {}
 
     /*
-     * List custodial wallets for a receiver
+     * List custodial wallets for a customer
      *
-     * @param string $receiverId
+     * @param string $customerId
      * @return BlindPayApiResponse<CustodialWallet[]>
      */
-    public function list(string $receiverId): BlindPayApiResponse
+    public function list(string $customerId): BlindPayApiResponse
     {
-        if (empty($receiverId)) {
+        if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Receiver ID cannot be empty')
+                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$receiverId}/wallets"
+            "instances/{$this->instanceId}/customers/{$customerId}/wallets"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -152,7 +152,7 @@ class CustodialWallets
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/wallets/{$input->id}"
+            "instances/{$this->instanceId}/customers/{$input->customerId}/wallets/{$input->id}"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -173,7 +173,7 @@ class CustodialWallets
     public function create(CreateCustodialWalletInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/wallets",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/wallets",
             $input->toArray()
         );
 
@@ -201,7 +201,7 @@ class CustodialWallets
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/wallets/{$input->id}/balance"
+            "instances/{$this->instanceId}/customers/{$input->customerId}/wallets/{$input->id}/balance"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -228,7 +228,7 @@ class CustodialWallets
         }
 
         return $this->client->delete(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/wallets/{$input->id}"
+            "instances/{$this->instanceId}/customers/{$input->customerId}/wallets/{$input->id}"
         );
     }
 }

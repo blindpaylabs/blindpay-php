@@ -63,7 +63,7 @@ class OfframpWalletsTest extends TestCase
                 'id' => 'ow_000000000000',
                 'external_id' => 'your_external_id',
                 'instance_id' => 'in_000000000000',
-                'receiver_id' => 're_000000000000',
+                'customer_id' => 're_000000000000',
                 'bank_account_id' => 'ba_000000000000',
                 'network' => 'tron',
                 'address' => 'TALJN9zTTEL9TVBb4WuTt6wLvPqJZr3hvb',
@@ -75,7 +75,7 @@ class OfframpWalletsTest extends TestCase
         $this->mockResponse($mockedOfframpWallets);
 
         $input = new ListOfframpWalletsInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             bankAccountId: 'ba_000000000000'
         );
 
@@ -88,7 +88,7 @@ class OfframpWalletsTest extends TestCase
         $this->assertEquals('ow_000000000000', $response->data[0]->id);
         $this->assertEquals('your_external_id', $response->data[0]->externalId);
         $this->assertEquals('in_000000000000', $response->data[0]->instanceId);
-        $this->assertEquals('re_000000000000', $response->data[0]->receiverId);
+        $this->assertEquals('re_000000000000', $response->data[0]->customerId);
         $this->assertEquals('ba_000000000000', $response->data[0]->bankAccountId);
         $this->assertEquals('tron', $response->data[0]->network);
         $this->assertEquals('TALJN9zTTEL9TVBb4WuTt6wLvPqJZr3hvb', $response->data[0]->address);
@@ -107,7 +107,7 @@ class OfframpWalletsTest extends TestCase
         $this->mockResponse($mockedOfframpWallet);
 
         $input = new CreateOfframpWalletInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             bankAccountId: 'ba_000000000000',
             externalId: 'your_external_id',
             network: 'tron'
@@ -130,7 +130,7 @@ class OfframpWalletsTest extends TestCase
             'id' => 'ow_000000000000',
             'external_id' => 'your_external_id',
             'instance_id' => 'in_000000000000',
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
             'bank_account_id' => 'ba_000000000000',
             'network' => 'tron',
             'address' => 'TALJN9zTTEL9TVBb4WuTt6wLvPqJZr3hvb',
@@ -143,7 +143,7 @@ class OfframpWalletsTest extends TestCase
         $input = new GetOfframpWalletInput(
             id: 'ow_000000000000',
             bankAccountId: 'ba_000000000000',
-            receiverId: 're_000000000000'
+            customerId: 're_000000000000'
         );
 
         $response = $this->blindpay->wallets->offramp->get($input);
@@ -153,7 +153,7 @@ class OfframpWalletsTest extends TestCase
         $this->assertEquals('ow_000000000000', $response->data->id);
         $this->assertEquals('your_external_id', $response->data->externalId);
         $this->assertEquals('in_000000000000', $response->data->instanceId);
-        $this->assertEquals('re_000000000000', $response->data->receiverId);
+        $this->assertEquals('re_000000000000', $response->data->customerId);
         $this->assertEquals('ba_000000000000', $response->data->bankAccountId);
         $this->assertEquals('tron', $response->data->network);
         $this->assertEquals('TALJN9zTTEL9TVBb4WuTt6wLvPqJZr3hvb', $response->data->address);

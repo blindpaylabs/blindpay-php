@@ -147,12 +147,7 @@ class PayinsTest extends TestCase
     public function it_lists_payins(): void
     {
         $mockedPayins = [
-            'data' => [$this->getPayinMockData()],
-            'pagination' => [
-                'has_more' => true,
-                'next_page' => 3,
-                'prev_page' => 1,
-            ],
+            $this->getPayinMockData(),
         ];
 
         $this->mockResponse($mockedPayins);
@@ -165,9 +160,6 @@ class PayinsTest extends TestCase
         $this->assertCount(1, $response->data->data);
         $this->assertEquals('re_000000000000', $response->data->data[0]->id);
         $this->assertEquals('re_000000000000', $response->data->data[0]->receiverId);
-        $this->assertTrue($response->data->pagination->hasMore);
-        $this->assertEquals(3, $response->data->pagination->nextPage);
-        $this->assertEquals(1, $response->data->pagination->prevPage);
     }
 
     #[Test]

@@ -155,14 +155,7 @@ class PayoutsTest extends TestCase
     public function it_lists_payouts(): void
     {
         $mockedPayouts = [
-            'data' => [
-                $this->getPayoutMockData(),
-            ],
-            'pagination' => [
-                'has_more' => true,
-                'next_page' => 3,
-                'prev_page' => 1,
-            ],
+            $this->getPayoutMockData(),
         ];
 
         $this->mockResponse($mockedPayouts);
@@ -176,9 +169,6 @@ class PayoutsTest extends TestCase
         $this->assertEquals('pa_000000000000', $response->data->data[0]->id);
         $this->assertEquals('re_000000000000', $response->data->data[0]->receiverId);
         $this->assertEquals('0x123...890', $response->data->data[0]->senderWalletAddress);
-        $this->assertTrue($response->data->pagination->hasMore);
-        $this->assertEquals(3, $response->data->pagination->nextPage);
-        $this->assertEquals(1, $response->data->pagination->prevPage);
     }
 
     #[Test]

@@ -11,7 +11,6 @@ use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Currency;
 use BlindPay\SDK\Types\Network;
-use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
 use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\StablecoinToken;
@@ -218,7 +217,6 @@ readonly class ListPayoutsResponse
 {
     public function __construct(
         public array $data,
-        public PaginationMetadata $pagination
     ) {}
 
     public static function fromArray(array $data): self
@@ -226,9 +224,8 @@ readonly class ListPayoutsResponse
         return new self(
             data: array_map(
                 fn (array $item) => Payout::fromArray($item),
-                $data['data']
+                $data
             ),
-            pagination: PaginationMetadata::fromArray($data['pagination'])
         );
     }
 }

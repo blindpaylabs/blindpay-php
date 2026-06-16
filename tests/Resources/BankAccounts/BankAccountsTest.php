@@ -83,7 +83,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedPixAccount);
 
         $input = new CreatePixInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'PIX Account',
             pixKey: '14947677768'
         );
@@ -114,7 +114,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedArgentinaTransfersAccount);
 
         $input = new CreateArgentinaTransfersInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'Argentina Transfers Account',
             beneficiaryName: 'Individual full name or business name',
             transfersAccount: 'BM123123123123',
@@ -150,7 +150,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedSpeiAccount);
 
         $input = new CreateSpeiInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             beneficiaryName: 'Individual full name or business name',
             name: 'SPEI Account',
             speiClabe: '5482347403740546',
@@ -191,7 +191,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedColombiaAchAccount);
 
         $input = new CreateColombiaAchInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'Colombia ACH Account',
             accountType: BankAccountType::CHECKING,
             achCopBeneficiaryFirstName: 'Fernando',
@@ -251,7 +251,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedAchAccount);
 
         $input = new CreateAchInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'ACH Account',
             accountClass: AccountClass::INDIVIDUAL,
             accountNumber: '1001001234',
@@ -308,7 +308,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedWireAccount);
 
         $input = new CreateWireInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'Wire Account',
             accountNumber: '1001001234',
             beneficiaryName: 'Individual full name or business name',
@@ -381,7 +381,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedInternationalSwiftAccount);
 
         $input = new CreateInternationalSwiftInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'International Swift Account',
             swiftAccountHolderName: 'John Doe',
             swiftAccountNumberIban: '123456789',
@@ -459,7 +459,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedRtpAccount);
 
         $input = new CreateRtpInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             name: 'John Doe RTP',
             beneficiaryName: 'John Doe',
             routingNumber: '121000358',
@@ -497,7 +497,7 @@ class BankAccountsTest extends TestCase
     {
         $mockedBankAccount = [
             'id' => 'ba_000000000000',
-            'receiver_id' => 'rcv_123',
+            'customer_id' => 'rcv_123',
             'account_holder_name' => 'Individual full name or business name',
             'account_number' => '1001001234',
             'routing_number' => '012345678',
@@ -513,7 +513,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse($mockedBankAccount);
 
         $input = new GetBankAccountInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             id: 'ba_000000000000'
         );
 
@@ -522,7 +522,7 @@ class BankAccountsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('ba_000000000000', $response->data->id);
-        $this->assertEquals('rcv_123', $response->data->receiverId);
+        $this->assertEquals('rcv_123', $response->data->customerId);
         $this->assertEquals('Individual full name or business name', $response->data->accountHolderName);
         $this->assertEquals('1001001234', $response->data->accountNumber);
         $this->assertEquals('012345678', $response->data->routingNumber);
@@ -537,66 +537,64 @@ class BankAccountsTest extends TestCase
     public function it_lists_bank_accounts(): void
     {
         $mockedBankAccounts = [
-            'data' => [
-                [
-                    'id' => 'ba_000000000000',
-                    'type' => 'wire',
-                    'name' => 'Bank Account Name',
-                    'pix_key' => '14947677768',
-                    'beneficiary_name' => 'Individual full name or business name',
-                    'routing_number' => '012345678',
-                    'account_number' => '1001001234',
-                    'account_type' => 'checking',
-                    'account_class' => 'individual',
-                    'address_line_1' => 'Address line 1',
-                    'address_line_2' => 'Address line 2',
-                    'city' => 'City',
-                    'state_province_region' => 'State/Province/Region',
-                    'country' => 'US',
-                    'postal_code' => 'Postal code',
-                    'spei_protocol' => 'SPEI',
-                    'spei_institution_code' => '40002',
-                    'spei_clabe' => '5482347403740546',
-                    'transfers_type' => 'CVU',
-                    'transfers_account' => 'BM123123123123',
-                    'ach_cop_beneficiary_first_name' => 'Fernando',
-                    'ach_cop_beneficiary_last_name' => 'Guzman Alarcón',
-                    'ach_cop_document_id' => '1661105408',
-                    'ach_cop_document_type' => 'CC',
-                    'ach_cop_email' => 'fernando.guzman@gmail.com',
-                    'ach_cop_bank_code' => '051',
-                    'ach_cop_bank_account' => '12345678',
-                    'swift_code_bic' => '123456789',
-                    'swift_account_holder_name' => 'John Doe',
-                    'swift_account_number_iban' => '123456789',
-                    'swift_beneficiary_address_line_1' => '123 Main Street, Suite 100, Downtown District, City Center CP 12345',
-                    'swift_beneficiary_address_line_2' => '456 Oak Avenue, Building 7, Financial District, Business Center CP 54321',
-                    'swift_beneficiary_country' => 'MX',
-                    'swift_beneficiary_city' => 'City',
-                    'swift_beneficiary_state_province_region' => 'District',
-                    'swift_beneficiary_postal_code' => '11530',
-                    'swift_bank_name' => 'Banco Regional SA',
-                    'swift_bank_address_line_1' => '123 Main Street, Suite 100, Downtown District, City Center CP 12345',
-                    'swift_bank_address_line_2' => '456 Oak Avenue, Building 7, Financial District, Business Center CP 54321',
-                    'swift_bank_country' => 'MX',
-                    'swift_bank_city' => 'City',
-                    'swift_bank_state_province_region' => 'District',
-                    'swift_bank_postal_code' => '11530',
-                    'swift_intermediary_bank_swift_code_bic' => 'AEIBARB1',
-                    'swift_intermediary_bank_account_number_iban' => '123456789',
-                    'swift_intermediary_bank_name' => 'Banco Regional SA',
-                    'swift_intermediary_bank_country' => 'US',
-                    'tron_wallet_hash' => 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-                    'offramp_wallets' => [
-                        [
-                            'address' => 'TALJN9zTTEL9TVBb4WuTt6wLvPqJZr3hvb',
-                            'id' => 'ow_000000000000',
-                            'network' => 'tron',
-                            'external_id' => 'your_external_id',
-                        ],
+            [
+                'id' => 'ba_000000000000',
+                'type' => 'wire',
+                'name' => 'Bank Account Name',
+                'pix_key' => '14947677768',
+                'beneficiary_name' => 'Individual full name or business name',
+                'routing_number' => '012345678',
+                'account_number' => '1001001234',
+                'account_type' => 'checking',
+                'account_class' => 'individual',
+                'address_line_1' => 'Address line 1',
+                'address_line_2' => 'Address line 2',
+                'city' => 'City',
+                'state_province_region' => 'State/Province/Region',
+                'country' => 'US',
+                'postal_code' => 'Postal code',
+                'spei_protocol' => 'SPEI',
+                'spei_institution_code' => '40002',
+                'spei_clabe' => '5482347403740546',
+                'transfers_type' => 'CVU',
+                'transfers_account' => 'BM123123123123',
+                'ach_cop_beneficiary_first_name' => 'Fernando',
+                'ach_cop_beneficiary_last_name' => 'Guzman Alarcón',
+                'ach_cop_document_id' => '1661105408',
+                'ach_cop_document_type' => 'CC',
+                'ach_cop_email' => 'fernando.guzman@gmail.com',
+                'ach_cop_bank_code' => '051',
+                'ach_cop_bank_account' => '12345678',
+                'swift_code_bic' => '123456789',
+                'swift_account_holder_name' => 'John Doe',
+                'swift_account_number_iban' => '123456789',
+                'swift_beneficiary_address_line_1' => '123 Main Street, Suite 100, Downtown District, City Center CP 12345',
+                'swift_beneficiary_address_line_2' => '456 Oak Avenue, Building 7, Financial District, Business Center CP 54321',
+                'swift_beneficiary_country' => 'MX',
+                'swift_beneficiary_city' => 'City',
+                'swift_beneficiary_state_province_region' => 'District',
+                'swift_beneficiary_postal_code' => '11530',
+                'swift_bank_name' => 'Banco Regional SA',
+                'swift_bank_address_line_1' => '123 Main Street, Suite 100, Downtown District, City Center CP 12345',
+                'swift_bank_address_line_2' => '456 Oak Avenue, Building 7, Financial District, Business Center CP 54321',
+                'swift_bank_country' => 'MX',
+                'swift_bank_city' => 'City',
+                'swift_bank_state_province_region' => 'District',
+                'swift_bank_postal_code' => '11530',
+                'swift_intermediary_bank_swift_code_bic' => 'AEIBARB1',
+                'swift_intermediary_bank_account_number_iban' => '123456789',
+                'swift_intermediary_bank_name' => 'Banco Regional SA',
+                'swift_intermediary_bank_country' => 'US',
+                'tron_wallet_hash' => 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+                'offramp_wallets' => [
+                    [
+                        'address' => 'TALJN9zTTEL9TVBb4WuTt6wLvPqJZr3hvb',
+                        'id' => 'ow_000000000000',
+                        'network' => 'tron',
+                        'external_id' => 'your_external_id',
                     ],
-                    'created_at' => '2021-01-01T00:00:00Z',
                 ],
+                'created_at' => '2021-01-01T00:00:00Z',
             ],
         ];
 
@@ -625,7 +623,7 @@ class BankAccountsTest extends TestCase
         $this->mockResponse(['data' => null]);
 
         $input = new DeleteBankAccountInput(
-            receiverId: 're_000000000000',
+            customerId: 're_000000000000',
             id: 'ba_000000000000'
         );
 

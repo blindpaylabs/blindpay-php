@@ -263,7 +263,7 @@ readonly class VirtualAccount
 readonly class CreateVirtualAccountInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $blockchainWalletId,
         public StablecoinToken $token,
         public ?BankingPartner $bankingPartner = null,
@@ -297,7 +297,7 @@ readonly class CreateVirtualAccountInput
 readonly class UpdateVirtualAccountInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $virtualAccountId,
         public string $blockchainWalletId,
         public StablecoinToken $token
@@ -327,7 +327,7 @@ class VirtualAccounts
     public function create(CreateVirtualAccountInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/virtual-accounts",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/virtual-accounts",
             $input->toArray()
         );
 
@@ -354,7 +354,7 @@ class VirtualAccounts
         }
 
         return $this->client->put(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/virtual-accounts/{$input->virtualAccountId}",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/virtual-accounts/{$input->virtualAccountId}",
             $input->toArray()
         );
     }
@@ -364,11 +364,11 @@ class VirtualAccounts
      *
      * @return BlindPayApiResponse<VirtualAccount>
      */
-    public function get(string $receiverId, string $virtualAccountId): BlindPayApiResponse
+    public function get(string $customerId, string $virtualAccountId): BlindPayApiResponse
     {
-        if (empty($receiverId)) {
+        if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Receiver ID cannot be empty')
+                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
             );
         }
 
@@ -379,7 +379,7 @@ class VirtualAccounts
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$receiverId}/virtual-accounts/{$virtualAccountId}"
+            "instances/{$this->instanceId}/customers/{$customerId}/virtual-accounts/{$virtualAccountId}"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -392,20 +392,20 @@ class VirtualAccounts
     }
 
     /**
-     * List virtual accounts for a receiver
+     * List virtual accounts for a customer
      *
      * @return BlindPayApiResponse<VirtualAccount[]>
      */
-    public function list(string $receiverId): BlindPayApiResponse
+    public function list(string $customerId): BlindPayApiResponse
     {
-        if (empty($receiverId)) {
+        if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Receiver ID cannot be empty')
+                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$receiverId}/virtual-accounts"
+            "instances/{$this->instanceId}/customers/{$customerId}/virtual-accounts"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {

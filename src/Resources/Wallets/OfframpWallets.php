@@ -14,7 +14,7 @@ readonly class OfframpWallet
         public string $id,
         public string $externalId,
         public string $instanceId,
-        public string $receiverId,
+        public string $customerId,
         public string $bankAccountId,
         public string $network,
         public string $address,
@@ -29,7 +29,7 @@ readonly class OfframpWallet
             id: $data['id'],
             externalId: $data['external_id'],
             instanceId: $data['instance_id'],
-            receiverId: $data['receiver_id'],
+            customerId: $data['customer_id'],
             bankAccountId: $data['bank_account_id'],
             network: $data['network'],
             address: $data['address'],
@@ -43,7 +43,7 @@ readonly class OfframpWallet
 readonly class ListOfframpWalletsInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $bankAccountId
     ) {}
 }
@@ -51,7 +51,7 @@ readonly class ListOfframpWalletsInput
 readonly class CreateOfframpWalletInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $bankAccountId,
         public string $externalId,
         public string $network
@@ -91,7 +91,7 @@ readonly class CreateOfframpWalletResponse
 readonly class GetOfframpWalletInput
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $bankAccountId,
         public string $id
     ) {}
@@ -115,7 +115,7 @@ class OfframpWallets
     public function list(ListOfframpWalletsInput $input): BlindPayApiResponse
     {
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts/{$input->bankAccountId}/offramp-wallets"
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->bankAccountId}/offramp-wallets"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
@@ -138,7 +138,7 @@ class OfframpWallets
     public function create(CreateOfframpWalletInput $input): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts/{$input->bankAccountId}/offramp-wallets",
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->bankAccountId}/offramp-wallets",
             $input->toArray()
         );
 
@@ -165,7 +165,7 @@ class OfframpWallets
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/receivers/{$input->receiverId}/bank-accounts/{$input->bankAccountId}/offramp-wallets/{$input->id}"
+            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->bankAccountId}/offramp-wallets/{$input->id}"
         );
 
         if ($response->isSuccess() && is_array($response->data)) {
