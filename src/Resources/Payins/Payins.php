@@ -6,6 +6,7 @@ namespace BlindPay\SDK\Resources\Payins;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ManualExecutionStatus;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
@@ -230,7 +231,8 @@ readonly class Payin
         public ?string $pseFullName = null,
         public ?string $psePaymentLink = null,
         public ?string $pseTaxId = null,
-        public ?string $partnerFeeId = null
+        public ?string $partnerFeeId = null,
+        public ?ManualExecutionStatus $manualExecutionStatus = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -275,7 +277,8 @@ readonly class Payin
             pseFullName: $data['pse_full_name'] ?? null,
             psePaymentLink: $data['pse_payment_link'] ?? null,
             pseTaxId: $data['pse_tax_id'] ?? null,
-            partnerFeeId: $data['partner_fee_id'] ?? null
+            partnerFeeId: $data['partner_fee_id'] ?? null,
+            manualExecutionStatus: isset($data['manual_execution_status']) ? ManualExecutionStatus::from($data['manual_execution_status']) : null
         );
     }
 }

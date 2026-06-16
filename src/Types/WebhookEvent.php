@@ -28,4 +28,5 @@ enum WebhookEvent: string
     case TRANSFER_COMPLETE = 'transfer.complete';
     case WALLET_NEW = 'wallet.new';
     case WALLET_INBOUND = 'wallet.inbound';
+    case RECEIVER_DELETE = 'receiver.delete';
 }
