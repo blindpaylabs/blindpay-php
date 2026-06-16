@@ -183,12 +183,8 @@ readonly class Payout
             tedBranchCode: $data['ted_branch_code'] ?? null,
             tedCpfCnpj: $data['ted_cpf_cnpj'] ?? null,
             billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
-<<<<<<< HEAD
             cpnPaymentId: $data['cpn_payment_id'] ?? null,
             senderLegalName: $data['sender_legal_name'] ?? null
-=======
-            cpnPaymentId: $data['cpn_payment_id'] ?? null
->>>>>>> 4d7c0ad (feat: add SEPA + api-sync content (mirrors node #50))
         );
     }
 }
