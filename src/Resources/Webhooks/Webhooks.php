@@ -21,6 +21,12 @@ enum WebhookEvents: string
      *             See https://www.blindpay.com/changelog/2026-06-04-customers-rename
      */
     case RECEIVER_UPDATE = 'receiver.update';
+
+    /**
+     * @deprecated 2.5.0 Use CUSTOMER_DELETE instead. Will be removed in v3.0.0.
+     *             See https://www.blindpay.com/changelog/2026-06-04-customers-rename
+     */
+    case RECEIVER_DELETE = 'receiver.delete';
     case CUSTOMER_NEW = 'customer.new';
     case CUSTOMER_UPDATE = 'customer.update';
     case CUSTOMER_DELETE = 'customer.delete';
