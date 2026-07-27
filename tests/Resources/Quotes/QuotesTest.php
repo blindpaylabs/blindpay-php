@@ -82,7 +82,7 @@ class QuotesTest extends TestCase
                     'chainId' => 1,
                 ],
             ],
-            'receiver_local_amount' => 1000,
+            'customer_local_amount' => 1000,
             'description' => 'Memo code or description, only works with USD and BRL',
         ];
 
@@ -114,7 +114,7 @@ class QuotesTest extends TestCase
         $this->assertEquals(1010.0, $response->data->senderAmount);
         $this->assertEquals(150.0, $response->data->partnerFeeAmount);
         $this->assertEquals(50.0, $response->data->flatFee);
-        $this->assertEquals(1000.0, $response->data->receiverLocalAmount);
+        $this->assertEquals(1000.0, $response->data->customerLocalAmount);
         $this->assertEquals('Memo code or description, only works with USD and BRL', $response->data->description);
 
         // Assert contract details

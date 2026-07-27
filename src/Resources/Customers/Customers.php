@@ -155,7 +155,7 @@ readonly class Owner
             ownershipPercentage: isset($data['ownership_percentage']) ? (int) $data['ownership_percentage'] : null,
             title: $data['title'] ?? null,
             taxType: isset($data['tax_type']) ? OwnerTaxType::from($data['tax_type']) : null,
-            customerId: $data['customer_id'] ?? $data['receiver_id'] ?? null
+            customerId: $data['customer_id'] ?? null
         );
     }
 

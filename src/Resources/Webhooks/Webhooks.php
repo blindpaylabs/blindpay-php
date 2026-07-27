@@ -10,23 +10,6 @@ use DateTimeImmutable;
 
 enum WebhookEvents: string
 {
-    /**
-     * @deprecated 2.5.0 Use CUSTOMER_NEW instead. Will be removed in v3.0.0.
-     *             See https://www.blindpay.com/changelog/2026-06-04-customers-rename
-     */
-    case RECEIVER_NEW = 'receiver.new';
-
-    /**
-     * @deprecated 2.5.0 Use CUSTOMER_UPDATE instead. Will be removed in v3.0.0.
-     *             See https://www.blindpay.com/changelog/2026-06-04-customers-rename
-     */
-    case RECEIVER_UPDATE = 'receiver.update';
-
-    /**
-     * @deprecated 2.5.0 Use CUSTOMER_DELETE instead. Will be removed in v3.0.0.
-     *             See https://www.blindpay.com/changelog/2026-06-04-customers-rename
-     */
-    case RECEIVER_DELETE = 'receiver.delete';
     case CUSTOMER_NEW = 'customer.new';
     case CUSTOMER_UPDATE = 'customer.update';
     case CUSTOMER_DELETE = 'customer.delete';
@@ -40,7 +23,16 @@ enum WebhookEvents: string
     case PAYIN_UPDATE = 'payin.update';
     case PAYIN_COMPLETE = 'payin.complete';
     case PAYIN_PARTNER_FEE = 'payin.partnerFee';
-    case TOS_ACCEPTED = 'tos.accepted';
+    case TOS_ACCEPTED = 'tos.accept';
+    case LIMIT_INCREASE_NEW = 'limitIncrease.new';
+    case LIMIT_INCREASE_UPDATE = 'limitIncrease.update';
+    case TRANSFER_NEW = 'transfer.new';
+    case TRANSFER_COMPLETE = 'transfer.complete';
+    case TRANSFER_UPDATE = 'transfer.update';
+    case VIRTUAL_ACCOUNT_NEW = 'virtualAccount.new';
+    case VIRTUAL_ACCOUNT_COMPLETE = 'virtualAccount.complete';
+    case WALLET_INBOUND = 'wallet.inbound';
+    case WALLET_NEW = 'wallet.new';
 }
 
 readonly class WebhookEndpoint
@@ -151,32 +143,6 @@ readonly class GetPortalAccessUrlResponse
     {
         return new self(
             url: $data['url']
-        );
-    }
-}
-
-readonly class ReceiverDeleteWebhookOut
-{
-    public function __construct(
-        public string $id,
-        public string $event,
-        public string $receiverId,
-        public string $instanceId,
-        public DateTimeImmutable $timestamp,
-        public string $type,
-        public array $data
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            event: $data['event'],
-            receiverId: $data['receiver_id'],
-            instanceId: $data['instance_id'],
-            timestamp: new DateTimeImmutable($data['timestamp']),
-            type: $data['type'],
-            data: $data['data']
         );
     }
 }

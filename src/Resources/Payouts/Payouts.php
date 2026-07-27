@@ -40,7 +40,7 @@ enum ArgentinaTransferType: string
 readonly class Payout
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $id,
         public TransactionStatus $status,
         public string $senderWalletAddress,
@@ -67,7 +67,7 @@ readonly class Payout
         public float $commercialQuotation,
         public float $blindpayQuotation,
         public float $totalFeeAmount,
-        public float $receiverLocalAmount,
+        public float $customerLocalAmount,
         public Currency $currency,
         public string $transactionDocumentFile,
         public TransactionDocumentType $transactionDocumentType,
@@ -115,7 +115,7 @@ readonly class Payout
     public static function fromArray(array $data): self
     {
         return new self(
-            receiverId: $data['receiver_id'],
+            customerId: $data['customer_id'],
             id: $data['id'],
             status: TransactionStatus::from($data['status']),
             senderWalletAddress: $data['sender_wallet_address'],
@@ -142,7 +142,7 @@ readonly class Payout
             commercialQuotation: (float) $data['commercial_quotation'],
             blindpayQuotation: (float) $data['blindpay_quotation'],
             totalFeeAmount: (float) $data['total_fee_amount'],
-            receiverLocalAmount: (float) $data['receiver_local_amount'],
+            customerLocalAmount: (float) $data['customer_local_amount'],
             currency: Currency::from($data['currency']),
             transactionDocumentFile: $data['transaction_document_file'],
             transactionDocumentType: TransactionDocumentType::from($data['transaction_document_type']),
@@ -192,7 +192,6 @@ readonly class Payout
 readonly class ListPayoutsInput extends PaginationParams
 {
     public function __construct(
-        public ?string $receiverId = null,
         public ?string $customerId = null,
         ?int $limit = null,
         ?int $offset = null,
@@ -205,10 +204,6 @@ readonly class ListPayoutsInput extends PaginationParams
     public function toArray(): array
     {
         $params = parent::toArray();
-
-        if ($this->receiverId !== null) {
-            $params['receiver_id'] = $this->receiverId;
-        }
 
         if ($this->customerId !== null) {
             $params['customer_id'] = $this->customerId;
@@ -327,7 +322,7 @@ readonly class CreateStellarPayoutResponse
         public string $id,
         public TransactionStatus $status,
         public string $senderWalletAddress,
-        public string $receiverId,
+        public string $customerId,
         public ?TrackingComplete $trackingComplete = null,
         public ?TrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
@@ -341,7 +336,7 @@ readonly class CreateStellarPayoutResponse
             id: $data['id'],
             status: TransactionStatus::from($data['status']),
             senderWalletAddress: $data['sender_wallet_address'],
-            receiverId: $data['receiver_id'],
+            customerId: $data['customer_id'],
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
             trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
@@ -373,7 +368,7 @@ readonly class CreateEvmPayoutResponse
         public string $id,
         public TransactionStatus $status,
         public string $senderWalletAddress,
-        public string $receiverId,
+        public string $customerId,
         public ?TrackingComplete $trackingComplete = null,
         public ?TrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
@@ -387,7 +382,7 @@ readonly class CreateEvmPayoutResponse
             id: $data['id'],
             status: TransactionStatus::from($data['status']),
             senderWalletAddress: $data['sender_wallet_address'],
-            receiverId: $data['receiver_id'],
+            customerId: $data['customer_id'],
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
             trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
@@ -419,7 +414,7 @@ readonly class CreateSolanaPayoutResponse
         public string $id,
         public TransactionStatus $status,
         public string $senderWalletAddress,
-        public string $receiverId,
+        public string $customerId,
         public ?TrackingComplete $trackingComplete = null,
         public ?TrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
@@ -433,7 +428,7 @@ readonly class CreateSolanaPayoutResponse
             id: $data['id'],
             status: TransactionStatus::from($data['status']),
             senderWalletAddress: $data['sender_wallet_address'],
-            receiverId: $data['receiver_id'],
+            customerId: $data['customer_id'],
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
             trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,

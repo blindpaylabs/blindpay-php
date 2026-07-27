@@ -64,7 +64,7 @@ class TermsOfServiceTest extends TestCase
 
         $input = new InitiateInput(
             idempotencyKey: '123e4567-e89b-12d3-a456-426614174000',
-            receiverId: null,
+            customerId: null,
             redirectUrl: null
         );
 

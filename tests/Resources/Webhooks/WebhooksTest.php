@@ -65,7 +65,7 @@ class WebhooksTest extends TestCase
 
         $input = new CreateWebhookEndpointInput(
             url: 'https://example.com/webhook',
-            events: [WebhookEvents::RECEIVER_NEW]
+            events: [WebhookEvents::CUSTOMER_NEW]
         );
 
         $response = $this->blindpay->instances->webhookEndpoints->create($input);
@@ -103,7 +103,7 @@ class WebhooksTest extends TestCase
             [
                 'id' => 'we_000000000000',
                 'url' => 'https://example.com/webhook',
-                'events' => ['receiver.new'],
+                'events' => ['customer.new'],
                 'last_event_at' => '2024-01-01T00:00:00.000Z',
                 'instance_id' => 'in_000000000000',
                 'created_at' => '2021-01-01T00:00:00Z',
@@ -122,7 +122,7 @@ class WebhooksTest extends TestCase
         $this->assertEquals('we_000000000000', $response->data[0]->id);
         $this->assertEquals('https://example.com/webhook', $response->data[0]->url);
         $this->assertCount(1, $response->data[0]->events);
-        $this->assertEquals(WebhookEvents::RECEIVER_NEW, $response->data[0]->events[0]);
+        $this->assertEquals(WebhookEvents::CUSTOMER_NEW, $response->data[0]->events[0]);
         $this->assertEquals('2024-01-01T00:00:00.000Z', $response->data[0]->lastEventAt);
         $this->assertEquals('in_000000000000', $response->data[0]->instanceId);
     }

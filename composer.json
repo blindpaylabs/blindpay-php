@@ -46,6 +46,7 @@
         "test": "pest",
         "test:coverage": "pest --coverage",
         "lint:check": "pint --test",
-        "lint:fix": "pint"
+        "lint:fix": "pint",
+        "contract-check": "php scripts/contract-check.php"
     }
 }

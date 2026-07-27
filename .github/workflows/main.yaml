@@ -16,7 +16,18 @@ jobs:
   tests:
     uses: ./.github/workflows/tests.yaml
     needs: lint
-  snyk: 
+  contract-check:
+    name: Contract check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - name: Verify SDK wire keys against the spec snapshot
+        run: php scripts/contract-check.php
+  snyk:
     uses: ./.github/workflows/snyk.yaml
     needs: [lint, tests]
     secrets: inherit

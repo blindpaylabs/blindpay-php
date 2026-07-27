@@ -68,10 +68,10 @@ class TransfersTest extends TestCase
             'sender_token' => 'USDC',
             'sender_amount' => 100.00,
             'receiver_amount' => 98.50,
-            'receiver_token' => 'USDT',
-            'receiver_network' => 'base',
-            'receiver_wallet_address' => '0xabc123',
-            'receiver_id' => 'rc_000000000000',
+            'customer_token' => 'USDT',
+            'customer_network' => 'base',
+            'customer_wallet_address' => '0xabc123',
+            'customer_id' => 'rc_000000000000',
             'address' => '0xabc123',
             'network' => 'base',
             'tracking_transaction_monitoring' => ['step' => 'pending', 'completed_at' => null],
@@ -103,9 +103,9 @@ class TransfersTest extends TestCase
         $input = new CreateTransferQuoteInput(
             walletId: 'wl_000000000000',
             senderToken: StablecoinToken::USDC,
-            receiverWalletAddress: '0xabc123',
-            receiverToken: StablecoinToken::USDT,
-            receiverNetwork: Network::BASE,
+            customerWalletAddress: '0xabc123',
+            customerToken: StablecoinToken::USDT,
+            customerNetwork: Network::BASE,
             requestAmount: 100,
             amountReference: CurrencyType::SENDER
         );
@@ -143,9 +143,9 @@ class TransfersTest extends TestCase
         $input = new CreateTransferQuoteInput(
             walletId: 'wl_000000000000',
             senderToken: StablecoinToken::USDC,
-            receiverWalletAddress: '0xabc123',
-            receiverToken: StablecoinToken::USDT,
-            receiverNetwork: Network::BASE,
+            customerWalletAddress: '0xabc123',
+            customerToken: StablecoinToken::USDT,
+            customerNetwork: Network::BASE,
             requestAmount: 100,
             amountReference: CurrencyType::SENDER,
             coverFees: true,
@@ -180,9 +180,9 @@ class TransfersTest extends TestCase
         $this->assertEquals('USDC', $response->data->senderToken->value);
         $this->assertEquals(100.00, $response->data->senderAmount);
         $this->assertEquals(98.50, $response->data->receiverAmount);
-        $this->assertEquals('USDT', $response->data->receiverToken->value);
-        $this->assertEquals('base', $response->data->receiverNetwork->value);
-        $this->assertEquals('0xabc123', $response->data->receiverWalletAddress);
+        $this->assertEquals('USDT', $response->data->customerToken->value);
+        $this->assertEquals('base', $response->data->customerNetwork->value);
+        $this->assertEquals('0xabc123', $response->data->customerWalletAddress);
     }
 
     #[Test]
@@ -198,7 +198,7 @@ class TransfersTest extends TestCase
         $this->assertNull($response->error);
         $this->assertEquals('tr_000000000000', $response->data->id);
         $this->assertEquals('completed', $response->data->status->value);
-        $this->assertEquals('rc_000000000000', $response->data->receiverId);
+        $this->assertEquals('rc_000000000000', $response->data->customerId);
         $this->assertEquals('base', $response->data->network->value);
     }
 

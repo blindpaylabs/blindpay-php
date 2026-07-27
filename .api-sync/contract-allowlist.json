@@ -1,0 +1,155 @@
+{
+  "$schema": "Entries exempt a specific SDK class from Direction A (declared wire key not found anywhere in .api-sync/spec-snapshot.json). Each entry needs a reason and an owner. Do not add entries for anything the current PR's changelist should fix.",
+  "entries": [
+    {
+      "schema": "BankAccountResponse",
+      "field": "account_holder_name",
+      "reason": "Pre-existing: get-single-bank-account models a legacy shape that predates the current BankAccountOut wire contract (spec uses beneficiary_name). Not part of the customer rename; needs its own fix.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountResponse",
+      "field": "swift_code",
+      "reason": "Pre-existing: spec only has swift_code_bic, no bare swift_code. Same legacy-shape issue as account_holder_name on this type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountResponse",
+      "field": "is_primary",
+      "reason": "Pre-existing: field does not exist anywhere in the wire contract for bank accounts. Same legacy-shape issue as account_holder_name on this type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "IndividualWithStandardKYC",
+      "field": "aiprise_validation_key",
+      "reason": "Pre-existing: not a response property anywhere in the spec (only appears as an unrelated webhook route path segment). Predates the customer rename.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "IndividualWithEnhancedKYC",
+      "field": "aiprise_validation_key",
+      "reason": "Pre-existing: not a response property anywhere in the spec (only appears as an unrelated webhook route path segment). Predates the customer rename.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BusinessWithStandardKYB",
+      "field": "aiprise_validation_key",
+      "reason": "Pre-existing: not a response property anywhere in the spec (only appears as an unrelated webhook route path segment). Predates the customer rename.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "IndividualWithEnhancedKYC",
+      "field": "individual_holding_doc_front_file",
+      "reason": "Pre-existing: field was dropped from CreateCustomerIn/CustomerOut/CustomerOut before wave 2; unrelated to the receiver-to-customer rename.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateIndividualWithEnhancedKYCInput",
+      "field": "individual_holding_doc_front_file",
+      "reason": "Pre-existing: same CreateCustomerIn shape gap as IndividualWithEnhancedKYC.individual_holding_doc_front_file. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "UpdateCustomerInput",
+      "field": "individual_holding_doc_front_file",
+      "reason": "Pre-existing: same UpdateCustomerIn shape gap as IndividualWithEnhancedKYC.individual_holding_doc_front_file. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "Payin",
+      "field": "billing_fee",
+      "reason": "Pre-existing: PayinOut only has billing_fee_amount (already modeled separately on this type). billing_fee is dead/incorrect and predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "Payin",
+      "field": "tracking_partner_fee",
+      "reason": "Pre-existing: PayinOut has no tracking_partner_fee key (it has a differently-shaped partner_fee object). Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "Payout",
+      "field": "tracking_partner_fee",
+      "reason": "Pre-existing: PayoutOut has no tracking_partner_fee key (it has a differently-shaped partner_fee object). Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "Transfer",
+      "field": "tracking_partner_fee",
+      "reason": "Pre-existing: TransferOut has no tracking_partner_fee key. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateStellarPayoutResponse",
+      "field": "tracking_partner_fee",
+      "reason": "Pre-existing: same PayoutOnEvmOut shape gap as Payout.tracking_partner_fee. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateEvmPayoutResponse",
+      "field": "tracking_partner_fee",
+      "reason": "Pre-existing: same PayoutOnEvmOut shape gap as Payout.tracking_partner_fee. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateSolanaPayoutResponse",
+      "field": "tracking_partner_fee",
+      "reason": "Pre-existing: same PayoutOnEvmOut shape gap as Payout.tracking_partner_fee. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateEvmPayinResponse",
+      "field": "tracking_partner_fee",
+      "reason": "Pre-existing: same PayinOut shape gap as Payin.tracking_partner_fee. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PartnerFee",
+      "field": "evm_wallet_address",
+      "reason": "Pre-existing: the partner-fees create/response schema has no evm_wallet_address property. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PartnerFee",
+      "field": "stellar_wallet_address",
+      "reason": "Pre-existing: the partner-fees create/response schema has no stellar_wallet_address property. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePartnerFeeInput",
+      "field": "evm_wallet_address",
+      "reason": "Pre-existing: same partner-fees schema gap as PartnerFee.evm_wallet_address. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePartnerFeeInput",
+      "field": "stellar_wallet_address",
+      "reason": "Pre-existing: same partner-fees schema gap as PartnerFee.stellar_wallet_address. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePartnerFeeResponse",
+      "field": "evm_wallet_address",
+      "reason": "Pre-existing: same partner-fees schema gap as PartnerFee.evm_wallet_address. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePartnerFeeResponse",
+      "field": "stellar_wallet_address",
+      "reason": "Pre-existing: same partner-fees schema gap as PartnerFee.stellar_wallet_address. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "GetPartnerFeeResponse",
+      "field": "evm_wallet_address",
+      "reason": "Pre-existing: same partner-fees schema gap as PartnerFee.evm_wallet_address. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "GetPartnerFeeResponse",
+      "field": "stellar_wallet_address",
+      "reason": "Pre-existing: same partner-fees schema gap as PartnerFee.stellar_wallet_address. Predates wave 2.",
+      "owner": "eric@blindpay.com"
+    }
+  ]
+}

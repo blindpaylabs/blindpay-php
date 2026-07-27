@@ -25,17 +25,13 @@ blindpay-php/
       Customers/             # Complex resource with sub-resource
         Customers.php        # Resource class + inline types
         CustomersWrapper.php # Wrapper delegating to Customers + exposing BankAccounts
-      Receivers/             # Deprecated alias of Customers, kept for backward compatibility until v3.0.0
-        Receivers.php        # Resource class + inline types
-        ReceiversWrapper.php # Wrapper delegating to Receivers + exposing BankAccounts
       Wallets/               # Aggregation wrapper (no base methods, only sub-resources)
         WalletsWrapper.php   # Groups BlockchainWallets, OfframpWallets, CustodialWallets
         BlockchainWallets.php
         OfframpWallets.php
       Instances/
         Instances.php
-        InstancesWrapper.php # Groups Instances + ApiKeys + Webhooks + TermsOfService
-      ApiKeys/ApiKeys.php
+        InstancesWrapper.php # Groups Instances + Webhooks + TermsOfService
       BankAccounts/BankAccounts.php
       CustodialWallets/CustodialWallets.php
       Fees/Fees.php
@@ -75,7 +71,6 @@ blindpay-php/
       Available/AvailableTest.php
       Payins/PayinsTest.php
       Payins/PayinQuotesTest.php
-      Receivers/ReceiversTest.php # No Customers test file yet; Receivers is exercised until callers migrate
       Wallets/BlockchainWalletsTest.php
       Wallets/OfframpWalletsTest.php
       ... (one test file per resource)
@@ -442,7 +437,7 @@ Create a new file in `src/Types/`. Use `readonly class` with `fromArray()` and o
 
 Sub-resources are used when a resource has logically grouped child endpoints. There are two wrapper patterns:
 
-### Pattern A: Delegation wrapper (Payins, Customers, Receivers)
+### Pattern A: Delegation wrapper (Payins, Customers)
 
 The wrapper delegates the base resource's methods AND exposes sub-resources as public properties.
 
