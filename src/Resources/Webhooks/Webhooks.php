@@ -10,8 +10,26 @@ use DateTimeImmutable;
 
 enum WebhookEvents: string
 {
+    /**
+     * @deprecated 2.5.0 Use CUSTOMER_NEW instead. Will be removed in v3.0.0.
+     *             See https://www.blindpay.com/changelog/2026-06-04-customers-rename
+     */
     case RECEIVER_NEW = 'receiver.new';
+
+    /**
+     * @deprecated 2.5.0 Use CUSTOMER_UPDATE instead. Will be removed in v3.0.0.
+     *             See https://www.blindpay.com/changelog/2026-06-04-customers-rename
+     */
     case RECEIVER_UPDATE = 'receiver.update';
+
+    /**
+     * @deprecated 2.5.0 Use CUSTOMER_DELETE instead. Will be removed in v3.0.0.
+     *             See https://www.blindpay.com/changelog/2026-06-04-customers-rename
+     */
+    case RECEIVER_DELETE = 'receiver.delete';
+    case CUSTOMER_NEW = 'customer.new';
+    case CUSTOMER_UPDATE = 'customer.update';
+    case CUSTOMER_DELETE = 'customer.delete';
     case BANK_ACCOUNT_NEW = 'bankAccount.new';
     case PAYOUT_NEW = 'payout.new';
     case PAYOUT_UPDATE = 'payout.update';

@@ -76,6 +76,27 @@ class WebhooksTest extends TestCase
     }
 
     #[Test]
+    public function it_creates_a_webhook_endpoint_with_customer_events(): void
+    {
+        $mockedWebhookEndpoint = [
+            'id' => 'we_000000000000',
+        ];
+
+        $this->mockResponse($mockedWebhookEndpoint);
+
+        $input = new CreateWebhookEndpointInput(
+            url: 'https://example.com/webhook',
+            events: [WebhookEvents::CUSTOMER_NEW, WebhookEvents::CUSTOMER_UPDATE, WebhookEvents::CUSTOMER_DELETE]
+        );
+
+        $response = $this->blindpay->instances->webhookEndpoints->create($input);
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->error);
+        $this->assertEquals('we_000000000000', $response->data->id);
+    }
+
+    #[Test]
     public function it_lists_webhook_endpoints(): void
     {
         $mockedWebhookEndpoints = [

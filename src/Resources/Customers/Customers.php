@@ -107,7 +107,6 @@ readonly class Owner
     public function __construct(
         public string $id,
         public string $instanceId,
-        public string $customerId,
         public OwnerRole $role,
         public string $firstName,
         public string $lastName,
@@ -127,7 +126,8 @@ readonly class Owner
         public string $proofOfAddressDocFile,
         public ?int $ownershipPercentage = null,
         public ?string $title = null,
-        public ?OwnerTaxType $taxType = null
+        public ?OwnerTaxType $taxType = null,
+        public ?string $customerId = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -135,7 +135,6 @@ readonly class Owner
         return new self(
             id: $data['id'],
             instanceId: $data['instance_id'],
-            customerId: $data['customer_id'],
             role: OwnerRole::from($data['role']),
             firstName: $data['first_name'],
             lastName: $data['last_name'],
@@ -155,7 +154,8 @@ readonly class Owner
             proofOfAddressDocFile: $data['proof_of_address_doc_file'],
             ownershipPercentage: isset($data['ownership_percentage']) ? (int) $data['ownership_percentage'] : null,
             title: $data['title'] ?? null,
-            taxType: isset($data['tax_type']) ? OwnerTaxType::from($data['tax_type']) : null
+            taxType: isset($data['tax_type']) ? OwnerTaxType::from($data['tax_type']) : null,
+            customerId: $data['customer_id'] ?? $data['receiver_id'] ?? null
         );
     }
 
