@@ -193,6 +193,7 @@ readonly class ListPayoutsInput extends PaginationParams
 {
     public function __construct(
         public ?string $receiverId = null,
+        public ?string $customerId = null,
         ?int $limit = null,
         ?int $offset = null,
         ?string $startingAfter = null,
@@ -207,6 +208,10 @@ readonly class ListPayoutsInput extends PaginationParams
 
         if ($this->receiverId !== null) {
             $params['receiver_id'] = $this->receiverId;
+        }
+
+        if ($this->customerId !== null) {
+            $params['customer_id'] = $this->customerId;
         }
 
         return $params;

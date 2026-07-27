@@ -135,7 +135,7 @@ readonly class Owner
         return new self(
             id: $data['id'],
             instanceId: $data['instance_id'],
-            customerId: $data['customer_id'],
+            customerId: $data['receiver_id'],
             role: OwnerRole::from($data['role']),
             firstName: $data['first_name'],
             lastName: $data['last_name'],
@@ -1192,7 +1192,7 @@ readonly class LimitIncreaseRequest
     {
         return new self(
             id: $data['id'],
-            customerId: $data['customer_id'],
+            customerId: $data['receiver_id'],
             status: LimitIncreaseRequestStatus::from($data['status']),
             daily: (float) $data['daily'],
             monthly: (float) $data['monthly'],

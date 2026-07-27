@@ -22,7 +22,10 @@ blindpay-php/
         Payins.php           # Resource class + inline types (Payin, ListPayinsInput, etc.)
         PayinsWrapper.php    # Wrapper delegating to Payins + exposing Quotes sub-resource
         Quotes.php           # Sub-resource class + inline types
-      Receivers/             # Complex resource with sub-resource
+      Customers/             # Complex resource with sub-resource
+        Customers.php        # Resource class + inline types
+        CustomersWrapper.php # Wrapper delegating to Customers + exposing BankAccounts
+      Receivers/             # Deprecated alias of Customers, kept for backward compatibility until v3.0.0
         Receivers.php        # Resource class + inline types
         ReceiversWrapper.php # Wrapper delegating to Receivers + exposing BankAccounts
       Wallets/               # Aggregation wrapper (no base methods, only sub-resources)
@@ -67,13 +70,12 @@ blindpay-php/
       StablecoinToken.php      # enum: USDC, USDT, USDB
       TransactionDocumentType.php
       TransactionStatus.php    # enum: refunded, processing, completed, failed, on_hold, pending_review
-      WebhookEvent.php         # enum: receiver.new, payout.new, payin.new, etc.
   tests/
     Resources/               # Mirrors src/Resources structure
       Available/AvailableTest.php
       Payins/PayinsTest.php
       Payins/PayinQuotesTest.php
-      Receivers/ReceiversTest.php
+      Receivers/ReceiversTest.php # No Customers test file yet; Receivers is exercised until callers migrate
       Wallets/BlockchainWalletsTest.php
       Wallets/OfframpWalletsTest.php
       ... (one test file per resource)
@@ -440,7 +442,7 @@ Create a new file in `src/Types/`. Use `readonly class` with `fromArray()` and o
 
 Sub-resources are used when a resource has logically grouped child endpoints. There are two wrapper patterns:
 
-### Pattern A: Delegation wrapper (Payins, Receivers)
+### Pattern A: Delegation wrapper (Payins, Customers, Receivers)
 
 The wrapper delegates the base resource's methods AND exposes sub-resources as public properties.
 
@@ -507,7 +509,7 @@ readonly class WalletsWrapper
 }
 ```
 
-Usage: `$blindpay->wallets->blockchain->list($receiverId)`
+Usage: `$blindpay->wallets->blockchain->list($customerId)`
 
 ## 8. Testing
 
@@ -682,4 +684,4 @@ When translating an OpenAPI spec change to SDK code:
 
 ### Nested endpoints
 
-Nested endpoints like `instances/{id}/receivers/{receiverId}/bank-accounts` are modeled as sub-resources accessed via wrappers: `$blindpay->receivers->bankAccounts->list($receiverId)`.
+Nested endpoints like `instances/{id}/customers/{customerId}/bank-accounts` are modeled as sub-resources accessed via wrappers: `$blindpay->customers->bankAccounts->list($customerId)`.
