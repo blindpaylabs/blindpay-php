@@ -11,7 +11,7 @@ readonly class InitiateInput
 {
     public function __construct(
         public string $idempotencyKey,
-        public ?string $receiverId = null,
+        public ?string $customerId = null,
         public ?string $redirectUrl = null
     ) {}
 
@@ -21,8 +21,8 @@ readonly class InitiateInput
             'idempotency_key' => $this->idempotencyKey,
         ];
 
-        if ($this->receiverId !== null) {
-            $data['receiver_id'] = $this->receiverId;
+        if ($this->customerId !== null) {
+            $data['customer_id'] = $this->customerId;
         }
 
         if ($this->redirectUrl !== null) {

@@ -191,7 +191,7 @@ readonly class BankDetails
 readonly class Payin
 {
     public function __construct(
-        public string $receiverId,
+        public string $customerId,
         public string $id,
         public TransactionStatus $status,
         public string $payinQuoteId,
@@ -237,7 +237,7 @@ readonly class Payin
     public static function fromArray(array $data): self
     {
         return new self(
-            receiverId: $data['receiver_id'],
+            customerId: $data['customer_id'],
             id: $data['id'],
             status: TransactionStatus::from($data['status']),
             payinQuoteId: $data['payin_quote_id'],
@@ -286,7 +286,6 @@ readonly class ListPayinsInput extends PaginationParams
 {
     public function __construct(
         public ?TransactionStatus $status = null,
-        public ?string $receiverId = null,
         public ?string $customerId = null,
         ?int $limit = null,
         ?int $offset = null,
@@ -302,10 +301,6 @@ readonly class ListPayinsInput extends PaginationParams
 
         if ($this->status !== null) {
             $params['status'] = $this->status->value;
-        }
-
-        if ($this->receiverId !== null) {
-            $params['receiver_id'] = $this->receiverId;
         }
 
         if ($this->customerId !== null) {
@@ -371,7 +366,7 @@ readonly class CreateEvmPayinResponse
     public function __construct(
         public string $id,
         public TransactionStatus $status,
-        public string $receiverId,
+        public string $customerId,
         public float $receiverAmount,
         public BankDetails $BankDetails,
         public ?string $pixCode = null,
@@ -388,7 +383,7 @@ readonly class CreateEvmPayinResponse
         return new self(
             id: $data['id'],
             status: TransactionStatus::from($data['status']),
-            receiverId: $data['receiver_id'],
+            customerId: $data['customer_id'],
             receiverAmount: (float) $data['receiver_amount'],
             BankDetails: BankDetails::fromArray($data['blindpay_bank_details']),
             pixCode: $data['pix_code'] ?? null,

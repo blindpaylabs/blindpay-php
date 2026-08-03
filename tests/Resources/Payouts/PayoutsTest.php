@@ -58,7 +58,7 @@ class PayoutsTest extends TestCase
     private function getPayoutMockData(): array
     {
         return [
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
             'id' => 'pa_000000000000',
             'status' => 'processing',
             'sender_wallet_address' => '0x123...890',
@@ -112,7 +112,7 @@ class PayoutsTest extends TestCase
             'commercial_quotation' => 495,
             'blindpay_quotation' => 485,
             'total_fee_amount' => 1.5,
-            'receiver_local_amount' => 1000,
+            'customer_local_amount' => 1000,
             'currency' => 'BRL',
             'transaction_document_file' => 'https://example.com/image.png',
             'transaction_document_type' => 'invoice',
@@ -167,7 +167,7 @@ class PayoutsTest extends TestCase
         $this->assertIsArray($response->data->data);
         $this->assertCount(1, $response->data->data);
         $this->assertEquals('pa_000000000000', $response->data->data[0]->id);
-        $this->assertEquals('re_000000000000', $response->data->data[0]->receiverId);
+        $this->assertEquals('re_000000000000', $response->data->data[0]->customerId);
         $this->assertEquals('0x123...890', $response->data->data[0]->senderWalletAddress);
     }
 
@@ -183,7 +183,7 @@ class PayoutsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('pa_000000000000', $response->data->id);
-        $this->assertEquals('re_000000000000', $response->data->receiverId);
+        $this->assertEquals('re_000000000000', $response->data->customerId);
         $this->assertEquals('processing', $response->data->status->value);
         $this->assertEquals('0x123...890', $response->data->senderWalletAddress);
         $this->assertEquals('AAA...Zey8y0A', $response->data->signedTransaction);
@@ -218,7 +218,7 @@ class PayoutsTest extends TestCase
         $this->assertIsArray($response->data);
         $this->assertCount(1, $response->data);
         $this->assertEquals('pa_000000000000', $response->data[0]->id);
-        $this->assertEquals('re_000000000000', $response->data[0]->receiverId);
+        $this->assertEquals('re_000000000000', $response->data[0]->customerId);
         $this->assertEquals('processing', $response->data[0]->status->value);
         $this->assertEquals('0x123...890', $response->data[0]->senderWalletAddress);
     }
@@ -235,7 +235,7 @@ class PayoutsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('pa_000000000000', $response->data->id);
-        $this->assertEquals('re_000000000000', $response->data->receiverId);
+        $this->assertEquals('re_000000000000', $response->data->customerId);
         $this->assertEquals('processing', $response->data->status->value);
         $this->assertEquals('processing', $response->data->trackingTransaction->step);
         $this->assertEquals('failed', $response->data->trackingTransaction->status);
@@ -308,7 +308,7 @@ class PayoutsTest extends TestCase
                 'estimated_time_of_arrival' => '1_business_day',
                 'completed_at' => '2011-10-05T14:48:00.000Z',
             ],
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
         ];
 
         $this->mockResponse($mockedStellarPayout);
@@ -325,7 +325,7 @@ class PayoutsTest extends TestCase
         $this->assertEquals('pa_000000000000', $response->data->id);
         $this->assertEquals('processing', $response->data->status->value);
         $this->assertEquals('0x123...890', $response->data->senderWalletAddress);
-        $this->assertEquals('re_000000000000', $response->data->receiverId);
+        $this->assertEquals('re_000000000000', $response->data->customerId);
         $this->assertNotNull($response->data->trackingComplete);
         $this->assertNotNull($response->data->trackingPayment);
         $this->assertNotNull($response->data->trackingTransaction);
@@ -372,7 +372,7 @@ class PayoutsTest extends TestCase
                 'estimated_time_of_arrival' => '1_business_day',
                 'completed_at' => '2011-10-05T14:48:00.000Z',
             ],
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
         ];
 
         $this->mockResponse($mockedEvmPayout);
@@ -389,7 +389,7 @@ class PayoutsTest extends TestCase
         $this->assertEquals('pa_000000000000', $response->data->id);
         $this->assertEquals('processing', $response->data->status->value);
         $this->assertEquals('0x123...890', $response->data->senderWalletAddress);
-        $this->assertEquals('re_000000000000', $response->data->receiverId);
+        $this->assertEquals('re_000000000000', $response->data->customerId);
         $this->assertNotNull($response->data->trackingComplete);
         $this->assertNotNull($response->data->trackingPayment);
         $this->assertNotNull($response->data->trackingTransaction);

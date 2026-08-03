@@ -59,7 +59,7 @@ class PayinsTest extends TestCase
     private function getPayinMockData(): array
     {
         return [
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
             'id' => 're_000000000000',
             'pix_code' => '00020101021226790014br.gov.bcb.pix2557brcode.starkinfra.com/v2/bcf07f6c4110454e9fd6f120bab13e835204000053039865802BR5915Blind Pay, Inc.6010Vila Velha62070503***6304BCAB',
             'memo_code' => '8K45GHBNT6BQ6462',
@@ -159,7 +159,7 @@ class PayinsTest extends TestCase
         $this->assertIsArray($response->data->data);
         $this->assertCount(1, $response->data->data);
         $this->assertEquals('re_000000000000', $response->data->data[0]->id);
-        $this->assertEquals('re_000000000000', $response->data->data[0]->receiverId);
+        $this->assertEquals('re_000000000000', $response->data->data[0]->customerId);
     }
 
     #[Test]
@@ -174,7 +174,7 @@ class PayinsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('re_000000000000', $response->data->id);
-        $this->assertEquals('re_000000000000', $response->data->receiverId);
+        $this->assertEquals('re_000000000000', $response->data->customerId);
         $this->assertEquals('pq_000000000000', $response->data->payinQuoteId);
         $this->assertEquals(TransactionStatus::PROCESSING, $response->data->status);
         $this->assertEquals('processing', $response->data->trackingTransaction->step);
@@ -305,7 +305,7 @@ class PayinsTest extends TestCase
                     'address_line_2' => 'San Francisco, CA 94129',
                 ],
             ],
-            'receiver_id' => 're_000000000000',
+            'customer_id' => 're_000000000000',
             'receiver_amount' => 1010,
         ];
 
@@ -317,7 +317,7 @@ class PayinsTest extends TestCase
         $this->assertNull($response->error);
         $this->assertEquals('pi_000000000000', $response->data->id);
         $this->assertEquals(TransactionStatus::PROCESSING, $response->data->status);
-        $this->assertEquals('re_000000000000', $response->data->receiverId);
+        $this->assertEquals('re_000000000000', $response->data->customerId);
         $this->assertEquals(1010.0, $response->data->receiverAmount);
     }
 }

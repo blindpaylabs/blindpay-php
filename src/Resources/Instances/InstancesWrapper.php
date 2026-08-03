@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK\Resources\Instances;
 
-use BlindPay\SDK\Resources\ApiKeys\ApiKeys;
 use BlindPay\SDK\Resources\TermsOfService\TermsOfService;
 use BlindPay\SDK\Resources\Webhooks\Webhooks;
 use BlindPay\SDK\Types\BlindPayApiResponse;
@@ -13,7 +12,6 @@ readonly class InstancesWrapper
 {
     public function __construct(
         private Instances $base,
-        public ApiKeys $apiKeys,
         public Webhooks $webhookEndpoints,
         public TermsOfService $tos
     ) {}

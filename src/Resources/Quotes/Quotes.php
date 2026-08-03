@@ -121,7 +121,7 @@ readonly class CreateQuoteResponse
         public float $partnerFeeAmount,
         public float $flatFee,
         public QuoteContract $contract,
-        public float $receiverLocalAmount,
+        public float $customerLocalAmount,
         public string $description
     ) {}
 
@@ -137,7 +137,7 @@ readonly class CreateQuoteResponse
             partnerFeeAmount: (float) $data['partner_fee_amount'],
             flatFee: (float) $data['flat_fee'],
             contract: QuoteContract::fromArray($data['contract']),
-            receiverLocalAmount: (float) $data['receiver_local_amount'],
+            customerLocalAmount: (float) $data['customer_local_amount'],
             description: $data['description']
         );
     }
@@ -154,7 +154,7 @@ readonly class CreateQuoteResponse
             'partner_fee_amount' => $this->partnerFeeAmount,
             'flat_fee' => $this->flatFee,
             'contract' => $this->contract->toArray(),
-            'receiver_local_amount' => $this->receiverLocalAmount,
+            'customer_local_amount' => $this->customerLocalAmount,
             'description' => $this->description,
         ];
     }

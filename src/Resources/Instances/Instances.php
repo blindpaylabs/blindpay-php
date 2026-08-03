@@ -65,7 +65,7 @@ readonly class UpdateInstanceInput
 {
     public function __construct(
         public string $name,
-        public ?string $receiverInviteRedirectUrl = null,
+        public ?string $customerInviteRedirectUrl = null,
         public ?bool $emailNotifications = null,
         public ?bool $requirePasskey = null
     ) {}
@@ -76,8 +76,8 @@ readonly class UpdateInstanceInput
             'name' => $this->name,
         ];
 
-        if ($this->receiverInviteRedirectUrl !== null) {
-            $data['receiver_invite_redirect_url'] = $this->receiverInviteRedirectUrl;
+        if ($this->customerInviteRedirectUrl !== null) {
+            $data['customer_invite_redirect_url'] = $this->customerInviteRedirectUrl;
         }
 
         if ($this->emailNotifications !== null) {
