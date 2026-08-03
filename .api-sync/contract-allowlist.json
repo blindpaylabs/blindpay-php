@@ -150,6 +150,12 @@
       "field": "stellar_wallet_address",
       "reason": "Pre-existing: same partner-fees schema gap as PartnerFee.stellar_wallet_address. Predates wave 2.",
       "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountResponse",
+      "field": "iban",
+      "reason": "Absent from the public spec snapshot; only appeared alongside internal-only surface in the unfiltered spec. Pre-existing SDK field, unrelated to the customers rename; needs its own investigation.",
+      "owner": "eric@blindpay.com"
     }
   ]
 }
