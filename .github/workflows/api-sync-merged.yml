@@ -37,3 +37,68 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: clear baseline — SDK synced" --allow-empty
           git push -f origin api-sync-data
+
+  auto-tag-release:
+    name: Auto-tag release
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'api-sync')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Read the VERSION const src/BlindPay.php was merged with
+        id: version
+        run: |
+          VERSION=$(php -r '
+            $source = file_get_contents("src/BlindPay.php");
+            if (! preg_match("/private const VERSION = .([0-9]+\.[0-9]+\.[0-9]+)./", $source, $m)) {
+                fwrite(STDERR, "could not find VERSION const in src/BlindPay.php\n");
+                exit(1);
+            }
+            echo $m[1];
+          ')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: "Guard: did this merge actually change VERSION?"
+        id: guard
+        run: |
+          # The api-sync PR is squash-merged onto main by api-sync.yml, so this merge is exactly
+          # one commit; its parent is main's previous tip, before the version bump.
+          BEFORE=$(git show HEAD~1:src/BlindPay.php 2>/dev/null | grep -oE "VERSION = '[0-9.]+'" || echo "none")
+          AFTER=$(grep -oE "VERSION = '[0-9.]+'" src/BlindPay.php)
+          echo "before=$BEFORE after=$AFTER"
+          if [ "$BEFORE" = "$AFTER" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Guard: does the tag already exist?"
+        id: tagcheck
+        run: |
+          git fetch origin --tags --quiet
+          if git rev-parse "refs/tags/v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Tag and push
+        if: steps.guard.outputs.changed == 'true' && steps.tagcheck.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.SDK_SYNC_PAT }}
+        run: |
+          git remote set-url origin "https://x-access-token:${{ secrets.SDK_SYNC_PAT }}@github.com/${{ github.repository }}.git"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Skip (no-op) reason
+        if: steps.guard.outputs.changed == 'false' || steps.tagcheck.outputs.exists == 'true'
+        run: |
+          echo "Not tagging: VERSION changed on this merge = ${{ steps.guard.outputs.changed }}, tag v${{ steps.version.outputs.version }} already exists = ${{ steps.tagcheck.outputs.exists }}"

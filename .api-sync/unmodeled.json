@@ -1,0 +1,604 @@
+{
+  "$schema": "Seeded state-reconciliation baseline: every spec property, on a schema mapped in .api-sync/spec-map.json, that scripts/api-sync.php currently finds absent from its mapped SDK class(es). Each entry needs a specific reason and an owner. `--check` treats anything absent from both the SDK and this file as pending drift and fails. Do not add an entry for a field this PR's changelist is adding instead.",
+  "entries": [
+    {
+      "schema": "BankAccountOut",
+      "field": "business_industry",
+      "reason": "Compliance metadata captured on ACH/wire/RTP/SWIFT bank-account creation; the shared list/get response type (BankAccountListItem) does not echo it back.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "date_of_birth",
+      "reason": "Beneficiary date of birth captured on ACH/wire/RTP/SWIFT bank-account creation; not echoed back on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "phone_number",
+      "reason": "Beneficiary phone number captured on ACH/wire/RTP/SWIFT bank-account creation; not echoed back on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "tax_id",
+      "reason": "Beneficiary tax ID captured on ACH/wire/RTP/SWIFT bank-account creation; not echoed back on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "recipient_relationship",
+      "reason": "Modeled on the rail-specific create Input/Response classes (ACH/wire/RTP/SWIFT) but not surfaced on the shared list/get response type (BankAccountListItem).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "status",
+      "reason": "Bank account verification status (verifying/approved/rejected/deprecated); not modeled on any bank-account response type in this SDK.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "pix_safe_bank_code",
+      "reason": "PIX Safe rail field modeled on create (CreatePixSafeInput/CreatePixSafeResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "pix_safe_branch_code",
+      "reason": "PIX Safe rail field modeled on create (CreatePixSafeInput/CreatePixSafeResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "pix_safe_cpf_cnpj",
+      "reason": "PIX Safe rail field modeled on create (CreatePixSafeInput/CreatePixSafeResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "sepa_beneficiary_address_line_1",
+      "reason": "SEPA rail field modeled on create (CreateSepaInput/CreateSepaResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "sepa_beneficiary_address_line_2",
+      "reason": "SEPA rail field modeled on create (CreateSepaInput/CreateSepaResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "sepa_beneficiary_city",
+      "reason": "SEPA rail field modeled on create (CreateSepaInput/CreateSepaResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "sepa_beneficiary_country",
+      "reason": "SEPA rail field modeled on create (CreateSepaInput/CreateSepaResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "sepa_beneficiary_legal_name",
+      "reason": "SEPA rail field modeled on create (CreateSepaInput/CreateSepaResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "sepa_beneficiary_postal_code",
+      "reason": "SEPA rail field modeled on create (CreateSepaInput/CreateSepaResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "sepa_beneficiary_state_province_region",
+      "reason": "SEPA rail field modeled on create (CreateSepaInput/CreateSepaResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "sepa_iban",
+      "reason": "SEPA rail field modeled on create (CreateSepaInput/CreateSepaResponse) but not surfaced on the shared list/get response type.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "swift_ifsc_branch_code",
+      "reason": "India-specific SWIFT branch code; not modeled on any SWIFT bank-account type in this SDK.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "swift_payment_code",
+      "reason": "SWIFT payment/purpose code; not modeled on any SWIFT bank-account type in this SDK.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateBankAccountIn",
+      "field": "checkbook_account_id",
+      "reason": "Internal payment-provider account-linkage field; not exposed as a constructor parameter on any rail's create Input class.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateBankAccountIn",
+      "field": "checkbook_user_key",
+      "reason": "Internal payment-provider account-linkage field; not exposed as a constructor parameter on any rail's create Input class.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateBankAccountIn",
+      "field": "onemoney_external_account_id",
+      "reason": "Internal payment-provider account-linkage field; not exposed as a constructor parameter on any rail's create Input class.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateBankAccountIn",
+      "field": "force_cpf_cnpj",
+      "reason": "Brazil-specific override flag; not exposed as a constructor parameter on any rail's create Input class.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateBankAccountIn",
+      "field": "status",
+      "reason": "Bank account status is server-assigned on creation, not client-set; no create Input class accepts it.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateBankAccountIn",
+      "field": "swift_ifsc_branch_code",
+      "reason": "India-specific SWIFT branch code; not modeled on CreateInternationalSwiftInput.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateCustomerIn",
+      "field": "additional_info",
+      "reason": "Free-form key/value compliance metadata; not exposed as a constructor parameter on any of the 3 create Input classes.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateCustomerIn",
+      "field": "latitude",
+      "reason": "Geolocation captured at KYC submission time; not exposed as a constructor parameter on any of the 3 create Input classes.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateCustomerIn",
+      "field": "longitude",
+      "reason": "Geolocation captured at KYC submission time; not exposed as a constructor parameter on any of the 3 create Input classes.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "field": "additional_info",
+      "reason": "Free-form key/value compliance metadata; not modeled on BaseCustomer or any of its 3 subclasses.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "field": "customer_id",
+      "reason": "Response envelope carries both `id` (modeled) and a duplicate `customer_id`; not modeled on BaseCustomer.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "field": "kyc_type",
+      "reason": "Used by Customers::mapCustomer() to select which subclass to instantiate, but not itself stored as a field on any subclass afterwards.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "field": "latitude",
+      "reason": "Geolocation captured at KYC submission time; not modeled on BaseCustomer or any of its 3 subclasses.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "field": "longitude",
+      "reason": "Geolocation captured at KYC submission time; not modeled on BaseCustomer or any of its 3 subclasses.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "field": "type",
+      "reason": "Used by Customers::mapCustomer() to select which subclass to instantiate, but not itself stored as a field on any subclass afterwards.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "UpdateCustomerIn",
+      "field": "additional_info",
+      "reason": "Free-form key/value compliance metadata; not exposed as a constructor parameter on UpdateCustomerInput.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "UpdateCustomerIn",
+      "field": "latitude",
+      "reason": "Geolocation; not exposed as a constructor parameter on UpdateCustomerInput.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "UpdateCustomerIn",
+      "field": "longitude",
+      "reason": "Geolocation; not exposed as a constructor parameter on UpdateCustomerInput.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "QuoteOut",
+      "field": "billing_fee_amount",
+      "reason": "Fee breakdown field; CreateQuoteResponse models flat_fee and partner_fee_amount but not this separate billing_fee_amount.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinQuoteOut",
+      "field": "billing_fee_amount",
+      "reason": "Fee breakdown field; CreatePayinQuoteResponse models flat_fee and partner_fee_amount but not this separate billing_fee_amount.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinQuoteOut",
+      "field": "is_otc",
+      "reason": "OTC (over-the-counter) quote flag; not modeled on CreatePayinQuoteResponse.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "manual_concluded_at",
+      "reason": "Manual-review audit timestamp; not modeled on Payin.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "manual_concluded_by",
+      "reason": "Manual-review audit actor; not modeled on Payin.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "partner_fee",
+      "reason": "Nested partner-fee detail object; Payin models the flat partner_fee_amount/partner_fee_id pair but not this nested object.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "payer_rules",
+      "reason": "Mirrors the payer_rules object sent on CreatePayinQuoteInput, but the payin response does not echo it back and Payin does not model it.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "transaction_fee_amount",
+      "reason": "Fee breakdown field; not modeled on Payin (which models total_fee_amount/partner_fee_amount but not this one).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "field": "billing_fee_amount",
+      "reason": "CreateEvmPayinResponse is a slim create-response shape; does not model this fee breakdown field (present on the full Payin/PayinOut shape considerations aside).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "field": "partner_fee",
+      "reason": "Nested partner-fee detail object; not modeled on the slim CreateEvmPayinResponse.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "field": "payment_method",
+      "reason": "Not modeled on the slim CreateEvmPayinResponse (this create path is EVM-only, so the method is implicit).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "field": "sender_amount",
+      "reason": "Not modeled on the slim CreateEvmPayinResponse, which only models receiver_amount.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "field": "transaction_fee_amount",
+      "reason": "Fee breakdown field; not modeled on the slim CreateEvmPayinResponse.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "jpm_track_data",
+      "reason": "Internal banking-partner tracking blob; not modeled on Payout.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "partner_fee",
+      "reason": "Nested partner-fee detail object; Payout models the flat partner_fee_amount/partner_fee_id pair but not this nested object.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "pix_safe_bank_code",
+      "reason": "PIX Safe rail field; not surfaced on the generic Payout response (mirrors the same gap on BankAccountOut).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "pix_safe_branch_code",
+      "reason": "PIX Safe rail field; not surfaced on the generic Payout response (mirrors the same gap on BankAccountOut).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "pix_safe_cpf_cnpj",
+      "reason": "PIX Safe rail field; not surfaced on the generic Payout response (mirrors the same gap on BankAccountOut).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "tracking_documents",
+      "reason": "SWIFT payout document-request tracking sub-object; no SDK class models it at all (no TrackingDocuments type exists).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "transaction_fee_amount",
+      "reason": "Fee breakdown field; not modeled on Payout (which models total_fee_amount/partner_fee_amount but not this one).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOnEvmOut",
+      "field": "bank_account_id",
+      "reason": "Not modeled on the slim CreateStellarPayoutResponse/CreateEvmPayoutResponse/CreateSolanaPayoutResponse create-response shapes.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOnEvmOut",
+      "field": "billing_fee_amount",
+      "reason": "Fee breakdown field; not modeled on the slim create-response shapes.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOnEvmOut",
+      "field": "offramp_wallet_id",
+      "reason": "Not modeled on the slim create-response shapes.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOnEvmOut",
+      "field": "partner_fee",
+      "reason": "Nested partner-fee detail object; not modeled on the slim create-response shapes.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOnEvmOut",
+      "field": "tracking_documents",
+      "reason": "SWIFT payout document-request tracking sub-object; no SDK class models it at all, same gap as PayoutOut.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOnEvmOut",
+      "field": "transaction_fee_amount",
+      "reason": "Fee breakdown field; not modeled on the slim create-response shapes.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "provider_integration",
+      "reason": "Payout tracking_payment carries 20 properties in the current spec; TrackingPayment models 6 (step/provider_name/provider_transaction_id/provider_status/estimated_time_of_arrival/completed_at). Exposing the remaining payout-only fields (this one plus provider_error_reason, provider_uetr, provider_imad, provider_reference, provider_clearing_system, recipient_name, recipient_tax_id, recipient_bank_code, recipient_branch_code, recipient_account_number, recipient_account_type, coelsa_id, end_to_end_id) is a deliberate additive change that needs one reviewed PR across all SDKs, not a blind per-field add here.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "provider_error_reason",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "provider_uetr",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "provider_imad",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "provider_reference",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch. Provider payment reference captured from the banking partner's booking webhook; present for some ACH/wire payouts.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "provider_clearing_system",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "recipient_name",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "recipient_tax_id",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "recipient_bank_code",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "recipient_branch_code",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "recipient_account_number",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "recipient_account_type",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "coelsa_id",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_payment",
+      "field": "end_to_end_id",
+      "reason": "See provider_integration on this same schema/path -- part of the same deferred payout tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "path": "tracking_payment",
+      "field": "review_source",
+      "reason": "Payin-side tracking_payment carries manual-review metadata (review_source/review_context/approved_risk_sources) that the shared TrackingPayment class, modeled after the payout shape, does not have. Same deferred-batch reasoning as the payout tracking_payment fields: needs a reviewed PR, not a blind add onto a class shared with payouts.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "path": "tracking_payment",
+      "field": "review_context",
+      "reason": "See review_source on this same schema/path -- part of the same deferred payin tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "path": "tracking_payment",
+      "field": "approved_risk_sources",
+      "reason": "See review_source on this same schema/path -- part of the same deferred payin tracking_payment batch.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "field": "blockchain_wallet",
+      "reason": "Nested embedded wallet object; VirtualAccount only stores blockchainWalletId (the ID string), not the embedded object.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "field": "customer_id",
+      "reason": "Not modeled on VirtualAccount; callers already have the customer_id they used to make the request.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateWalletIn",
+      "field": "name",
+      "reason": "Wallet display name; not exposed as a constructor parameter on CreateCustodialWalletInput (only network is accepted).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateWalletIn",
+      "field": "external_id",
+      "reason": "Caller-supplied external ID; not exposed as a constructor parameter on CreateCustodialWalletInput.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "WalletOut",
+      "field": "name",
+      "reason": "Wallet display name; not modeled on CustodialWallet.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "WalletOut",
+      "field": "external_id",
+      "reason": "Caller-supplied external ID; not modeled on CustodialWallet.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "WalletTokenOut",
+      "field": "id",
+      "reason": "Not modeled on WalletTokenBalance (which models amount/token/address).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "WalletTokenOut",
+      "field": "symbol",
+      "reason": "WalletTokenBalance reads a `token` key instead of `symbol` for the currency code; worth confirming against a live response whether this is the intended wire key or a pre-existing key-name mismatch. Not touched in this PR.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "UpdateInstanceMemberIn",
+      "field": "user_role",
+      "reason": "UpdateMemberRoleInput has no toArray; Instances::updateMemberRole() builds `['user_role' => $input->role->value]` inline instead of calling a method on this DTO.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "UpdateInstanceIn",
+      "field": "compliance_emails",
+      "reason": "Instance-level notification routing setting added after UpdateInstanceInput was last generated; not modeled.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "UpdateInstanceIn",
+      "field": "customer_rfi_emails_enabled",
+      "reason": "Instance-level notification routing setting added after UpdateInstanceInput was last generated; not modeled.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "GetFeesOut",
+      "field": "id",
+      "reason": "Fee-config envelope metadata; FeesResponse only models the per-rail fee breakdown, not the record's own id.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "GetFeesOut",
+      "field": "instance_id",
+      "reason": "Fee-config envelope metadata; FeesResponse only models the per-rail fee breakdown, not instance_id.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "GetFeesOut",
+      "field": "created_at",
+      "reason": "Fee-config envelope metadata; FeesResponse only models the per-rail fee breakdown, not timestamps.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "GetFeesOut",
+      "field": "updated_at",
+      "reason": "Fee-config envelope metadata; FeesResponse only models the per-rail fee breakdown, not timestamps.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "GetFeesOut",
+      "field": "sepa",
+      "reason": "SEPA rail fee bucket added to the spec after FeesResponse was last generated; FeesResponse enumerates the other rails' FeeOptions but has no `sepa` property.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "AvailableBankDetails",
+      "field": "requiredWhen",
+      "reason": "Conditional-requirement expression added to the spec after BankDetail was last generated; not modeled.",
+      "owner": "eric@blindpay.com"
+    }
+  ]
+}

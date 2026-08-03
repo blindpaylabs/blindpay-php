@@ -25,7 +25,8 @@ readonly class CreateQuoteInput
         public TransactionDocumentType $transactionDocumentType,
         public ?Network $network = null,
         public ?StablecoinToken $token = null,
-        public ?string $description = null
+        public ?string $description = null,
+        public ?string $refundWalletAddress = null
     ) {}
 
     public function toArray(): array
@@ -42,6 +43,7 @@ readonly class CreateQuoteInput
             'network' => $this->network?->value,
             'token' => $this->token?->value,
             'description' => $this->description,
+            'refund_wallet_address' => $this->refundWalletAddress,
         ];
     }
 }

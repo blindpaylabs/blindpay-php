@@ -118,6 +118,7 @@ enum BusinessIndustry: string
     case NAICS_455219 = '455219';
     case NAICS_424210 = '424210';
     case NAICS_456110 = '456110';
+    case NAICS_446120 = '446120';
     case NAICS_541511 = '541511';
     case NAICS_541512 = '541512';
     case NAICS_541519 = '541519';

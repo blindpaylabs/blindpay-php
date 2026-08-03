@@ -1,0 +1,37 @@
+{
+  "$schema": "Recorded, reasoned, owned divergences that state reconciliation must not silently paper over. Two kinds: `enumValues` is a spec enum member whose value does not match any SDK case value even though the SDK models that enum (usually because an SDK case value has a typo/format bug) -- the fix is to CORRECT the existing case, not to add a near-duplicate new one, so scripts/api-sync.php treats a listed (enum, specValue) pair as satisfied rather than pending drift. `fields` is a spec property backed by a constrained enum in the spec but modeled as a plain untyped field in the SDK, so there is no case-completeness gap to begin with. Distinct from .api-sync/unmodeled.json, which is for properties absent from the SDK outright.",
+  "enumValues": [
+    {
+      "enum": "BankAccountType",
+      "specValue": "saving",
+      "sdkCase": "SAVINGS",
+      "sdkValue": "savings",
+      "reason": "LIVE DEFECT (not fixed in this PR): the API's wire value is 'saving' (singular); this SDK's case value is 'savings' (plural), so a PHP backed enum currently serializes the wrong string and a real 'saving' account_type response would fail to parse via BankAccountType::from(). To be fixed in its own deliberate PR that corrects the case value directly instead of adding a second near-duplicate case.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "enum": "BankAccountType",
+      "specValue": null,
+      "sdkCase": "TED",
+      "sdkValue": "ted",
+      "reason": "SDK-only case with no counterpart in the spec's account_type enum (which only has checking/saving). Pre-existing, unrelated to account_type modeling; not touched here.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "enum": "EstimatedAnnualRevenue",
+      "specValue": "250000000_plus",
+      "sdkCase": "RANGE_2500000000_PLUS",
+      "sdkValue": "2500000000_plus",
+      "reason": "The API's top revenue bucket is '250000000_plus' (250 million); this SDK's case value has an extra digit, '2500000000_plus' (2.5 billion), so a real API response for the top bucket would fail to parse via EstimatedAnnualRevenue::from(). Same shape of bug as BankAccountType.saving/savings -- to be fixed in its own deliberate PR that corrects the case value, not by adding a second near-duplicate case.",
+      "owner": "eric@blindpay.com"
+    }
+  ],
+  "fields": [
+    {
+      "schema": "CustomerOut",
+      "field": "kyc_status",
+      "reason": "Spec constrains kyc_status to an 8-value enum (verifying/approved/rejected/deprecated/pending_review/awaiting_contract/compliance_request/approved_rfi). This SDK models it as a plain `string` on BaseCustomer, not a backed enum, so every spec value already parses without error -- there is no case-completeness gap in code today. Recorded for visibility only.",
+      "owner": "eric@blindpay.com"
+    }
+  ]
+}
