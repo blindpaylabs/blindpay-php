@@ -81,6 +81,9 @@ jobs:
             }
             echo count($gaps)." total.\n";
           '
+      - name: Type audit (non-blocking -- full state comparison, surfaces pre-existing type debt too, not just new drift)
+        if: always()
+        run: php scripts/api-sync.php --audit-types --spec=.api-sync/spec-snapshot.json
   snyk:
     uses: ./.github/workflows/snyk.yaml
     needs: [lint, tests]

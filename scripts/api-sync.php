@@ -13,8 +13,12 @@
  * version-bump classification.
  *
  * Usage:
- *   php scripts/api-sync.php [--check] [--apply] [--spec=path] [--report=path]
+ *   php scripts/api-sync.php [--check] [--apply] [--audit-types] [--spec=path] [--report=path]
  * Default mode is --check. Default --spec is .api-sync/spec-current.json.
+ * --audit-types is a separate, always-exit-0 mode: it prints every already-modeled property
+ * whose CURRENT spec type disagrees with its SDK type (state, not just forward drift), so
+ * pre-existing type debt stays visible without blocking CI. See auditTypes() for why this is
+ * broader than the blocking check.
  * No Composer dependencies -- uses only the Tokenizer/JSON extensions PHP ships with.
  */
 
@@ -28,12 +32,14 @@ $root = dirname(__DIR__);
 
 function parseArgs(array $argv): array
 {
-    $opts = ['apply' => false, 'check' => false, 'spec' => null, 'report' => null];
+    $opts = ['apply' => false, 'check' => false, 'auditTypes' => false, 'spec' => null, 'report' => null];
     foreach (array_slice($argv, 1) as $arg) {
         if ($arg === '--apply') {
             $opts['apply'] = true;
         } elseif ($arg === '--check') {
             $opts['check'] = true;
+        } elseif ($arg === '--audit-types') {
+            $opts['auditTypes'] = true;
         } elseif (str_starts_with($arg, '--spec=')) {
             $opts['spec'] = substr($arg, strlen('--spec='));
         } elseif (str_starts_with($arg, '--report=')) {
@@ -275,15 +281,29 @@ function scanClassesDetailed(string $path): array
                 }
             } elseif ($ctorParenDepth === 1 && is_array($t) && in_array($id, [T_PUBLIC, T_PROTECTED, T_PRIVATE], true)
                 && $currentClass !== null && isset($classes[$currentClass])) {
+                $typeParts = [];
                 for ($j = $i + 1; $j < $count; $j++) {
                     $nt = $tokens[$j];
                     if (! is_array($nt) && in_array($nt, [',', ')'], true)) {
                         break;
                     }
                     if (is_array($nt) && $nt[0] === T_VARIABLE) {
-                        $classes[$currentClass]['ctor']['params'][] = ['name' => ltrim($nt[1], '$'), 'line' => $nt[2]];
+                        $classes[$currentClass]['ctor']['params'][] = [
+                            'name' => ltrim($nt[1], '$'),
+                            'line' => $nt[2],
+                            'type' => implode('', $typeParts),
+                        ];
 
                         break;
+                    }
+                    if (is_array($nt) && $nt[0] === T_READONLY) {
+                        continue;
+                    }
+                    // Type declaration tokens: `?`, a name (possibly namespaced with `\`), `|` for
+                    // unions, or `array` -- which tokenizes as the dedicated T_ARRAY, not T_STRING.
+                    if ((! is_array($nt) && in_array($nt, ['?', '\\', '|'], true))
+                        || (is_array($nt) && in_array($nt[0], [T_STRING, T_ARRAY], true))) {
+                        $typeParts[] = is_array($nt) ? $nt[1] : $nt;
                     }
                 }
             }
@@ -471,6 +491,110 @@ function snakeToCamel(string $snake): string
 }
 
 // ---------------------------------------------------------------------------
+// Type-mismatch detection: spec declared type vs SDK declared property type
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize a spec property's JSON Schema type into {category, nullable}.
+ * category is one of: null (untyped in spec -- cannot compare), 'ambiguous' (more than one
+ * non-null JSON type -- always needs a human), 'enum' (has an `enum` list; may legitimately be
+ * modeled as a scalar OR a backed-enum/object in the SDK), or a plain JSON Schema type name
+ * (string/integer/number/boolean/array/object).
+ */
+function specTypeCategory(array $propSchema): array
+{
+    $type = $propSchema['type'] ?? null;
+    if ($type === null) {
+        return ['category' => null, 'nullable' => null];
+    }
+    $types = is_array($type) ? $type : [$type];
+    $nullable = in_array('null', $types, true);
+    $nonNull = array_values(array_diff($types, ['null']));
+    if (count($nonNull) !== 1) {
+        return ['category' => 'ambiguous', 'nullable' => $nullable];
+    }
+    $category = isset($propSchema['enum']) ? 'enum' : $nonNull[0];
+
+    return ['category' => $category, 'nullable' => $nullable];
+}
+
+/**
+ * Normalize a PHP promoted-property type declaration (e.g. "?string", "Network", "?array")
+ * into {category, nullable}. A bare class/enum name normalizes to 'object'.
+ */
+function phpTypeCategory(?string $phpType): array
+{
+    if ($phpType === null || $phpType === '') {
+        return ['category' => null, 'nullable' => null, 'className' => null];
+    }
+    $nullable = str_starts_with($phpType, '?');
+    $base = ltrim($phpType, '?');
+    if (str_contains($base, '|')) {
+        return ['category' => 'ambiguous', 'nullable' => $nullable, 'className' => null];
+    }
+    $scalarMap = ['string' => 'string', 'int' => 'integer', 'float' => 'number', 'bool' => 'boolean', 'array' => 'array'];
+    $category = $scalarMap[$base] ?? 'object';
+
+    return ['category' => $category, 'nullable' => $nullable, 'className' => $category === 'object' ? $base : null];
+}
+
+/**
+ * Whether a spec property's base representation and an SDK property's base representation are
+ * compatible enough that a real spec value is guaranteed to decode correctly. Nullability is
+ * deliberately NOT considered here -- see typeNullabilityWidened() below for why. Deliberately
+ * conservative on the base category: anything not positively known to be safe is a mismatch.
+ */
+function categoriesCompatible(array $spec, array $php): bool
+{
+    if ($spec['category'] === null || $php['category'] === null) {
+        return true; // one side can't be determined -- do not force a false positive
+    }
+    if ($spec['category'] === 'ambiguous' || $php['category'] === 'ambiguous') {
+        return false;
+    }
+    // This SDK's established decode pattern: a date-time string is parsed into DateTimeImmutable.
+    if ($spec['category'] === 'string' && ($php['className'] ?? null) === 'DateTimeImmutable') {
+        return true;
+    }
+    // PHP widens int to float safely, even under strict_types (a documented special case) -- the
+    // reverse (spec `number`, SDK `int`) is NOT safe, a fractional value would lose precision.
+    if ($spec['category'] === 'integer' && $php['category'] === 'number') {
+        return true;
+    }
+    if ($spec['category'] === 'enum') {
+        // May be modeled as a plain scalar (deliberately loose, e.g. known-divergences.json) or as
+        // a backed enum/class -- both parse every spec value without error.
+        return in_array($php['category'], ['string', 'object'], true);
+    }
+    // json_decode(..., true) throughout this codebase represents a JSON object as a PHP
+    // associative array, so a spec `object` modeled as PHP `array` is this SDK's norm, not a bug.
+    if ($spec['category'] === 'object' && $php['category'] === 'array') {
+        return true;
+    }
+
+    return $spec['category'] === $php['category'];
+}
+
+/**
+ * Whether nullability was newly ADDED to this property's spec type between $oldPropSchema and
+ * $newPropSchema, while the SDK's declared type is not itself nullable. Checked as an old-vs-new
+ * event, not a pure state check: this codebase's spec has long-standing, pervasive `|null`
+ * annotations on fields the SDK still declares non-nullable (predating every snapshot on record),
+ * and re-litigating that entire backlog on every run is neither this patcher's job nor safe to
+ * silently mass-fix. A genuinely NEW nullability relaxation is a real, actionable signal though.
+ */
+function typeNullabilityWidened(array $oldPropSchema, array $newPropSchema, array $phpType): bool
+{
+    if ($phpType['nullable'] ?? true) {
+        return false; // SDK already tolerates null -- nothing at risk
+    }
+    $old = specTypeCategory($oldPropSchema);
+    $new = specTypeCategory($newPropSchema);
+
+    return ! $old['nullable'] && $new['nullable'];
+}
+
+// ---------------------------------------------------------------------------
 // Map validation
 // ---------------------------------------------------------------------------
 
@@ -575,7 +699,7 @@ function typeSpecSchemas(array $entry): array
     return is_array($spec) ? $spec : [$spec];
 }
 
-function reconcileTypes(array $map, array $newSpec, array $reachable, array $classIndex, array $unmodeledIndex): array
+function reconcileTypes(array $map, array $newSpec, array $reachable, array $classIndex, array $unmodeledIndex, array $divergenceFieldIndex = []): array
 {
     $applicable = [];
     $needsHuman = [];
@@ -586,6 +710,19 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
         // unmodeled.json records one entry per group (using the first schema as the canonical
         // name), not once per schema in a multi-schema entry like ["PayoutOut","PayoutOnEvmOut"].
         $canonicalSchema = $schemas[0];
+
+        // camelCase param name -> PHP type string. Only meaningful for a 1:1 schema-to-class
+        // mapping: a discriminator fan-out (e.g. CreateBankAccountIn's 10 rails) has each class
+        // model only its own rail's requiredness for a shared wire key, which genuinely diverges
+        // from the flattened spec schema's nullability -- that's covered by field-presence
+        // checking only, not per-field type strictness.
+        $ctorTypesByParam = [];
+        if (count($entry['sdk']) === 1) {
+            $info = $classIndex[$entry['sdk'][0]['class']] ?? null;
+            foreach ($info['ctor']['params'] ?? [] as $param) {
+                $ctorTypesByParam[$param['name']] ??= $param['type'];
+            }
+        }
 
         foreach ($schemas as $schemaName) {
             if (! isset($reachable[$schemaName])) {
@@ -617,6 +754,28 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
 
             foreach ($specProps as $field) {
                 if (isset($modeled[$field])) {
+                    // Already modeled -- check the declared type still matches, not just presence.
+                    $divergenceKey = "{$canonicalSchema}|{$field}";
+                    if (isset($divergenceFieldIndex[$divergenceKey])) {
+                        continue;
+                    }
+                    $camel = snakeToCamel($field);
+                    $phpType = $ctorTypesByParam[$camel] ?? null;
+                    if ($phpType === null) {
+                        continue; // modeled via fromArray/toArray only (e.g. no promoted ctor prop) -- nothing to compare
+                    }
+                    $propSchema = $path !== null
+                        ? nestedPropSchema($newSpec, $schemaName, $path, $field)
+                        : ($newSpec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
+                    $specType = specTypeCategory($propSchema);
+                    $sdkType = phpTypeCategory($phpType);
+                    if (! categoriesCompatible($specType, $sdkType)) {
+                        $label = $schemaName.($path !== null ? ".{$path}" : '');
+                        $needsHuman[] = "NEEDS_HUMAN: type mismatch on {$label}.{$field}: spec declares "
+                            .($specType['category'] ?? 'unknown').($specType['nullable'] ? '|null' : '')
+                            .", SDK declares {$phpType} (mapped class(es): ".implode(', ', array_column($entry['sdk'], 'class')).')';
+                    }
+
                     continue;
                 }
                 $unmodeledKey = $canonicalSchema.'|'.($path ?? '').'|'.$field;
@@ -676,7 +835,7 @@ function pathMethodSet(array $spec): array
     return $out;
 }
 
-function computeStructuralDiff(array $oldSpec, array $newSpec, array $reachableOld, array $reachableNew, array $map): array
+function computeStructuralDiff(array $oldSpec, array $newSpec, array $reachableOld, array $reachableNew, array $map, array $classIndex = []): array
 {
     $issues = [];
 
@@ -744,7 +903,19 @@ function computeStructuralDiff(array $oldSpec, array $newSpec, array $reachableO
 
     foreach ($map['types'] as $entry) {
         $path = $entry['path'] ?? null;
-        foreach (typeSpecSchemas($entry) as $schemaName) {
+        $schemas = typeSpecSchemas($entry);
+        // See reconcileTypes(): a discriminator fan-out's flattened schema nullability doesn't
+        // apply uniformly to every rail's class, so per-field type/nullability checks only make
+        // sense for an unambiguous 1:1 mapping.
+        $ctorTypesByParam = [];
+        if (count($entry['sdk']) === 1) {
+            $info = $classIndex[$entry['sdk'][0]['class']] ?? null;
+            foreach ($info['ctor']['params'] ?? [] as $param) {
+                $ctorTypesByParam[$param['name']] ??= $param['type'];
+            }
+        }
+
+        foreach ($schemas as $schemaName) {
             if (! isset($reachableOld[$schemaName]) || ! isset($reachableNew[$schemaName])) {
                 continue;
             }
@@ -757,6 +928,19 @@ function computeStructuralDiff(array $oldSpec, array $newSpec, array $reachableO
             if (! empty($removed)) {
                 $label = $schemaName.($path !== null ? ".{$path}" : '');
                 $issues[] = 'NEEDS_HUMAN: propert'.(count($removed) === 1 ? 'y' : 'ies')." removed from {$label}: ".implode(', ', $removed).' (breaking, requires a deliberate major)';
+            }
+
+            foreach (array_intersect($oldProps, $newProps) as $field) {
+                $phpType = $ctorTypesByParam[snakeToCamel($field)] ?? null;
+                if ($phpType === null) {
+                    continue;
+                }
+                $oldPropSchema = $path !== null ? nestedPropSchema($oldSpec, $schemaName, $path, $field) : ($oldSpec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
+                $newPropSchema = $path !== null ? nestedPropSchema($newSpec, $schemaName, $path, $field) : ($newSpec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
+                if (typeNullabilityWidened($oldPropSchema, $newPropSchema, phpTypeCategory($phpType))) {
+                    $label = $schemaName.($path !== null ? ".{$path}" : '');
+                    $issues[] = "NEEDS_HUMAN: {$label}.{$field} newly allows null in the spec, but the SDK declares a non-nullable {$phpType} (mapped class: {$entry['sdk'][0]['class']})";
+                }
             }
         }
     }
@@ -792,6 +976,91 @@ function computeCoverageReport(array $map, array $spec, array $reachable): array
     sort($gaps);
 
     return $gaps;
+}
+
+// ---------------------------------------------------------------------------
+// Type audit (non-blocking): full state comparison, not just forward drift
+// ---------------------------------------------------------------------------
+
+/**
+ * Compares every already-modeled property's CURRENT spec type against its declared PHP type,
+ * for every mapped schema/path -- regardless of whether that mismatch is old or new. This is
+ * deliberately broader than the blocking --check type-mismatch gate (reconcileTypes) and than
+ * typeNullabilityWidened() (computeStructuralDiff), which only fire on genuinely NEW drift: this
+ * is the same state-vs-event distinction the whole design is built on, applied to types instead
+ * of presence. Never blocks: purely a printed report for a human to triage (Phase C).
+ *
+ * Discriminator fan-outs (more than one SDK class per entry) are reported as skipped, not
+ * silently omitted: a flattened spec schema's nullability/requiredness genuinely differs per
+ * rail, so a union-of-classes comparison would be noise, not signal.
+ */
+function auditTypes(array $map, array $spec, array $reachable, array $classIndex, array $divergenceFieldIndex): array
+{
+    $findings = [];
+    $skippedFanOuts = [];
+
+    foreach ($map['types'] as $entry) {
+        $schemas = typeSpecSchemas($entry);
+        $path = $entry['path'] ?? null;
+        $canonicalSchema = $schemas[0];
+
+        if (count($entry['sdk']) > 1) {
+            $skippedFanOuts[] = $canonicalSchema.($path !== null ? ".{$path}" : '');
+
+            continue;
+        }
+
+        $info = $classIndex[$entry['sdk'][0]['class']] ?? null;
+        $ctorTypesByParam = [];
+        foreach ($info['ctor']['params'] ?? [] as $param) {
+            $ctorTypesByParam[$param['name']] ??= $param['type'];
+        }
+
+        foreach ($schemas as $schemaName) {
+            if (! isset($reachable[$schemaName])) {
+                continue;
+            }
+            $specProps = $path !== null ? nestedProps($spec, $schemaName, $path) : schemaProps($spec, $schemaName);
+            if ($specProps === null) {
+                continue;
+            }
+
+            foreach ($specProps as $field) {
+                $camel = snakeToCamel($field);
+                $phpType = $ctorTypesByParam[$camel] ?? null;
+                if ($phpType === null) {
+                    continue; // not modeled via a promoted constructor property -- nothing to compare
+                }
+                $propSchema = $path !== null
+                    ? nestedPropSchema($spec, $schemaName, $path, $field)
+                    : ($spec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
+                $specType = specTypeCategory($propSchema);
+                $sdkType = phpTypeCategory($phpType);
+
+                $categoryMismatch = ! categoriesCompatible($specType, $sdkType);
+                $nullabilityMismatch = $specType['nullable'] === true && $sdkType['nullable'] !== true;
+                if (! $categoryMismatch && ! $nullabilityMismatch) {
+                    continue;
+                }
+
+                $label = $schemaName.($path !== null ? ".{$path}" : '');
+                $findings[] = [
+                    'field' => "{$label}.{$field}",
+                    'class' => $entry['sdk'][0]['class'],
+                    'specType' => ($specType['category'] ?? 'unknown').($specType['nullable'] ? '|null' : ''),
+                    'sdkType' => $phpType,
+                    'categoryMismatch' => $categoryMismatch,
+                    'nullabilityMismatch' => $nullabilityMismatch,
+                    'recordedDivergence' => isset($divergenceFieldIndex["{$canonicalSchema}|{$field}"]),
+                ];
+            }
+        }
+    }
+
+    usort($findings, fn ($a, $b) => $a['field'] <=> $b['field']);
+    sort($skippedFanOuts);
+
+    return ['findings' => $findings, 'skippedFanOuts' => $skippedFanOuts];
 }
 
 // ---------------------------------------------------------------------------
@@ -1037,6 +1306,10 @@ function runCli(array $argv, string $root): void
             $divergenceEnumIndex["{$d['enum']}|{$d['specValue']}"] = true;
         }
     }
+    $divergenceFieldIndex = [];
+    foreach ($divergences['fields'] as $d) {
+        $divergenceFieldIndex["{$d['schema']}|{$d['field']}"] = true;
+    }
 
     $classIndex = scanAllClasses($root);
 
@@ -1046,13 +1319,39 @@ function runCli(array $argv, string $root): void
     $reachableOld = computeReachable($oldSpec);
     $reachableNew = computeReachable($newSpec);
 
-    $structuralIssues = empty($mapErrors) ? computeStructuralDiff($oldSpec, $newSpec, $reachableOld, $reachableNew, $map) : [];
+    if ($opts['auditTypes']) {
+        $audit = auditTypes($map, $newSpec, $reachableNew, $classIndex, $divergenceFieldIndex);
+        fwrite(STDOUT, "[api-sync] --audit-types: full state comparison of every mapped property's spec type vs SDK type.\nNon-blocking and informational -- pre-existing mismatches are Phase C triage, not a gate.\n\n");
+        if (empty($audit['findings'])) {
+            fwrite(STDOUT, "No type mismatches found.\n");
+        }
+        foreach ($audit['findings'] as $f) {
+            $tags = [];
+            if ($f['categoryMismatch']) {
+                $tags[] = 'category';
+            }
+            if ($f['nullabilityMismatch']) {
+                $tags[] = 'nullability';
+            }
+            $recorded = $f['recordedDivergence'] ? ' [recorded in known-divergences.json]' : ' [NOT YET RECORDED]';
+            fwrite(STDOUT, "  - {$f['field']} ({$f['class']}): spec={$f['specType']} sdk={$f['sdkType']} mismatch=".implode('+', $tags).$recorded."\n");
+        }
+        if (! empty($audit['skippedFanOuts'])) {
+            fwrite(STDOUT, "\nSkipped (discriminator fan-out -- per-rail requiredness genuinely differs from the flattened schema): ".implode(', ', $audit['skippedFanOuts'])."\n");
+        }
+        if ($reportPath !== null) {
+            file_put_contents($reportPath, encodeJsonDeterministic(['mode' => 'audit-types', 'spec' => $specPath, 'audit' => $audit]));
+        }
+        exit(0);
+    }
+
+    $structuralIssues = empty($mapErrors) ? computeStructuralDiff($oldSpec, $newSpec, $reachableOld, $reachableNew, $map, $classIndex) : [];
 
     [$enumApplicable, $enumNeedsHuman] = empty($mapErrors)
         ? reconcileEnums($map, $newSpec, $reachableNew, $classIndex, $divergenceEnumIndex)
         : [[], []];
     [$fieldApplicable, $fieldNeedsHuman] = empty($mapErrors)
-        ? reconcileTypes($map, $newSpec, $reachableNew, $classIndex, $unmodeledIndex)
+        ? reconcileTypes($map, $newSpec, $reachableNew, $classIndex, $unmodeledIndex, $divergenceFieldIndex)
         : [[], []];
 
     $coverage = computeCoverageReport($map, $newSpec, $reachableNew);

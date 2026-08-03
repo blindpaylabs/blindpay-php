@@ -1,5 +1,5 @@
 {
-  "$schema": "Recorded, reasoned, owned divergences that state reconciliation must not silently paper over. Two kinds: `enumValues` is a spec enum member whose value does not match any SDK case value even though the SDK models that enum (usually because an SDK case value has a typo/format bug) -- the fix is to CORRECT the existing case, not to add a near-duplicate new one, so scripts/api-sync.php treats a listed (enum, specValue) pair as satisfied rather than pending drift. `fields` is a spec property backed by a constrained enum in the spec but modeled as a plain untyped field in the SDK, so there is no case-completeness gap to begin with. Distinct from .api-sync/unmodeled.json, which is for properties absent from the SDK outright.",
+  "$schema": "Recorded, reasoned, owned divergences that state reconciliation must not silently paper over. Two kinds: `enumValues` is a spec enum member whose value does not match any SDK case value even though the SDK models that enum (usually because an SDK case value has a typo/format bug) -- the fix is to CORRECT the existing case, not to add a near-duplicate new one, so scripts/api-sync.php treats a listed (enum, specValue) pair as satisfied rather than pending drift. `fields` covers two situations, both keyed by {schema, field}: (a) a spec property backed by a constrained enum but modeled as a plain untyped field in the SDK, so there is no case-completeness gap to begin with; (b) a genuine type-representation mismatch between the spec's declared type and the SDK's declared PHP property type on an already-modeled field, recorded here rather than silently accepted or blindly auto-fixed, since correcting it is a deliberate code change a human must make. Distinct from .api-sync/unmodeled.json, which is for properties absent from the SDK outright.",
   "enumValues": [
     {
       "enum": "BankAccountType",
@@ -31,6 +31,24 @@
       "schema": "CustomerOut",
       "field": "kyc_status",
       "reason": "Spec constrains kyc_status to an 8-value enum (verifying/approved/rejected/deprecated/pending_review/awaiting_contract/compliance_request/approved_rfi). This SDK models it as a plain `string` on BaseCustomer, not a backed enum, so every spec value already parses without error -- there is no case-completeness gap in code today. Recorded for visibility only.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "QuoteOut",
+      "field": "expires_at",
+      "reason": "TYPE MISMATCH, pre-existing and identical between the last two spec snapshots (not new drift): spec declares expires_at as `number|null` (a float), CreateQuoteResponse declares `public int $expiresAt` with no cast in fromArray. In practice this is a Unix timestamp (spec example: 1712958191, always a whole number), so json_decode already hands back a PHP int and the mismatch has not surfaced -- but a genuinely fractional or null value from the API would throw a TypeError under strict_types. Not fixed here: changing the property type is a deliberate decision, not a mechanical field add.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinQuoteOut",
+      "field": "expires_at",
+      "reason": "Same pre-existing mismatch as QuoteOut.expires_at, on the payin-quote equivalent (CreatePayinQuoteResponse). Here the field IS cast, `expiresAt: (int) $data['expires_at']`, so a fractional value would silently truncate rather than throw -- a real risk in disguise if the API ever returns one.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "billing_fee_amount",
+      "reason": "TYPE MISMATCH, pre-existing and identical between the last two spec snapshots (not new drift): spec declares billing_fee_amount as `number|null` (a fee in cents), Payin declares `public ?string $billingFeeAmount` with no cast in fromArray. A present, non-null value from the API would be a PHP int/float from json_decode, which would throw a TypeError against the `?string` property under strict_types. Not fixed here: choosing the correct type (float? string with an explicit cast?) is a deliberate decision.",
       "owner": "eric@blindpay.com"
     }
   ]

@@ -485,6 +485,88 @@ class ApiSyncTest extends TestCase
         $this->assertEmpty(array_filter($issues, fn ($i) => str_contains($i, 'OrphanOut')));
     }
 
+    // ---- NEEDS_HUMAN: type mismatches on already-modeled properties ----
+
+    #[Test]
+    public function a_string_property_changing_to_integer_in_the_spec_is_needs_human(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $newSpec = $this->baseSpec();
+        $newSpec['components']['schemas']['WidgetOut']['properties']['name'] = ['type' => 'integer'];
+        $reachable = computeReachable($newSpec);
+
+        [$applicable, $needsHuman] = reconcileTypes($this->widgetMap(), $newSpec, $reachable, $classIndex, []);
+
+        $this->assertEmpty($applicable);
+        $this->assertNotEmpty(array_filter($needsHuman, fn ($i) => str_contains($i, 'WidgetOut.name') && str_contains($i, 'integer') && str_contains($i, 'string')));
+    }
+
+    #[Test]
+    public function a_property_newly_allowing_null_while_the_sdk_stays_non_nullable_is_needs_human(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $oldSpec = $this->baseSpec(); // WidgetOut.name: {"type": "string"} -- non-nullable
+        $newSpec = $this->baseSpec();
+        $newSpec['components']['schemas']['WidgetOut']['properties']['name'] = ['type' => ['string', 'null']];
+        $reachableOld = computeReachable($oldSpec);
+        $reachableNew = computeReachable($newSpec);
+
+        // WidgetResponse declares `public string $name` (no `?`) -- a real null would break it.
+        $issues = computeStructuralDiff($oldSpec, $newSpec, $reachableOld, $reachableNew, $this->widgetMap(), $classIndex);
+
+        $this->assertNotEmpty(array_filter($issues, fn ($i) => str_contains($i, 'WidgetOut.name') && str_contains($i, 'newly allows null') && str_contains($i, 'string')));
+    }
+
+    #[Test]
+    public function an_enum_backed_sdk_property_whose_spec_constraint_degrades_to_a_bare_string_is_needs_human(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $newSpec = $this->baseSpec();
+        // WidgetResponse declares `public WidgetColor $color` -- an enum class. If the spec drops
+        // the enum constraint down to a bare, unconstrained string, WidgetColor::from() can now
+        // throw on a value outside its known set.
+        $newSpec['components']['schemas']['WidgetOut']['properties']['color'] = ['type' => 'string'];
+        $reachable = computeReachable($newSpec);
+
+        [$applicable, $needsHuman] = reconcileTypes($this->widgetMap(), $newSpec, $reachable, $classIndex, []);
+
+        $this->assertEmpty($applicable);
+        $this->assertNotEmpty(array_filter($needsHuman, fn ($i) => str_contains($i, 'WidgetOut.color')));
+    }
+
+    #[Test]
+    public function an_integer_spec_property_modeled_as_a_php_float_is_deliberately_treated_as_compatible(): void
+    {
+        // PHP widens int to float safely, even under strict_types -- a spec `integer` read into a
+        // `float`-typed property parses every value without error, so this is not a mismatch.
+        $spec = specTypeCategory(['type' => 'integer']);
+        $php = phpTypeCategory('float');
+
+        $this->assertTrue(categoriesCompatible($spec, $php));
+    }
+
+    // ---- constructor insertion never reorders existing parameters ----
+
+    #[Test]
+    public function the_new_promoted_property_always_lands_last_and_no_existing_parameter_moves(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $before = array_column($classIndex['WidgetResponse']['ctor']['params'], 'name');
+
+        applyFieldInsertion(
+            $this->fixtureRoot,
+            'src/Resources/Widgets/Widgets.php',
+            'WidgetResponse',
+            'nickname',
+            ['type' => ['string', 'null']]
+        );
+
+        $after = array_column(scanAllClasses($this->fixtureRoot)['WidgetResponse']['ctor']['params'], 'name');
+
+        $this->assertSame([...$before, 'nickname'], $after, 'existing parameters must keep their exact order, with the new one appended last');
+        $this->assertPhpFileParses("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php");
+    }
+
     // ---- map validity ----
 
     #[Test]
@@ -551,6 +633,89 @@ class ApiSyncTest extends TestCase
         $this->assertSame('3.1.0', bumpVersionString('3.0.0', 'minor'));
         $this->assertSame('3.0.6', bumpVersionString('3.0.5', 'patch'));
         $this->assertSame('3.1.0', bumpVersionString('3.0.9', 'minor'));
+    }
+
+    // ---- --audit-types: non-blocking, full state comparison (not just forward drift) ----
+
+    #[Test]
+    public function audit_types_reports_a_pre_existing_nullability_mismatch_that_check_mode_would_not_flag(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        // WidgetResponse declares `public string $name` (non-nullable); the spec allows null.
+        // This did NOT change between "old" and "new" here -- audit-types must still surface it,
+        // unlike the blocking checks, which only fire on genuinely new drift.
+        $spec = $this->baseSpec();
+        $spec['components']['schemas']['WidgetOut']['properties']['name'] = ['type' => ['string', 'null']];
+        $reachable = computeReachable($spec);
+
+        $audit = auditTypes($this->widgetMap(), $spec, $reachable, $classIndex, []);
+
+        $finding = current(array_filter($audit['findings'], fn ($f) => $f['field'] === 'WidgetOut.name'));
+        $this->assertNotFalse($finding);
+        $this->assertTrue($finding['nullabilityMismatch']);
+        $this->assertFalse($finding['categoryMismatch']);
+        $this->assertFalse($finding['recordedDivergence']);
+    }
+
+    #[Test]
+    public function audit_types_marks_a_recorded_known_divergence_instead_of_hiding_it(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $spec = $this->baseSpec();
+        $spec['components']['schemas']['WidgetOut']['properties']['name'] = ['type' => ['string', 'null']];
+        $reachable = computeReachable($spec);
+
+        $audit = auditTypes($this->widgetMap(), $spec, $reachable, $classIndex, ['WidgetOut|name' => true]);
+
+        $finding = current(array_filter($audit['findings'], fn ($f) => $f['field'] === 'WidgetOut.name'));
+        $this->assertNotFalse($finding);
+        $this->assertTrue($finding['recordedDivergence'], 'a recorded divergence must still be reported, just marked, never hidden');
+    }
+
+    #[Test]
+    public function audit_types_skips_discriminator_fan_outs_instead_of_guessing(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $map = $this->widgetMap();
+        // Simulate a fan-out: the same WidgetOut schema modeled by two classes.
+        $map['types'][0]['sdk'][] = ['file' => 'src/Resources/Widgets/Widgets.php', 'class' => 'WidgetInputLiteral'];
+        $spec = $this->baseSpec();
+        $reachable = computeReachable($spec);
+
+        $audit = auditTypes($map, $spec, $reachable, $classIndex, []);
+
+        $this->assertContains('WidgetOut', $audit['skippedFanOuts']);
+        $this->assertEmpty($audit['findings']);
+    }
+
+    #[Test]
+    public function audit_types_cli_mode_always_exits_zero_even_with_findings(): void
+    {
+        // Reuse the byte-copy fixture wiring (real script copy + full .api-sync/*.json set), but
+        // seed a spec with a deliberate nullability mismatch so --audit-types has something to say.
+        mkdir("{$this->fixtureRoot}/.api-sync", 0777, true);
+        mkdir("{$this->fixtureRoot}/scripts", 0777, true);
+        copy(__DIR__.'/../../scripts/api-sync.php', "{$this->fixtureRoot}/scripts/api-sync.php");
+        file_put_contents("{$this->fixtureRoot}/src/BlindPay.php", "<?php\nclass BlindPay { private const VERSION = '1.0.0'; }\n");
+
+        file_put_contents("{$this->fixtureRoot}/.api-sync/spec-map.json", json_encode($this->widgetMap()));
+        file_put_contents("{$this->fixtureRoot}/.api-sync/unmodeled.json", json_encode(['entries' => []]));
+        file_put_contents("{$this->fixtureRoot}/.api-sync/known-divergences.json", json_encode(['enumValues' => [], 'fields' => []]));
+        file_put_contents("{$this->fixtureRoot}/.api-sync/spec-snapshot.json", json_encode($this->baseSpec()));
+
+        $spec = $this->baseSpec();
+        $spec['components']['schemas']['WidgetOut']['properties']['name'] = ['type' => ['string', 'null']];
+        $specPath = "{$this->fixtureRoot}/.api-sync/spec-current.json";
+        file_put_contents($specPath, json_encode($spec));
+
+        exec(sprintf(
+            'php %s --audit-types --spec=%s 2>&1',
+            escapeshellarg("{$this->fixtureRoot}/scripts/api-sync.php"),
+            escapeshellarg($specPath)
+        ), $output, $exitCode);
+
+        $this->assertSame(0, $exitCode);
+        $this->assertNotEmpty(array_filter($output, fn ($l) => str_contains($l, 'WidgetOut.name')));
     }
 
     // ---- snapshot refresh must copy bytes verbatim, never re-serialize ----
