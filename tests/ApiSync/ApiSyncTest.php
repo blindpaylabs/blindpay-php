@@ -396,6 +396,142 @@ class ApiSyncTest extends TestCase
         $this->assertSame(3, substr_count($source, 'description'));
     }
 
+    #[Test]
+    public function a_multi_schema_entry_missing_the_same_field_on_both_schemas_is_only_scheduled_once(): void
+    {
+        // Reproduces the exact double-apply bug: a single spec-map.json entry with TWO schemas
+        // (e.g. spec: ["PayinOut", "CreatePayinOut"]) sharing one SDK class. If both schemas are
+        // independently missing the same field, reconcileTypes() used to emit one 'field-added'
+        // per schema -- two entries for the same (class, field) -- and --apply inserted the
+        // promoted property/fromArray line/toArray line twice into one file in a single run.
+        $map = $this->widgetMap();
+        $map['types'][0]['spec'] = ['WidgetOut', 'WidgetOutAlias'];
+
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $newSpec = $this->baseSpec([
+            'components' => ['schemas' => [
+                'WidgetOut' => ['properties' => ['description' => ['type' => ['string', 'null']]]],
+                'WidgetOutAlias' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'id' => ['type' => 'string'],
+                        'name' => ['type' => 'string'],
+                        'color' => ['type' => 'string', 'enum' => ['red', 'blue']],
+                        'description' => ['type' => ['string', 'null']],
+                    ],
+                ],
+            ]],
+        ]);
+        // WidgetOutAlias is only reachable if something references it -- webhooks is a
+        // convenient root for a schema with no operation of its own.
+        $newSpec['webhooks'] = ['widget.alias' => ['post' => ['requestBody' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/WidgetOutAlias']]]]]]];
+        $reachable = computeReachable($newSpec);
+
+        [$applicable, $needsHuman] = reconcileTypes($map, $newSpec, $reachable, $classIndex, []);
+
+        $this->assertEmpty($needsHuman);
+        $this->assertCount(1, $applicable, 'the same (class, field) gap reported by two schemas in one entry must be scheduled only once');
+        $this->assertSame('description', $applicable[0]['field']);
+        $this->assertSame('WidgetResponse', $applicable[0]['class']);
+
+        foreach ($applicable as $change) {
+            applyFieldInsertion($this->fixtureRoot, $change['file'], $change['class'], $change['field'], $change['propSchema']);
+        }
+
+        $source = file_get_contents("{$this->fixtureRoot}/{$applicable[0]['file']}");
+        $this->assertSame(3, substr_count($source, 'description'), 'exactly one constructor param + one fromArray line + one toArray line, never two of each');
+
+        // a second --apply-equivalent pass over the now-patched source finds nothing left to do.
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        [$applicableAgain, $needsHumanAgain] = reconcileTypes($map, $newSpec, $reachable, $classIndex, []);
+        $this->assertEmpty($applicableAgain);
+        $this->assertEmpty($needsHumanAgain);
+    }
+
+    #[Test]
+    public function two_separate_entries_mapping_the_same_class_missing_the_same_field_are_only_scheduled_once(): void
+    {
+        // Same bug, different trigger shape: TWO separate spec-map.json `types` entries (not one
+        // multi-schema entry) independently point at the same SDK class -- this is exactly how
+        // TrackingTransaction is reused across the payin and payout tracking_transaction paths.
+        $map = $this->widgetMap();
+        $map['types'][] = [
+            'spec' => 'WidgetOutAlias',
+            'sdk' => [['file' => 'src/Resources/Widgets/Widgets.php', 'class' => 'WidgetResponse']],
+        ];
+
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $newSpec = $this->baseSpec([
+            'components' => ['schemas' => [
+                'WidgetOut' => ['properties' => ['description' => ['type' => ['string', 'null']]]],
+                'WidgetOutAlias' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'id' => ['type' => 'string'],
+                        'name' => ['type' => 'string'],
+                        'color' => ['type' => 'string', 'enum' => ['red', 'blue']],
+                        'description' => ['type' => ['string', 'null']],
+                    ],
+                ],
+            ]],
+        ]);
+        $newSpec['webhooks'] = ['widget.alias' => ['post' => ['requestBody' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/WidgetOutAlias']]]]]]];
+        $reachable = computeReachable($newSpec);
+
+        [$applicable, $needsHuman] = reconcileTypes($map, $newSpec, $reachable, $classIndex, []);
+
+        $this->assertEmpty($needsHuman);
+        $this->assertCount(1, $applicable, 'two entries mapping the same class must not double-schedule the same missing field');
+
+        foreach ($applicable as $change) {
+            applyFieldInsertion($this->fixtureRoot, $change['file'], $change['class'], $change['field'], $change['propSchema']);
+        }
+
+        $source = file_get_contents("{$this->fixtureRoot}/{$applicable[0]['file']}");
+        $this->assertSame(3, substr_count($source, 'description'));
+    }
+
+    #[Test]
+    public function two_enum_entries_mapping_the_same_class_missing_the_same_value_are_only_scheduled_once(): void
+    {
+        // Mirrors the field-insertion bug on the enum side: two spec-map.json `enums` entries
+        // (e.g. the same LimitIncreaseRequestSupportingDocumentType class mapped from both
+        // CustomerLimitIncreaseIn and GetCustomerLimitIncreaseOut) independently report the same
+        // missing case, which used to insert it twice into the enum file in one --apply run.
+        $map = $this->widgetMap();
+        $map['enums'][] = [
+            'spec' => ['schema' => 'WidgetOutAlias', 'property' => 'color'],
+            'sdk' => ['file' => 'src/Types/WidgetColor.php', 'class' => 'WidgetColor'],
+        ];
+
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $newSpec = $this->baseSpec([
+            'components' => ['schemas' => [
+                'WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', 'green']]]],
+                'WidgetOutAlias' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'color' => ['type' => 'string', 'enum' => ['red', 'blue', 'green']],
+                    ],
+                ],
+            ]],
+        ]);
+        $newSpec['webhooks'] = ['widget.alias' => ['post' => ['requestBody' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/WidgetOutAlias']]]]]]];
+        $reachable = computeReachable($newSpec);
+
+        [$applicable, $needsHuman] = reconcileEnums($map, $newSpec, $reachable, $classIndex, []);
+
+        $this->assertEmpty($needsHuman);
+        $this->assertCount(1, $applicable, 'two enum entries reporting the same missing case on the same class must not double-schedule it');
+        $this->assertSame('green', $applicable[0]['value']);
+
+        $specValuesByEnum = ['WidgetColor' => ['red', 'blue', 'green']];
+        applyEnumCaseInsertion($this->fixtureRoot, $applicable[0]['file'], 'WidgetColor', 'green', $newSpec, $specValuesByEnum);
+
+        $source = file_get_contents("{$this->fixtureRoot}/src/Types/WidgetColor.php");
+        $this->assertSame(1, substr_count($source, "case GREEN = 'green';"));
+    }
+
     // ---- NEEDS_HUMAN: removals ----
 
     #[Test]

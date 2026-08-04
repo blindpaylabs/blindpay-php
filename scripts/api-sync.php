@@ -725,6 +725,14 @@ function reconcileEnums(array $map, array $newSpec, array $reachable, array $cla
 {
     $applicable = [];
     $needsHuman = [];
+    // Same idempotency concern as reconcileTypes()' $scheduledInsertions: more than one
+    // spec-map.json enums entry can legitimately point at the same SDK enum class (e.g. the same
+    // LimitIncreaseRequestSupportingDocumentType class is mapped from both
+    // CustomerLimitIncreaseIn.supporting_document_type and
+    // GetCustomerLimitIncreaseOut.supporting_document_type). If a new spec value is missing from
+    // that class, both entries independently report it -- dedupe per (class, value) so --apply
+    // inserts the case at most once per run.
+    $scheduledCases = [];
 
     foreach ($map['enums'] as $entry) {
         $s = $entry['spec'];
@@ -752,6 +760,11 @@ function reconcileEnums(array $map, array $newSpec, array $reachable, array $cla
             if (isset($divergenceEnumIndex["{$className}|{$value}"])) {
                 continue; // recorded known divergence, not pending drift
             }
+            $caseKey = "{$className}|{$value}";
+            if (isset($scheduledCases[$caseKey])) {
+                continue; // same class+value already scheduled by an earlier enums entry this run
+            }
+            $scheduledCases[$caseKey] = true;
             $applicable[] = [
                 'kind' => 'enum-member-added',
                 'enum' => $className,
@@ -960,6 +973,16 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
 {
     $applicable = [];
     $needsHuman = [];
+    // Insertion is per (class, field), not per (schema, class, field): a multi-schema entry
+    // (e.g. spec: ["PayinOut", "CreatePayinOut"]) or two separate entries mapping the same SDK
+    // class (e.g. TrackingTransaction reused across the payin and payout tracking_transaction
+    // paths) can independently find the SAME missing field on the SAME class -- once per schema
+    // that lacks it. Without this dedupe, --apply would insert that promoted property/fromArray
+    // line/toArray line more than once into one file in a single run, corrupting the source
+    // (duplicate constructor parameters). This index makes insertion idempotent per run: the
+    // first schema to report a given (class, field) as missing wins, later reports of the exact
+    // same gap are dropped as already-scheduled, not re-emitted.
+    $scheduledInsertions = [];
 
     foreach ($map['types'] as $entry) {
         $schemas = typeSpecSchemas($entry);
@@ -1045,6 +1068,11 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
                 // is unambiguous; for a fan-out with multiple sdk sites we apply to ALL of them, since
                 // any of them might legitimately accept/return the new field.
                 foreach ($entry['sdk'] as $site) {
+                    $insertionKey = "{$site['class']}|{$field}";
+                    if (isset($scheduledInsertions[$insertionKey])) {
+                        continue; // same class+field already scheduled by an earlier schema/entry this run
+                    }
+                    $scheduledInsertions[$insertionKey] = true;
                     $applicable[] = [
                         'kind' => 'field-added',
                         'schema' => $schemaName,
