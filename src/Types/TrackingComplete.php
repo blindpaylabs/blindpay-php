@@ -11,7 +11,7 @@ readonly class TrackingComplete extends BaseTracking
     public function __construct(
         string $step,
         public string $status,
-        public string $transactionHash,
+        public ?string $transactionHash,
         public ?string $providerTransactionId = null,
         public ?string $refundReason = null,
         public ?string $gasFee = null,
@@ -26,7 +26,7 @@ readonly class TrackingComplete extends BaseTracking
         return new self(
             step: $data['step'],
             status: $data['status'],
-            transactionHash: $data['transaction_hash'],
+            transactionHash: $data['transaction_hash'] ?? null,
             providerTransactionId: $data['provider_transaction_id'] ?? null,
             refundReason: $data['refund_reason'] ?? null,
             gasFee: $data['gas_fee'] ?? null,

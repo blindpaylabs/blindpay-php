@@ -1185,13 +1185,13 @@ readonly class LimitIncreaseRequest
         public string $id,
         public string $customerId,
         public LimitIncreaseRequestStatus $status,
-        public float $daily,
-        public float $monthly,
-        public float $perTransaction,
-        public string $supportingDocumentFile,
-        public LimitIncreaseRequestSupportingDocumentType $supportingDocumentType,
-        public DateTimeImmutable $createdAt,
-        public DateTimeImmutable $updatedAt,
+        public ?float $daily,
+        public ?float $monthly,
+        public ?float $perTransaction,
+        public ?string $supportingDocumentFile,
+        public ?LimitIncreaseRequestSupportingDocumentType $supportingDocumentType,
+        public ?DateTimeImmutable $createdAt,
+        public ?DateTimeImmutable $updatedAt,
         public ?int $approvedPerTransaction = null,
         public ?int $approvedDaily = null,
         public ?int $approvedMonthly = null
@@ -1203,13 +1203,17 @@ readonly class LimitIncreaseRequest
             id: $data['id'],
             customerId: $data['customer_id'],
             status: LimitIncreaseRequestStatus::from($data['status']),
-            daily: (float) $data['daily'],
-            monthly: (float) $data['monthly'],
-            perTransaction: (float) $data['per_transaction'],
-            supportingDocumentFile: $data['supporting_document_file'],
-            supportingDocumentType: LimitIncreaseRequestSupportingDocumentType::from($data['supporting_document_type']),
-            createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at']),
+            daily: isset($data['daily']) ? (float) $data['daily'] : null,
+            monthly: isset($data['monthly']) ? (float) $data['monthly'] : null,
+            perTransaction: isset($data['per_transaction']) ? (float) $data['per_transaction'] : null,
+            supportingDocumentFile: $data['supporting_document_file'] ?? null,
+            supportingDocumentType: isset($data['supporting_document_type']) ? LimitIncreaseRequestSupportingDocumentType::from($data['supporting_document_type']) : null,
+            createdAt: isset($data['created_at'])
+                ? new DateTimeImmutable($data['created_at'])
+                : null,
+            updatedAt: isset($data['updated_at'])
+                ? new DateTimeImmutable($data['updated_at'])
+                : null,
             approvedPerTransaction: isset($data['approved_per_transaction']) ? (int) $data['approved_per_transaction'] : null,
             approvedDaily: isset($data['approved_daily']) ? (int) $data['approved_daily'] : null,
             approvedMonthly: isset($data['approved_monthly']) ? (int) $data['approved_monthly'] : null
@@ -1221,9 +1225,9 @@ readonly class RequestLimitIncreaseInput
 {
     public function __construct(
         public string $customerId,
-        public float $daily,
-        public float $monthly,
-        public float $perTransaction,
+        public ?float $daily,
+        public ?float $monthly,
+        public ?float $perTransaction,
         public string $supportingDocumentFile,
         public LimitIncreaseRequestSupportingDocumentType $supportingDocumentType
     ) {}

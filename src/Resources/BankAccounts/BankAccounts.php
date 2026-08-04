@@ -93,7 +93,7 @@ readonly class BankAccountListItem
         public ?Country $swiftIntermediaryBankCountry,
         public ?string $tronWalletHash,
         public ?array $offrampWallets,
-        public DateTimeImmutable $createdAt,
+        public ?DateTimeImmutable $createdAt,
         public ?string $tedBankCode = null,
         public ?string $tedBranchCode = null,
         public ?string $tedCpfCnpj = null,
@@ -152,7 +152,9 @@ readonly class BankAccountListItem
             swiftIntermediaryBankCountry: isset($data['swift_intermediary_bank_country']) ? Country::from($data['swift_intermediary_bank_country']) : null,
             tronWalletHash: $data['tron_wallet_hash'] ?? null,
             offrampWallets: $data['offramp_wallets'] ?? null,
-            createdAt: new DateTimeImmutable($data['created_at']),
+            createdAt: isset($data['created_at'])
+                ? new DateTimeImmutable($data['created_at'])
+                : null,
             tedBankCode: $data['ted_bank_code'] ?? null,
             tedBranchCode: $data['ted_branch_code'] ?? null,
             tedCpfCnpj: $data['ted_cpf_cnpj'] ?? null,

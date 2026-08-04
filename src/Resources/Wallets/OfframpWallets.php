@@ -12,14 +12,14 @@ readonly class OfframpWallet
 {
     public function __construct(
         public string $id,
-        public string $externalId,
+        public ?string $externalId,
         public string $instanceId,
         public string $customerId,
         public string $bankAccountId,
         public string $network,
         public string $address,
-        public DateTimeImmutable $createdAt,
-        public DateTimeImmutable $updatedAt,
+        public ?DateTimeImmutable $createdAt,
+        public ?DateTimeImmutable $updatedAt,
         public ?string $circleWalletId = null
     ) {}
 
@@ -27,14 +27,18 @@ readonly class OfframpWallet
     {
         return new self(
             id: $data['id'],
-            externalId: $data['external_id'],
+            externalId: $data['external_id'] ?? null,
             instanceId: $data['instance_id'],
             customerId: $data['customer_id'],
             bankAccountId: $data['bank_account_id'],
             network: $data['network'],
             address: $data['address'],
-            createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at']),
+            createdAt: isset($data['created_at'])
+                ? new DateTimeImmutable($data['created_at'])
+                : null,
+            updatedAt: isset($data['updated_at'])
+                ? new DateTimeImmutable($data['updated_at'])
+                : null,
             circleWalletId: $data['circle_wallet_id'] ?? null
         );
     }

@@ -21,7 +21,7 @@ enum PaymentMethod: string
 readonly class PayerRules
 {
     public function __construct(
-        public array $pixAllowedTaxIds,
+        public ?array $pixAllowedTaxIds,
         public ?string $transfersAllowedTaxId = null,
         public ?array $pseAllowedTaxIds = null,
         public ?string $pseFullName = null,
@@ -50,7 +50,7 @@ readonly class PayerRules
     public static function fromArray(array $data): self
     {
         return new self(
-            pixAllowedTaxIds: $data['pix_allowed_tax_ids'] ?? [],
+            pixAllowedTaxIds: $data['pix_allowed_tax_ids'] ?? null,
             transfersAllowedTaxId: $data['transfers_allowed_tax_id'] ?? null,
             pseAllowedTaxIds: $data['pse_allowed_tax_ids'] ?? null,
             pseFullName: $data['pse_full_name'] ?? null,
@@ -66,13 +66,13 @@ readonly class PayerRules
 readonly class CreatePayinQuoteInput
 {
     public function __construct(
-        public string $blockchainWalletId,
+        public ?string $blockchainWalletId,
         public CurrencyType $currencyType,
         public PaymentMethod $paymentMethod,
         public float $requestAmount,
         public StablecoinToken $token,
-        public bool $coverFees,
-        public PayerRules $payerRules,
+        public ?bool $coverFees,
+        public ?PayerRules $payerRules,
         public ?string $partnerFeeId = null,
         public ?bool $isOtc = null,
         public ?string $walletId = null
@@ -87,7 +87,7 @@ readonly class CreatePayinQuoteInput
             'request_amount' => $this->requestAmount,
             'token' => $this->token->value,
             'cover_fees' => $this->coverFees,
-            'payer_rules' => $this->payerRules->toArray(),
+            'payer_rules' => $this->payerRules?->toArray(),
         ];
 
         if ($this->partnerFeeId !== null) {
@@ -111,10 +111,10 @@ readonly class CreatePayinQuoteResponse
     public function __construct(
         public string $id,
         public int $expiresAt,
-        public float $commercialQuotation,
-        public float $blindpayQuotation,
-        public float $receiverAmount,
-        public float $senderAmount,
+        public ?float $commercialQuotation,
+        public ?float $blindpayQuotation,
+        public ?float $receiverAmount,
+        public ?float $senderAmount,
         public ?float $partnerFeeAmount = null,
         public ?float $flatFee = null
     ) {}
@@ -124,10 +124,10 @@ readonly class CreatePayinQuoteResponse
         return new self(
             id: $data['id'],
             expiresAt: (int) $data['expires_at'],
-            commercialQuotation: (float) $data['commercial_quotation'],
-            blindpayQuotation: (float) $data['blindpay_quotation'],
-            receiverAmount: (float) $data['receiver_amount'],
-            senderAmount: (float) $data['sender_amount'],
+            commercialQuotation: isset($data['commercial_quotation']) ? (float) $data['commercial_quotation'] : null,
+            blindpayQuotation: isset($data['blindpay_quotation']) ? (float) $data['blindpay_quotation'] : null,
+            receiverAmount: isset($data['receiver_amount']) ? (float) $data['receiver_amount'] : null,
+            senderAmount: isset($data['sender_amount']) ? (float) $data['sender_amount'] : null,
             partnerFeeAmount: isset($data['partner_fee_amount']) ? (float) $data['partner_fee_amount'] : null,
             flatFee: isset($data['flat_fee']) ? (float) $data['flat_fee'] : null
         );
