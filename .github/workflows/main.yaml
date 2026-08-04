@@ -65,8 +65,11 @@ jobs:
           mkdir -p /tmp/api-sync-determinism/a /tmp/api-sync-determinism/b
           cp -R . /tmp/api-sync-determinism/a
           cp -R . /tmp/api-sync-determinism/b
-          (cd /tmp/api-sync-determinism/a && php scripts/api-sync.php --apply --spec=.api-sync/spec-snapshot.json --report=report.json)
-          (cd /tmp/api-sync-determinism/b && php scripts/api-sync.php --apply --spec=.api-sync/spec-snapshot.json --report=report.json)
+          # Reports are written OUTSIDE the two trees being compared: --report's resolved path is
+          # an absolute, invocation-specific diagnostic (which directory you happened to run in),
+          # not part of the determinism guarantee, which is about the applied CODE being identical.
+          (cd /tmp/api-sync-determinism/a && php scripts/api-sync.php --apply --spec=.api-sync/spec-snapshot.json --report=/tmp/api-sync-determinism/report-a.json)
+          (cd /tmp/api-sync-determinism/b && php scripts/api-sync.php --apply --spec=.api-sync/spec-snapshot.json --report=/tmp/api-sync-determinism/report-b.json)
           diff -rq --exclude=.git /tmp/api-sync-determinism/a /tmp/api-sync-determinism/b
       - name: Coverage report (non-blocking -- spec operations/schemas with no SDK mapping)
         if: always()
