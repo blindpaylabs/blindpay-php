@@ -73,13 +73,15 @@ readonly class CreateCustodialWalletInput
 {
     public function __construct(
         public string $customerId,
-        public Network $network
+        public Network $network,
+        public string $name
     ) {}
 
     public function toArray(): array
     {
         return [
             'network' => $this->network->value,
+            'name' => $this->name,
         ];
     }
 }

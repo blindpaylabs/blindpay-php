@@ -9,10 +9,10 @@ use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\ManualExecutionStatus;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\PaginationParams;
+use BlindPay\SDK\Types\PayinTrackingPayment;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TrackingComplete;
 use BlindPay\SDK\Types\TrackingPartnerFee;
-use BlindPay\SDK\Types\TrackingPayment;
 use BlindPay\SDK\Types\TrackingTransaction;
 use BlindPay\SDK\Types\TransactionStatus;
 use DateTimeImmutable;
@@ -217,7 +217,7 @@ readonly class Payin
         public ?string $memoCode = null,
         public ?string $clabe = null,
         public ?TrackingTransaction $trackingTransaction = null,
-        public ?TrackingPayment $trackingPayment = null,
+        public ?PayinTrackingPayment $trackingPayment = null,
         public ?TrackingComplete $trackingComplete = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
         public ?string $imageUrl = null,
@@ -225,7 +225,7 @@ readonly class Payin
         public ?string $lastName = null,
         public ?string $legalName = null,
         public ?bool $isOtc = null,
-        public ?string $billingFeeAmount = null,
+        public ?float $billingFeeAmount = null,
         public ?string $pseDocumentType = null,
         public ?string $pseFullName = null,
         public ?string $psePaymentLink = null,
@@ -263,7 +263,7 @@ readonly class Payin
             memoCode: $data['memo_code'] ?? null,
             clabe: $data['clabe'] ?? null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
-            trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
+            trackingPayment: isset($data['tracking_payment']) ? PayinTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
             trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
             imageUrl: $data['image_url'] ?? null,
@@ -271,7 +271,7 @@ readonly class Payin
             lastName: $data['last_name'] ?? null,
             legalName: $data['legal_name'] ?? null,
             isOtc: $data['is_otc'] ?? null,
-            billingFeeAmount: $data['billing_fee_amount'] ?? null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
             pseDocumentType: $data['pse_document_type'] ?? null,
             pseFullName: $data['pse_full_name'] ?? null,
             psePaymentLink: $data['pse_payment_link'] ?? null,
@@ -373,7 +373,7 @@ readonly class CreateEvmPayinResponse
         public ?string $memoCode = null,
         public ?string $clabe = null,
         public ?TrackingComplete $trackingComplete = null,
-        public ?TrackingPayment $trackingPayment = null,
+        public ?PayinTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null
     ) {}
@@ -390,7 +390,7 @@ readonly class CreateEvmPayinResponse
             memoCode: $data['memo_code'] ?? null,
             clabe: $data['clabe'] ?? null,
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
-            trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
+            trackingPayment: isset($data['tracking_payment']) ? PayinTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
             trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null
         );

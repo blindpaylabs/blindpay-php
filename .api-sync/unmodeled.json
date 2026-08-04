@@ -512,12 +512,6 @@
     },
     {
       "schema": "CreateWalletIn",
-      "field": "name",
-      "reason": "LIVE DEFECT, not cosmetic: `name` is REQUIRED on CreateWalletIn (spec `required: [\"network\",\"name\"]`), but CreateCustodialWalletInput's constructor accepts only customerId and network. Every custodial-wallet-creation call through this SDK omits a required field and is rejected by the API -- custodial wallet creation is completely broken through this SDK today. node, go and swift all send `name`; python and php do not. Not fixed here: this needs a required (non-defaulted) constructor parameter, which is a breaking API-shape change to CreateCustodialWalletInput, not a mechanical optional-field add.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "CreateWalletIn",
       "field": "external_id",
       "reason": "Caller-supplied external ID; not exposed as a constructor parameter on CreateCustodialWalletInput.",
       "owner": "eric@blindpay.com"

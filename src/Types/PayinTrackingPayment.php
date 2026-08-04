@@ -6,15 +6,12 @@ namespace BlindPay\SDK\Types;
 
 use DateTimeImmutable;
 
-readonly class TrackingPayment extends BaseTracking
+readonly class PayinTrackingPayment extends BaseTracking
 {
     public function __construct(
         string $step,
-        public string $providerName,
-        public string $providerTransactionId,
-        public string $providerStatus,
-        public string $estimatedTimeOfArrival,
-        ?DateTimeImmutable $completedAt
+        public ?string $providerName = null,
+        ?DateTimeImmutable $completedAt = null
     ) {
         parent::__construct($step, $completedAt);
     }
@@ -23,10 +20,7 @@ readonly class TrackingPayment extends BaseTracking
     {
         return new self(
             step: $data['step'],
-            providerName: $data['provider_name'],
-            providerTransactionId: $data['provider_transaction_id'],
-            providerStatus: $data['provider_status'],
-            estimatedTimeOfArrival: $data['estimated_time_of_arrival'],
+            providerName: $data['provider_name'] ?? null,
             completedAt: isset($data['completed_at'])
                 ? new DateTimeImmutable($data['completed_at'])
                 : null
@@ -38,9 +32,6 @@ readonly class TrackingPayment extends BaseTracking
         return [
             'step' => $this->step,
             'provider_name' => $this->providerName,
-            'provider_transaction_id' => $this->providerTransactionId,
-            'provider_status' => $this->providerStatus,
-            'estimated_time_of_arrival' => $this->estimatedTimeOfArrival,
             'completed_at' => $this->completedAt?->format('c'),
         ];
     }
