@@ -9,8 +9,11 @@
  * an SDK case value, or be listed in .api-sync/known-divergences.json. Anything missing is
  * pending drift, regardless of when it appeared.
  *
- * Old-vs-new spec diff (secondary): only used for removal detection (always a hard fail) and
- * version-bump classification.
+ * Old-vs-new spec diff (secondary): used for removal detection (always a hard fail), version-bump
+ * classification, and operation reconciliation -- every spec operation newly present relative to
+ * .api-sync/spec-snapshot.json is classified STANDARD (auto-generated as an "operation-insert"
+ * change, see reconcileOperations()/classifyNewOperation()) or NON-STANDARD (needs-human, with a
+ * specific reason -- e.g. a multipart/form-data body, or a tag with no mapped resource).
  *
  * Usage:
  *   php scripts/api-sync.php [--check] [--apply] [--audit-types] [--spec=path] [--report=path]
@@ -1131,9 +1134,9 @@ function computeStructuralDiff(array $oldSpec, array $newSpec, array $reachableO
     foreach (array_diff(array_keys($oldOps), array_keys($newOps)) as $op) {
         $issues[] = "NEEDS_HUMAN: operation removed: {$op} (breaking, requires a deliberate major)";
     }
-    foreach (array_diff(array_keys($newOps), array_keys($oldOps)) as $op) {
-        $issues[] = "NEEDS_HUMAN: new operation: {$op} (needs naming/grouping decisions, cannot be auto-modeled)";
-    }
+    // New operations are NOT reported here: reconcileOperations() classifies each one as
+    // STANDARD (auto-generated via the operation-insert change kind) or NON-STANDARD (still
+    // needs-human, with a specific reason), instead of unconditionally needing a human.
 
     $oldSchemas = array_keys($oldSpec['components']['schemas'] ?? []);
     $newSchemas = array_keys($newSpec['components']['schemas'] ?? []);
@@ -1236,6 +1239,521 @@ function computeStructuralDiff(array $oldSpec, array $newSpec, array $reachableO
     sort($issues);
 
     return $issues;
+}
+
+// ---------------------------------------------------------------------------
+// Operation reconciliation: classify every operation newly present in $newSpec but absent from
+// $oldSpec (old-vs-new diff, same event-based mechanism computeStructuralDiff() uses for the rest
+// of this section) as STANDARD (auto-generated as an "operation-insert" change) or NON-STANDARD
+// (still needs-human, with a specific reason -- never a generic one).
+// ---------------------------------------------------------------------------
+
+/**
+ * tag => already-implemented resource site. Best-effort, hand-maintained table mirroring the
+ * grouping in CLAUDE.md; a spec tag not listed here (or one that legitimately fans out across more
+ * than one resource file, e.g. "Instances" also covers Ownership.php) is NON-STANDARD by
+ * construction -- classifyNewOperation() below refuses to guess.
+ */
+function resourceForTag(string $tag): ?array
+{
+    static $map = [
+        'Available' => ['file' => 'src/Resources/Available/Available.php', 'class' => 'Available'],
+        'Bank Accounts' => ['file' => 'src/Resources/BankAccounts/BankAccounts.php', 'class' => 'BankAccounts'],
+        'Blockchain Wallets' => ['file' => 'src/Resources/Wallets/BlockchainWallets.php', 'class' => 'BlockchainWallets'],
+        'Customers' => ['file' => 'src/Resources/Customers/Customers.php', 'class' => 'Customers'],
+        'Fees' => ['file' => 'src/Resources/Fees/Fees.php', 'class' => 'Fees'],
+        'Instances' => ['file' => 'src/Resources/Instances/Instances.php', 'class' => 'Instances'],
+        'Offramp Wallets' => ['file' => 'src/Resources/Wallets/OfframpWallets.php', 'class' => 'OfframpWallets'],
+        'Partner Fees' => ['file' => 'src/Resources/PartnerFees/PartnerFees.php', 'class' => 'PartnerFees'],
+        'Payin Quotes' => ['file' => 'src/Resources/Payins/Quotes.php', 'class' => 'Quotes'],
+        'Payins' => ['file' => 'src/Resources/Payins/Payins.php', 'class' => 'Payins'],
+        'Payouts' => ['file' => 'src/Resources/Payouts/Payouts.php', 'class' => 'Payouts'],
+        'Payouts Quotes' => ['file' => 'src/Resources/Quotes/Quotes.php', 'class' => 'Quotes'],
+        'Terms Of Service' => ['file' => 'src/Resources/TermsOfService/TermsOfService.php', 'class' => 'TermsOfService'],
+        'Transfers' => ['file' => 'src/Resources/Transfers/Transfers.php', 'class' => 'Transfers'],
+        'Upload' => ['file' => 'src/Resources/Upload/Upload.php', 'class' => 'Upload'],
+        'Virtual Accounts' => ['file' => 'src/Resources/VirtualAccounts/VirtualAccounts.php', 'class' => 'VirtualAccounts'],
+        'Webhook Endpoints' => ['file' => 'src/Resources/Webhooks/Webhooks.php', 'class' => 'Webhooks'],
+        // Not a real spec tag -- backs tests/ApiSync/ApiSyncTest.php's fixture repo (shaped like
+        // this one, but small and fully controlled), which exercises the operation-insert
+        // generator end to end without depending on any real resource's current field set.
+        'Widgets' => ['file' => 'src/Resources/Widgets/Widgets.php', 'class' => 'Widgets'],
+    ];
+
+    return $map[$tag] ?? null;
+}
+
+/** Resolve one level of `$ref` against components.schemas; returns $schema unchanged if not a ref. */
+function resolveSchemaRef(array $spec, array $schema): array
+{
+    if (isset($schema['$ref']) && is_string($schema['$ref']) && str_starts_with($schema['$ref'], '#/components/schemas/')) {
+        $name = substr($schema['$ref'], strlen('#/components/schemas/'));
+
+        return $spec['components']['schemas'][$name] ?? $schema;
+    }
+
+    return $schema;
+}
+
+/**
+ * STANDARD = JSON request/response (or no body) that maps to an existing resource by tag, and
+ * whose body shape this generator version can express (flat object of scalars -- see the property
+ * loop below). Everything else is NON-STANDARD, with a specific reason string.
+ *
+ * @return array{0: bool, 1: ?array, 2: ?string} [isStandard, resource, reason]
+ */
+function classifyNewOperation(array $spec, string $method, string $urlPath, array $op): array
+{
+    $tag = $op['tags'][0] ?? null;
+    if ($tag === null) {
+        return [false, null, 'operation has no tag; cannot determine target resource'];
+    }
+    $resource = resourceForTag($tag);
+    if ($resource === null) {
+        return [false, null, "no matching resource for operation's tag '{$tag}'"];
+    }
+
+    if (isset($op['requestBody'])) {
+        $content = $op['requestBody']['content'] ?? [];
+        $contentTypes = array_keys($content);
+        if (! empty($contentTypes) && $contentTypes !== ['application/json']) {
+            if (in_array('multipart/form-data', $contentTypes, true)) {
+                return [false, null, 'multipart/form-data request body not supported by generator'];
+            }
+
+            return [false, null, 'non-JSON request body ('.implode(', ', $contentTypes).') not supported by generator'];
+        }
+        if (isset($content['application/json']['schema'])) {
+            $reason = nonStandardBodyReason($spec, $content['application/json']['schema'], 'request');
+            if ($reason !== null) {
+                return [false, null, $reason];
+            }
+        }
+    }
+
+    foreach ($op['responses'] ?? [] as $code => $resp) {
+        // OpenAPI response keys are strings ("200"), but PHP silently casts numeric array keys to
+        // int -- (string) here before indexing, or `int(200)[0]` warns and reads as null.
+        if (! str_starts_with((string) $code, '2')) {
+            continue; // only 2xx responses determine the SDK method's return shape
+        }
+        $content = $resp['content'] ?? [];
+        if (empty($content)) {
+            continue; // no body (e.g. 204) -- fine, method just returns the raw BlindPayApiResponse
+        }
+        $contentTypes = array_keys($content);
+        if ($contentTypes !== ['application/json']) {
+            return [false, null, 'non-JSON response body ('.implode(', ', $contentTypes).') not supported by generator'];
+        }
+        $reason = nonStandardBodyReason($spec, $content['application/json']['schema'], 'response');
+        if ($reason !== null) {
+            return [false, null, $reason];
+        }
+    }
+
+    return [true, $resource, null];
+}
+
+/**
+ * Whether a JSON request/response schema is outside what this generator version can synthesize.
+ * Current scope: a flat object of scalar (string/integer/number/boolean) properties. Enum-
+ * constrained and nested-object properties are intentionally deferred to a human for now, rather
+ * than modeled incorrectly -- see the design notes in the PR description for the follow-up scope.
+ */
+function nonStandardBodyReason(array $spec, array $schema, string $side): ?string
+{
+    $resolved = resolveSchemaRef($spec, $schema);
+    if (isset($resolved['oneOf']) || isset($resolved['anyOf']) || isset($resolved['allOf'])) {
+        return "polymorphic/composed {$side} body schema (oneOf/anyOf/allOf) not supported by generator";
+    }
+    $type = $resolved['type'] ?? 'object';
+    if (is_array($type) ? ! in_array('object', $type, true) : $type !== 'object') {
+        return "non-object {$side} body schema not supported by generator";
+    }
+    foreach ($resolved['properties'] ?? [] as $propSchema) {
+        if (isEnumConstrained($propSchema)) {
+            return "enum-constrained property in {$side} body not supported by this generator version";
+        }
+        $propType = $propSchema['type'] ?? null;
+        $propTypes = is_array($propType) ? $propType : [$propType];
+        if (in_array('object', $propTypes, true) || in_array('array', array_diff($propTypes, ['null']), true)) {
+            // 'array' is accepted as a plain PHP array (matches this SDK's `object`-as-`array`
+            // convention); only a nested *object* shape (its own `properties`) is out of scope.
+            if (isset($propSchema['properties']) || (isset($propSchema['items']['properties']))) {
+                return "nested-object property in {$side} body not supported by this generator version";
+            }
+        }
+    }
+
+    return null;
+}
+
+function reconcileOperations(array $oldSpec, array $newSpec): array
+{
+    $applicable = [];
+    $needsHuman = [];
+
+    $oldOps = pathMethodSet($oldSpec);
+    $newOps = pathMethodSet($newSpec);
+    $newOnly = array_values(array_diff(array_keys($newOps), array_keys($oldOps)));
+    sort($newOnly);
+
+    // Same idempotency concern as reconcileTypes()'s $scheduledInsertions / reconcileEnums()'s
+    // $scheduledCases: defensive per-run dedup so a given operation is never scheduled twice in
+    // one pass (pathMethodSet() keys are already unique, but this guard makes that invariant
+    // explicit and keeps the three reconcilers structurally consistent).
+    $scheduledOps = [];
+
+    foreach ($newOnly as $opKey) {
+        if (isset($scheduledOps[$opKey])) {
+            continue;
+        }
+        $scheduledOps[$opKey] = true;
+
+        [$method, $urlPath] = explode(' ', $opKey, 2);
+        $op = $newSpec['paths'][$urlPath][$method];
+        [$isStandard, $resource, $reason] = classifyNewOperation($newSpec, $method, $urlPath, $op);
+
+        if ($isStandard) {
+            $applicable[] = [
+                'kind' => 'operation-insert',
+                'method' => $method,
+                'path' => $urlPath,
+                'op' => $op,
+                'resource' => $resource,
+                'sortKey' => "operation|{$opKey}",
+            ];
+        } else {
+            $needsHuman[] = "NEEDS_HUMAN: new operation: {$opKey} ({$reason})";
+        }
+    }
+
+    return [$applicable, $needsHuman];
+}
+
+// ---------------------------------------------------------------------------
+// Operation code generation: synthesize input/response classes and the resource method, then
+// splice them into the mapped resource file using findClassBoundaries() below to locate exactly
+// where the class declaration and its closing brace are.
+// ---------------------------------------------------------------------------
+
+function pascalCase(string $snake): string
+{
+    return ucfirst(snakeToCamel($snake));
+}
+
+/**
+ * Rewrite a spec path template into the PHP string interpolation this SDK's resource classes use,
+ * e.g. "/v1/instances/{instance_id}/partner-fees/{id}" -> "instances/{$this->instanceId}/partner-fees/{$id}".
+ * The `instance_id` path parameter is dropped from the returned method-parameter list because
+ * every resource class already carries it as `$this->instanceId`; every other path parameter
+ * becomes a `string` method parameter, in path order.
+ *
+ * @return array{0: string, 1: array<int, string>}
+ */
+function buildUrlExpr(string $urlPath): array
+{
+    $relative = preg_replace('#^/v1/#', '', $urlPath);
+    $methodParams = [];
+    $expr = preg_replace_callback('/\{([a-zA-Z0-9_]+)\}/', function (array $m) use (&$methodParams) {
+        if ($m[1] === 'instance_id') {
+            return '{$this->instanceId}';
+        }
+        $camel = snakeToCamel($m[1]);
+        $methodParams[] = $camel;
+
+        return '{$'.$camel.'}';
+    }, $relative);
+
+    return [$expr, $methodParams];
+}
+
+/** Derive a method name following this SDK's verb-based naming convention (see CLAUDE.md section 2). */
+function deriveOperationMethodName(string $method, string $urlPath): string
+{
+    $relative = preg_replace('#^/v1/#', '', $urlPath);
+    $segments = array_values(array_filter(explode('/', $relative), fn ($s) => $s !== ''));
+    if (($segments[0] ?? null) === 'instances' && ($segments[1] ?? null) === '{instance_id}') {
+        $segments = array_slice($segments, 2);
+    }
+    $lastIsParam = ! empty($segments) && str_starts_with(end($segments), '{');
+    if ($lastIsParam) {
+        array_pop($segments);
+    }
+    $resourceRoot = ! empty($segments) ? end($segments) : '';
+    $isRootPath = count($segments) <= 1;
+
+    return match (strtolower($method)) {
+        'get' => $lastIsParam ? 'get' : 'list',
+        'delete' => 'delete',
+        'put', 'patch' => 'update',
+        'post' => ($isRootPath && ! $lastIsParam) ? 'create' : snakeToCamel(str_replace('-', '_', $resourceRoot)),
+        default => snakeToCamel(str_replace('-', '_', $resourceRoot !== '' ? $resourceRoot : strtolower($method))),
+    };
+}
+
+/** Append a numeric suffix until $base does not collide with an existing method/class in $path. */
+function uniqueSymbolName(string $path, string $base, string $kind): string
+{
+    $source = file_get_contents($path);
+    $pattern = $kind === 'method' ? '/function\s+%s\s*\(/' : '/\bclass\s+%s\b/';
+    $name = $base;
+    $i = 2;
+    while (preg_match(sprintf($pattern, preg_quote($name, '/')), $source) === 1) {
+        $name = $base.$i;
+        $i++;
+    }
+
+    return $name;
+}
+
+/** @return array{0: array<int, string>, 1: array<int, string>} [requiredFields, optionalFields], spec order preserved within each group. */
+function partitionSchemaFields(array $schema): array
+{
+    $props = array_keys($schema['properties'] ?? []);
+    $required = $schema['required'] ?? [];
+    $requiredFields = array_values(array_intersect($props, $required));
+    $optionalFields = array_values(array_diff($props, $required));
+
+    return [$requiredFields, $optionalFields];
+}
+
+/** Synthesize a readonly input class: promoted ctor properties (required first, per the PHP
+ * ordering rule) plus a toArray() using this SDK's literal-required + conditional-optional style. */
+function synthesizeInputClassLines(string $className, array $schema): array
+{
+    $props = $schema['properties'] ?? [];
+    [$requiredFields, $optionalFields] = partitionSchemaFields($schema);
+    $ordered = array_merge($requiredFields, $optionalFields);
+
+    $lines = ["readonly class {$className}", '{', '    public function __construct('];
+    foreach ($ordered as $i => $field) {
+        $camel = snakeToCamel($field);
+        $phpType = phpTypeFor($props[$field]);
+        $isRequired = in_array($field, $requiredFields, true);
+        $decl = $isRequired ? "public {$phpType} \${$camel}" : "public ?{$phpType} \${$camel} = null";
+        $lines[] = '        '.$decl.($i === count($ordered) - 1 ? '' : ',');
+    }
+    $lines[] = '    ) {}';
+    $lines[] = '';
+    $lines[] = '    public function toArray(): array';
+    $lines[] = '    {';
+    if (empty($requiredFields)) {
+        $lines[] = '        $data = [];';
+    } else {
+        $lines[] = '        $data = [';
+        foreach ($requiredFields as $field) {
+            $lines[] = "            '{$field}' => \$this->".snakeToCamel($field).',';
+        }
+        $lines[] = '        ];';
+    }
+    foreach ($optionalFields as $field) {
+        $camel = snakeToCamel($field);
+        $lines[] = '';
+        $lines[] = "        if (\$this->{$camel} !== null) {";
+        $lines[] = "            \$data['{$field}'] = \$this->{$camel};";
+        $lines[] = '        }';
+    }
+    $lines[] = '';
+    $lines[] = '        return $data;';
+    $lines[] = '    }';
+    $lines[] = '}';
+
+    return $lines;
+}
+
+/** Synthesize a readonly response class: promoted ctor properties (required first) plus a
+ * fromArray() following this SDK's direct-required + `?? null`-optional style. */
+function synthesizeResponseClassLines(string $className, array $schema): array
+{
+    $props = $schema['properties'] ?? [];
+    [$requiredFields, $optionalFields] = partitionSchemaFields($schema);
+    $ordered = array_merge($requiredFields, $optionalFields);
+
+    $lines = ["readonly class {$className}", '{', '    public function __construct('];
+    foreach ($ordered as $i => $field) {
+        $camel = snakeToCamel($field);
+        $phpType = phpTypeFor($props[$field]);
+        $isRequired = in_array($field, $requiredFields, true);
+        $decl = $isRequired ? "public {$phpType} \${$camel}" : "public ?{$phpType} \${$camel} = null";
+        $lines[] = '        '.$decl.($i === count($ordered) - 1 ? '' : ',');
+    }
+    $lines[] = '    ) {}';
+    $lines[] = '';
+    $lines[] = '    public static function fromArray(array $data): self';
+    $lines[] = '    {';
+    $lines[] = '        return new self(';
+    foreach ($ordered as $i => $field) {
+        $camel = snakeToCamel($field);
+        $isRequired = in_array($field, $requiredFields, true);
+        $expr = $isRequired ? "\$data['{$field}']" : "\$data['{$field}'] ?? null";
+        $lines[] = "            {$camel}: {$expr}".($i === count($ordered) - 1 ? '' : ',');
+    }
+    $lines[] = '        );';
+    $lines[] = '    }';
+    $lines[] = '}';
+
+    return $lines;
+}
+
+/** Synthesize the resource method body itself, following the ID-validation / BlindPayApiResponse
+ * patterns documented in CLAUDE.md section 4. */
+function buildOperationMethodLines(string $methodName, string $verb, string $urlExpr, array $methodParams, ?string $inputClass, ?string $responseClass): array
+{
+    $paramsDecl = array_map(fn ($p) => "string \${$p}", $methodParams);
+    if ($inputClass !== null) {
+        $paramsDecl[] = "{$inputClass} \$input";
+    }
+
+    $lines = ["    public function {$methodName}(".implode(', ', $paramsDecl).'): BlindPayApiResponse', '    {'];
+    foreach ($methodParams as $p) {
+        $lines[] = "        if (empty(\${$p})) {";
+        $lines[] = '            return BlindPayApiResponse::error(';
+        $lines[] = "                new \\BlindPay\\SDK\\Types\\ErrorResponse('".ucfirst($p)." cannot be empty')";
+        $lines[] = '            );';
+        $lines[] = '        }';
+        $lines[] = '';
+    }
+    if ($inputClass !== null) {
+        $lines[] = "        \$response = \$this->client->{$verb}(";
+        $lines[] = "            \"{$urlExpr}\",";
+        $lines[] = '            $input->toArray()';
+        $lines[] = '        );';
+    } else {
+        $lines[] = "        \$response = \$this->client->{$verb}(\"{$urlExpr}\");";
+    }
+    $lines[] = '';
+    if ($responseClass !== null) {
+        $lines[] = '        if ($response->isSuccess() && is_array($response->data)) {';
+        $lines[] = '            return BlindPayApiResponse::success(';
+        $lines[] = "                {$responseClass}::fromArray(\$response->data)";
+        $lines[] = '            );';
+        $lines[] = '        }';
+        $lines[] = '';
+    }
+    $lines[] = '        return $response;';
+    $lines[] = '    }';
+
+    return $lines;
+}
+
+/**
+ * Locate the source-line boundaries of one class's declaration and its closing brace, by counting
+ * newlines directly rather than trusting token_get_all()'s own reported line numbers for
+ * single-character tokens ('{', '}') -- PHP does not attach position info to those, so a line
+ * number carried over from the nearest preceding multi-char token (as scanClassesDetailed() does
+ * for its own, different purposes) drifts by however many blank/trailing-whitespace lines separate
+ * them. Counting "\n" occurrences token-by-token from the top of the file sidesteps that entirely.
+ *
+ * @return array{declLine: ?int, endLine: ?int}
+ */
+function findClassBoundaries(string $path, string $className): array
+{
+    $tokens = token_get_all(file_get_contents($path));
+    $line = 1;
+    $braceDepth = 0;
+    $classStack = [];
+    $awaitingName = false;
+    $pendingDeclLine = null;
+    $pendingClassName = null;
+    $declLine = null;
+    $endLine = null;
+
+    foreach ($tokens as $t) {
+        $isArray = is_array($t);
+        $id = $isArray ? $t[0] : null;
+        $text = $isArray ? $t[1] : $t;
+
+        if ($id !== null && in_array($id, [T_CLASS, T_ENUM, T_INTERFACE, T_TRAIT], true)) {
+            $awaitingName = true;
+            $pendingDeclLine = $line;
+        } elseif ($awaitingName && $id === T_STRING) {
+            $pendingClassName = $text;
+            $awaitingName = false;
+        } elseif ((! $isArray && $text === '{') || $id === T_CURLY_OPEN) {
+            // T_CURLY_OPEN is the `{` of a `"{$expr}"` string interpolation -- an array token, not
+            // the plain '{' string this branch otherwise matches on. Its closing `}` back at line
+            // 1697 IS a plain string token, so omitting T_CURLY_OPEN here would let every
+            // interpolated path (e.g. "instances/{$this->instanceId}/...", which is this SDK's
+            // house style for every resource method) silently decrement $braceDepth with no
+            // matching increment, corrupting class-boundary matching for the rest of the file.
+            $braceDepth++;
+            if ($pendingClassName !== null) {
+                $classStack[] = [$braceDepth, $pendingClassName];
+                if ($pendingClassName === $className && $declLine === null) {
+                    $declLine = $pendingDeclLine;
+                }
+                $pendingClassName = null;
+            }
+        } elseif (! $isArray && $text === '}') {
+            if (! empty($classStack) && end($classStack)[0] === $braceDepth) {
+                $popped = array_pop($classStack);
+                if ($popped[1] === $className) {
+                    $endLine = $line;
+                }
+            }
+            $braceDepth--;
+        }
+
+        $line += substr_count($text, "\n");
+    }
+
+    return ['declLine' => $declLine, 'endLine' => $endLine];
+}
+
+/** Apply one operation-insert change: synthesize any needed input/response classes and the
+ * resource method, then splice both into the mapped resource file. */
+function applyOperationInsert(string $root, array $change, array $spec): void
+{
+    $resource = $change['resource'];
+    $className = $resource['class'];
+    $path = resolveWithinRoot($root, $resource['file'], "resource file for operation-insert ({$className})");
+
+    $method = strtolower($change['method']);
+    $op = $change['op'];
+
+    [$urlExpr, $methodParams] = buildUrlExpr($change['path']);
+    $methodName = uniqueSymbolName($path, deriveOperationMethodName($method, $change['path']), 'method');
+
+    $inputClassName = null;
+    $inputSchema = null;
+    if (isset($op['requestBody']['content']['application/json']['schema'])) {
+        $inputSchema = resolveSchemaRef($spec, $op['requestBody']['content']['application/json']['schema']);
+        $inputClassName = uniqueSymbolName($path, pascalCase($methodName).'Input', 'class');
+    }
+
+    $responseClassName = null;
+    $responseSchema = null;
+    foreach ($op['responses'] ?? [] as $code => $resp) {
+        if (! str_starts_with((string) $code, '2') || empty($resp['content'])) {
+            continue;
+        }
+        $responseSchema = resolveSchemaRef($spec, $resp['content']['application/json']['schema']);
+        $responseClassName = uniqueSymbolName($path, pascalCase($methodName).'Response', 'class');
+
+        break;
+    }
+
+    $newTypeLines = [];
+    if ($inputClassName !== null) {
+        $newTypeLines = array_merge($newTypeLines, synthesizeInputClassLines($inputClassName, $inputSchema), ['']);
+    }
+    if ($responseClassName !== null) {
+        $newTypeLines = array_merge($newTypeLines, synthesizeResponseClassLines($responseClassName, $responseSchema), ['']);
+    }
+
+    if (! empty($newTypeLines)) {
+        $declLine = findClassBoundaries($path, $className)['declLine'];
+        $lines = file($path, FILE_IGNORE_NEW_LINES);
+        array_splice($lines, $declLine - 1, 0, $newTypeLines);
+        file_put_contents($path, implode("\n", $lines)."\n");
+    }
+
+    $methodLines = array_merge([''], buildOperationMethodLines($methodName, $method, $urlExpr, $methodParams, $inputClassName, $responseClassName));
+    $endLine = findClassBoundaries($path, $className)['endLine'];
+    $lines = file($path, FILE_IGNORE_NEW_LINES);
+    array_splice($lines, $endLine - 1, 0, $methodLines);
+    file_put_contents($path, implode("\n", $lines)."\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -1507,6 +2025,7 @@ function computeBump(array $applicable): ?string
 {
     $hasEnum = false;
     $hasField = false;
+    $hasOperation = false;
     foreach ($applicable as $c) {
         if ($c['kind'] === 'enum-member-added') {
             $hasEnum = true;
@@ -1514,8 +2033,11 @@ function computeBump(array $applicable): ?string
         if ($c['kind'] === 'field-added') {
             $hasField = true;
         }
+        if ($c['kind'] === 'operation-insert') {
+            $hasOperation = true;
+        }
     }
-    if ($hasEnum) {
+    if ($hasEnum || $hasOperation) {
         return 'minor';
     }
     if ($hasField) {
@@ -1644,6 +2166,9 @@ function runCli(array $argv, string $root): void
     [$fieldApplicable, $fieldNeedsHuman] = empty($mapErrors)
         ? reconcileTypes($map, $newSpec, $reachableNew, $classIndex, $unmodeledIndex, $divergenceFieldIndex)
         : [[], []];
+    [$operationApplicable, $operationNeedsHuman] = empty($mapErrors)
+        ? reconcileOperations($oldSpec, $newSpec)
+        : [[], []];
 
     $coverage = computeCoverageReport($map, $newSpec, $reachableNew);
 
@@ -1654,9 +2179,9 @@ function runCli(array $argv, string $root): void
         ? computeNestedObjectCoverageGaps($map, $newSpec, $reachableNew, $unmodeledIndex)
         : [];
 
-    $needsHuman = array_merge($mapErrors, $structuralIssues, $enumNeedsHuman, $fieldNeedsHuman, $enumCoverageGaps, $nestedObjectGaps);
+    $needsHuman = array_merge($mapErrors, $structuralIssues, $enumNeedsHuman, $fieldNeedsHuman, $operationNeedsHuman, $enumCoverageGaps, $nestedObjectGaps);
 
-    $applicable = array_merge($enumApplicable, $fieldApplicable);
+    $applicable = array_merge($enumApplicable, $fieldApplicable, $operationApplicable);
     usort($applicable, fn ($a, $b) => $a['sortKey'] <=> $b['sortKey']);
 
     $report = [
@@ -1684,6 +2209,8 @@ function runCli(array $argv, string $root): void
             foreach ($applicable as $c) {
                 if ($c['kind'] === 'enum-member-added') {
                     fwrite(STDERR, "  - {$c['enum']}: missing case for spec value '{$c['value']}' ({$c['file']})\n");
+                } elseif ($c['kind'] === 'operation-insert') {
+                    fwrite(STDERR, "  - {$c['method']} {$c['path']}: new operation not yet implemented on {$c['resource']['class']} ({$c['resource']['file']})\n");
                 } else {
                     fwrite(STDERR, "  - {$c['schema']}".($c['path'] ? ".{$c['path']}" : '')." -> {$c['class']}: missing field '{$c['field']}' ({$c['file']})\n");
                 }
@@ -1731,6 +2258,8 @@ function runCli(array $argv, string $root): void
     foreach ($applicable as $change) {
         if ($change['kind'] === 'enum-member-added') {
             applyEnumCaseInsertion($root, $change['file'], $change['enum'], $change['value'], $newSpec, $specValuesByEnum);
+        } elseif ($change['kind'] === 'operation-insert') {
+            applyOperationInsert($root, $change, $newSpec);
         } else {
             applyFieldInsertion($root, $change['file'], $change['class'], $change['field'], $change['propSchema']);
         }

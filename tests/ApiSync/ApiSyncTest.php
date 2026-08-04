@@ -579,17 +579,403 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function it_flags_a_new_operation_as_needs_human(): void
+    public function computestructuraldiff_no_longer_reports_new_operations_itself(): void
     {
+        // New-operation classification moved to reconcileOperations() (STANDARD vs NON-STANDARD),
+        // so computeStructuralDiff() must stay silent about additions -- only removals are still
+        // its concern.
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
-        $newSpec['paths']['/v1/gadgets'] = ['post' => ['requestBody' => [], 'responses' => []]];
+        $newSpec['paths']['/v1/gadgets'] = ['post' => ['tags' => ['Gadgets'], 'requestBody' => [], 'responses' => []]];
         $reachableOld = computeReachable($oldSpec);
         $reachableNew = computeReachable($newSpec);
 
         $issues = computeStructuralDiff($oldSpec, $newSpec, $reachableOld, $reachableNew, $this->widgetMap());
 
-        $this->assertNotEmpty(array_filter($issues, fn ($i) => str_contains($i, 'new operation: post /v1/gadgets')));
+        $this->assertEmpty(array_filter($issues, fn ($i) => str_contains($i, 'gadgets')));
+    }
+
+    // ---- operation reconciliation: STANDARD (operation-insert) vs NON-STANDARD (needs-human) ----
+
+    #[Test]
+    public function it_flags_a_new_operation_with_no_matching_resource_tag_as_needs_human_with_a_specific_reason(): void
+    {
+        $oldSpec = $this->baseSpec();
+        $newSpec = $this->baseSpec();
+        $newSpec['paths']['/v1/gadgets'] = ['post' => [
+            'tags' => ['Gadgets'],
+            'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
+        ]];
+
+        [$applicable, $needsHuman] = reconcileOperations($oldSpec, $newSpec);
+
+        $this->assertEmpty($applicable);
+        $this->assertNotEmpty(array_filter($needsHuman, fn ($i) => str_contains($i, 'post /v1/gadgets') && str_contains($i, "no matching resource for operation's tag 'Gadgets'")));
+    }
+
+    #[Test]
+    public function it_flags_a_new_operation_with_a_multipart_request_body_as_needs_human_with_a_precise_reason(): void
+    {
+        $oldSpec = $this->baseSpec();
+        $newSpec = $this->baseSpec();
+        $newSpec['paths']['/v1/instances/{instance_id}/widgets/upload'] = ['post' => [
+            'tags' => ['Available'],
+            'requestBody' => ['content' => ['multipart/form-data' => ['schema' => ['type' => 'object']]]],
+            'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => []]]]]],
+        ]];
+
+        [$applicable, $needsHuman] = reconcileOperations($oldSpec, $newSpec);
+
+        $this->assertEmpty($applicable);
+        $this->assertNotEmpty(array_filter($needsHuman, fn ($i) => str_contains($i, 'multipart/form-data request body not supported by generator')));
+    }
+
+    #[Test]
+    public function it_flags_a_new_operation_with_a_polymorphic_response_as_needs_human(): void
+    {
+        $oldSpec = $this->baseSpec();
+        $newSpec = $this->baseSpec();
+        $newSpec['paths']['/v1/instances/{instance_id}/widgets/poly'] = ['get' => [
+            'tags' => ['Available'],
+            'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['oneOf' => [['type' => 'object'], ['type' => 'string']]]]]]],
+        ]];
+
+        [$applicable, $needsHuman] = reconcileOperations($oldSpec, $newSpec);
+
+        $this->assertEmpty($applicable);
+        $this->assertNotEmpty(array_filter($needsHuman, fn ($i) => str_contains($i, 'polymorphic/composed response body schema')));
+    }
+
+    #[Test]
+    public function it_classifies_a_standard_new_json_operation_as_an_operation_insert(): void
+    {
+        $oldSpec = $this->baseSpec();
+        $newSpec = $this->baseSpec();
+        $newSpec['paths']['/v1/instances/{instance_id}/widgets/standard'] = ['get' => [
+            'tags' => ['Available'],
+            'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
+        ]];
+
+        [$applicable, $needsHuman] = reconcileOperations($oldSpec, $newSpec);
+
+        $this->assertEmpty($needsHuman);
+        $this->assertCount(1, $applicable);
+        $this->assertSame('operation-insert', $applicable[0]['kind']);
+        $this->assertSame('Available', $applicable[0]['resource']['class']);
+    }
+
+    // ---- golden self-test: delete a hand-written GET and a hand-written POST-with-body method
+    // (plus their generated classes) from a repo shaped like the real one, run --apply against
+    // the spec that already contains both operations, and assert the regenerated code matches the
+    // deleted originals' route/verb/parameter/return-type shape; then assert a second --apply is a
+    // byte-identical no-op, and that a synthetic multipart operation lands in needs-human. ----
+
+    /** Spec used by the golden test: the baseline op the fixture starts with, plus two new
+     * "Widgets" resource operations (a GET-by-id and a POST-with-body) under the "Widgets" tag
+     * that resourceForTag() maps to this fixture's own Widgets.php/Widgets class. */
+    private function goldenNewSpec(): array
+    {
+        return $this->baseSpec([
+            'paths' => [
+                '/v1/instances/{instance_id}/widgets/{id}' => [
+                    'get' => [
+                        'tags' => ['Widgets'],
+                        'responses' => ['200' => ['content' => ['application/json' => ['schema' => [
+                            'type' => 'object',
+                            'properties' => ['id' => ['type' => 'string'], 'name' => ['type' => 'string']],
+                            'required' => ['id', 'name'],
+                        ]]]]],
+                    ],
+                ],
+                '/v1/instances/{instance_id}/widgets' => [
+                    'post' => [
+                        'tags' => ['Widgets'],
+                        'requestBody' => ['content' => ['application/json' => ['schema' => [
+                            'type' => 'object',
+                            'properties' => ['name' => ['type' => 'string'], 'note' => ['type' => ['string', 'null']]],
+                            'required' => ['name'],
+                        ]]]],
+                        'responses' => ['200' => ['content' => ['application/json' => ['schema' => [
+                            'type' => 'object',
+                            'properties' => ['id' => ['type' => 'string'], 'name' => ['type' => 'string'], 'note' => ['type' => ['string', 'null']]],
+                            'required' => ['id', 'name'],
+                        ]]]]],
+                    ],
+                ],
+            ],
+        ]);
+    }
+
+    /** The hand-written "as it exists today" source for the golden test's Widgets resource class,
+     * matching goldenNewSpec()'s two operations field-for-field. */
+    private function goldenWidgetsResourceSource(): string
+    {
+        return <<<'PHP'
+
+
+            readonly class GetWidgetResponse
+            {
+                public function __construct(
+                    public string $id,
+                    public string $name
+                ) {}
+
+                public static function fromArray(array $data): self
+                {
+                    return new self(
+                        id: $data['id'],
+                        name: $data['name']
+                    );
+                }
+            }
+
+            readonly class CreateWidgetInput
+            {
+                public function __construct(
+                    public string $name,
+                    public ?string $note = null
+                ) {}
+
+                public function toArray(): array
+                {
+                    $data = [
+                        'name' => $this->name,
+                    ];
+
+                    if ($this->note !== null) {
+                        $data['note'] = $this->note;
+                    }
+
+                    return $data;
+                }
+            }
+
+            readonly class CreateWidgetResponse
+            {
+                public function __construct(
+                    public string $id,
+                    public string $name,
+                    public ?string $note = null
+                ) {}
+
+                public static function fromArray(array $data): self
+                {
+                    return new self(
+                        id: $data['id'],
+                        name: $data['name'],
+                        note: $data['note'] ?? null
+                    );
+                }
+            }
+
+            class Widgets
+            {
+                public function __construct(
+                    private readonly string $instanceId,
+                    private readonly ApiClientInterface $client
+                ) {}
+
+                public function get(string $id): BlindPayApiResponse
+                {
+                    if (empty($id)) {
+                        return BlindPayApiResponse::error(
+                            new \BlindPay\SDK\Types\ErrorResponse('Id cannot be empty')
+                        );
+                    }
+
+                    $response = $this->client->get("instances/{$this->instanceId}/widgets/{$id}");
+
+                    if ($response->isSuccess() && is_array($response->data)) {
+                        return BlindPayApiResponse::success(
+                            GetWidgetResponse::fromArray($response->data)
+                        );
+                    }
+
+                    return $response;
+                }
+
+                public function create(CreateWidgetInput $input): BlindPayApiResponse
+                {
+                    $response = $this->client->post(
+                        "instances/{$this->instanceId}/widgets",
+                        $input->toArray()
+                    );
+
+                    if ($response->isSuccess() && is_array($response->data)) {
+                        return BlindPayApiResponse::success(
+                            CreateWidgetResponse::fromArray($response->data)
+                        );
+                    }
+
+                    return $response;
+                }
+            }
+
+            PHP;
+    }
+
+    /** Builds a full scratch repo (real script copy + .api-sync/*.json + BlindPay.php + the
+     * type-only Widgets.php from setUp(), extended with the hand-written resource class above) at
+     * a fresh temp path, independent of $this->fixtureRoot so the golden test can freely mutate it. */
+    private function buildGoldenRepo(): string
+    {
+        $root = sys_get_temp_dir().'/blindpay-api-sync-golden-'.bin2hex(random_bytes(6));
+        mkdir("{$root}/src/Types", 0777, true);
+        mkdir("{$root}/src/Resources/Widgets", 0777, true);
+        mkdir("{$root}/.api-sync", 0777, true);
+        mkdir("{$root}/scripts", 0777, true);
+
+        copy("{$this->fixtureRoot}/src/Types/WidgetColor.php", "{$root}/src/Types/WidgetColor.php");
+        copy(__DIR__.'/../../scripts/api-sync.php', "{$root}/scripts/api-sync.php");
+
+        $baseWidgetsSource = file_get_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php");
+        $baseWidgetsSource = str_replace(
+            "use BlindPay\SDK\Types\WidgetColor;\n",
+            "use BlindPay\SDK\Internal\ApiClientInterface;\nuse BlindPay\SDK\Types\BlindPayApiResponse;\nuse BlindPay\SDK\Types\WidgetColor;\n",
+            $baseWidgetsSource
+        );
+        file_put_contents("{$root}/src/Resources/Widgets/Widgets.php", rtrim($baseWidgetsSource)."\n".$this->goldenWidgetsResourceSource());
+
+        file_put_contents("{$root}/src/BlindPay.php", "<?php\nclass BlindPay { private const VERSION = '1.0.0'; }\n");
+        file_put_contents("{$root}/.api-sync/spec-map.json", json_encode($this->widgetMap()));
+        file_put_contents("{$root}/.api-sync/unmodeled.json", json_encode(['entries' => []]));
+        file_put_contents("{$root}/.api-sync/known-divergences.json", json_encode(['enumValues' => [], 'fields' => []]));
+        // The "old" baseline this scratch repo's SDK was (per the golden test's premise) written
+        // against -- deliberately missing the two Widgets operations, so reconcileOperations()'s
+        // old-vs-new diff treats them as newly appeared, exactly as it would for a real spec bump.
+        file_put_contents("{$root}/.api-sync/spec-snapshot.json", json_encode($this->baseSpec()));
+
+        return $root;
+    }
+
+    #[Test]
+    public function golden_self_test_regenerates_two_deleted_methods_idempotently_and_needs_humans_a_multipart_op(): void
+    {
+        $root = $this->buildGoldenRepo();
+
+        try {
+            $widgetsPath = "{$root}/src/Resources/Widgets/Widgets.php";
+            $originalSource = file_get_contents($widgetsPath);
+            $this->assertPhpFileParses($widgetsPath);
+
+            // 1) Delete both hand-written methods and their three generated classes, simulating
+            // the SDK having fallen behind a spec that already has these two operations. (There
+            // are no spec-map.json/coverage-ledger entries referencing them to remove: their
+            // request/response bodies are inline schemas, never eligible for a coverage-ledger
+            // entry in the first place -- see nonStandardBodyReason()'s scope note.)
+            $mutated = preg_replace('/\n\nreadonly class GetWidgetResponse.*\nclass Widgets\n\{\n/s', "\n\nclass Widgets\n{\n", $originalSource);
+            $mutated = preg_replace('/\n\n    public function get\(string \$id\).*\n\}\n$/s', "\n}\n", $mutated);
+            $this->assertStringNotContainsString('GetWidgetResponse', $mutated, 'setup sanity check: the deletion regex must actually strip the target classes');
+            $this->assertStringNotContainsString('function create(', $mutated);
+            file_put_contents($widgetsPath, $mutated);
+            $this->assertPhpFileParses($widgetsPath);
+
+            // 2) Run --apply against the spec that already has both operations.
+            $specPath = "{$root}/.api-sync/spec-current.json";
+            file_put_contents($specPath, json_encode($this->goldenNewSpec()));
+
+            $cmd = sprintf('php %s --apply --spec=%s 2>&1', escapeshellarg("{$root}/scripts/api-sync.php"), escapeshellarg($specPath));
+            exec($cmd, $output, $exitCode);
+            $this->assertSame(0, $exitCode, 'apply failed: '.implode("\n", $output));
+            $this->assertPhpFileParses($widgetsPath);
+
+            $regenerated = file_get_contents($widgetsPath);
+
+            // 3) Assert the regenerated method matches the deleted original's route, HTTP verb,
+            // and parameter/return types (class *names* are allowed to differ -- the generator
+            // derives them from the method name, not from the hand-written original's naming
+            // choice -- but the wire route, verb, and field-level shape must match exactly).
+            $this->assertMatchesRegularExpression('/public function get\(string \$id\): BlindPayApiResponse/', $regenerated);
+            $this->assertStringContainsString('$this->client->get("instances/{$this->instanceId}/widgets/{$id}")', $regenerated);
+            $this->assertMatchesRegularExpression('/public function create\((\w+) \$input\): BlindPayApiResponse/', $regenerated, '');
+            $this->assertStringContainsString('$this->client->post(', $regenerated);
+            $this->assertStringContainsString('"instances/{$this->instanceId}/widgets"', $regenerated);
+
+            $classes = scanClassesDetailed($widgetsPath);
+            $getResponseClass = null;
+            $createInputClass = null;
+            $createResponseClass = null;
+            foreach ($classes as $name => $info) {
+                if ($name === 'Widgets') {
+                    continue;
+                }
+                $fields = array_column($info['ctor']['params'] ?? [], 'type', 'name');
+                if ($fields === ['id' => 'string', 'name' => 'string']) {
+                    $getResponseClass = $name;
+                } elseif ($fields === ['name' => 'string', 'note' => '?string']) {
+                    $createInputClass = $name;
+                } elseif ($fields === ['id' => 'string', 'name' => 'string', 'note' => '?string']) {
+                    $createResponseClass = $name;
+                }
+            }
+            $this->assertNotNull($getResponseClass, 'regenerated GET response class must have exactly {id: string, name: string}');
+            $this->assertNotNull($createInputClass, 'regenerated POST input class must have exactly {name: string, note: ?string}');
+            $this->assertNotNull($createResponseClass, 'regenerated POST response class must have exactly {id: string, name: string, note: ?string}');
+
+            // 4) Idempotency: a second --apply against the same (now-current) spec must be a
+            // byte-identical no-op -- no double insertion, no thrash.
+            exec($cmd, $output2, $exitCode2);
+            $this->assertSame(0, $exitCode2, 'second apply failed: '.implode("\n", $output2));
+            $this->assertSame($regenerated, file_get_contents($widgetsPath), 'a second --apply must not modify the file again (idempotent, no double-insert)');
+            $this->assertSame(1, substr_count($regenerated, 'function get('), 'exactly one get() method after two applies');
+            $this->assertSame(1, substr_count($regenerated, 'function create('), 'exactly one create() method after two applies');
+
+            // 5) Version was bumped exactly once, by the first apply (operation-insert bumps minor,
+            // wired the same way applyOperationInsert() is called with --apply in runCli()).
+            $this->assertStringContainsString("VERSION = '1.1.0'", file_get_contents("{$root}/src/BlindPay.php"));
+
+            // 6) A synthetic multipart/form-data operation added to the same "Widgets" tag must be
+            // rejected with a precise, non-generic needs-human reason, not silently skipped and not
+            // auto-generated.
+            $specWithMultipart = $this->goldenNewSpec();
+            $specWithMultipart['paths']['/v1/instances/{instance_id}/widgets/upload'] = ['post' => [
+                'tags' => ['Widgets'],
+                'requestBody' => ['content' => ['multipart/form-data' => ['schema' => ['type' => 'object']]]],
+                'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
+            ]];
+            $multipartSpecPath = "{$root}/.api-sync/spec-with-multipart.json";
+            file_put_contents($multipartSpecPath, json_encode($specWithMultipart));
+            $checkCmd = sprintf('php %s --check --spec=%s 2>&1', escapeshellarg("{$root}/scripts/api-sync.php"), escapeshellarg($multipartSpecPath));
+            exec($checkCmd, $checkOutput, $checkExitCode);
+            $this->assertSame(1, $checkExitCode, '--check must fail (CI-red) while the multipart operation is unimplemented');
+            $this->assertNotEmpty(array_filter($checkOutput, fn ($l) => str_contains($l, 'multipart/form-data request body not supported by generator')));
+        } finally {
+            $this->removeDirectory($root);
+        }
+    }
+
+    #[Test]
+    public function check_mode_fails_on_a_pending_unapplied_operation_insert(): void
+    {
+        $root = $this->buildGoldenRepo();
+
+        try {
+            $widgetsPath = "{$root}/src/Resources/Widgets/Widgets.php";
+            $original = file_get_contents($widgetsPath);
+            $mutated = preg_replace('/\n\nreadonly class GetWidgetResponse.*\nclass Widgets\n\{\n/s', "\n\nclass Widgets\n{\n", $original);
+            $mutated = preg_replace('/\n\n    public function get\(string \$id\).*\n\}\n$/s', "\n}\n", $mutated);
+            file_put_contents($widgetsPath, $mutated);
+
+            $specPath = "{$root}/.api-sync/spec-current.json";
+            file_put_contents($specPath, json_encode($this->goldenNewSpec()));
+
+            $cmd = sprintf('php %s --check --spec=%s 2>&1', escapeshellarg("{$root}/scripts/api-sync.php"), escapeshellarg($specPath));
+            exec($cmd, $output, $exitCode);
+
+            $this->assertSame(1, $exitCode, '--check must be CI-red while an operation-insert change is pending and unapplied');
+            $this->assertNotEmpty(array_filter($output, fn ($l) => str_contains($l, 'pending drift')));
+            $this->assertNotEmpty(array_filter($output, fn ($l) => str_contains($l, 'new operation not yet implemented')));
+
+            // Confirm --apply then clears it (same spec, same repo).
+            $applyCmd = sprintf('php %s --apply --spec=%s 2>&1', escapeshellarg("{$root}/scripts/api-sync.php"), escapeshellarg($specPath));
+            exec($applyCmd, $applyOutput, $applyExitCode);
+            $this->assertSame(0, $applyExitCode, 'apply failed: '.implode("\n", $applyOutput));
+
+            exec($cmd, $recheckOutput, $recheckExitCode);
+            $this->assertSame(0, $recheckExitCode, '--check must be clean once the operation-insert has been applied: '.implode("\n", $recheckOutput));
+        } finally {
+            $this->removeDirectory($root);
+        }
     }
 
     #[Test]
