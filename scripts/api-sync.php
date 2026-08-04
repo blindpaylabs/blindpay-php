@@ -2098,7 +2098,10 @@ function runCli(array $argv, string $root): void
     $mode = $opts['apply'] ? 'apply' : 'check';
     // Resolved and validated once, right where they enter the program (see resolveReadablePath()/
     // resolveWritablePath() above), not re-trusted as raw strings at each later read/write.
-    $specPath = resolveReadablePath($opts['spec'] ?? ($root.'/.api-sync/spec-current.json'), '--spec');
+    // Non-apply modes assert against committed state, so the snapshot is the right
+    // default: spec-current.json only exists on the api-sync-data branch.
+    $defaultSpec = $mode === 'apply' ? '/.api-sync/spec-current.json' : '/.api-sync/spec-snapshot.json';
+    $specPath = resolveReadablePath($opts['spec'] ?? ($root.$defaultSpec), '--spec');
     $reportPath = $opts['report'] !== null ? resolveWritablePath($opts['report'], '--report') : null;
 
     $map = loadJson($root.'/.api-sync/spec-map.json');
