@@ -1,5 +1,5 @@
 {
-  "$schema": "Seeded state-reconciliation baseline: every spec property, on a schema mapped in .api-sync/spec-map.json, that scripts/api-sync.php currently finds absent from its mapped SDK class(es). Each entry needs a specific reason and an owner. `--check` treats anything absent from both the SDK and this file as pending drift and fails. Do not add an entry for a field this PR's changelist is adding instead.",
+  "$schema": "Seeded state-reconciliation baseline: every spec property, on a schema mapped in .api-sync/spec-map.json, that scripts/api-sync.php currently finds absent from its mapped SDK class(es). Each entry needs a specific reason and an owner. `--check` treats anything absent from both the SDK and this file as pending drift and fails. Do not add an entry for a field this PR's changelist is adding instead. An entry with `\"field\": \"*\"` (paired with `\"path\"`) is a whole-shape omission: the entire inline object or array-of-object shape at schema.path is not modeled as its own class at all (checked by computeNestedObjectCoverageGaps() in scripts/api-sync.php), as opposed to a single named field being absent from an otherwise-modeled shape.",
   "entries": [
     {
       "schema": "BankAccountOut",
@@ -592,6 +592,202 @@
       "schema": "AvailableBankDetails",
       "field": "requiredWhen",
       "reason": "Conditional-requirement expression added to the spec after BankDetail was last generated; not modeled.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "path": "offramp_wallets[]",
+      "field": "*",
+      "reason": "BankAccountListItem stores offramp_wallets as a raw ?array passthrough (not decoded into OfframpWallet objects); callers who need typed offramp wallets use OfframpWallets::list() instead.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateCustomerIn",
+      "path": "owners[]",
+      "field": "*",
+      "reason": "Beneficial-owner sub-objects on business customer creation; not modeled as a class, no owners param on CreateCustomerIn.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "UpdateCustomerIn",
+      "path": "owners[]",
+      "field": "*",
+      "reason": "Same gap as CreateCustomerIn.owners[] on the update input.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "path": "owners[]",
+      "field": "*",
+      "reason": "Beneficial-owner sub-objects echoed back on the customer response; not modeled, same gap as the create/update input side.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "path": "kyc_warnings[]",
+      "field": "*",
+      "reason": "KYC warning sub-objects; CustomerOut's kyc_warnings property is not modeled as a typed class list.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "path": "fraud_warnings[]",
+      "field": "*",
+      "reason": "Fraud warning sub-objects; not modeled as a typed class list.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "path": "aml_hits",
+      "field": "*",
+      "reason": "AML screening hit details; not modeled on the customer response.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "path": "limit",
+      "field": "*",
+      "reason": "Per-customer transaction limit sub-object; not modeled, distinct from GetCustomerLimitsOut which also lacks its own nested modeling (see below).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "GetCustomerLimitsOut",
+      "path": "limits",
+      "field": "*",
+      "reason": "Limits container sub-object; GetCustomerLimitsOut is not otherwise modeled with typed nested classes.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "GetCustomerLimitsOut",
+      "path": "limits.payin",
+      "field": "*",
+      "reason": "Nested under limits; same gap as GetCustomerLimitsOut.limits.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "GetCustomerLimitsOut",
+      "path": "limits.payout",
+      "field": "*",
+      "reason": "Nested under limits; same gap as GetCustomerLimitsOut.limits.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "QuoteOut",
+      "path": "contract",
+      "field": "*",
+      "reason": "On-chain contract call metadata for the quote; not modeled on CreateQuoteResponse.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "QuoteOut",
+      "path": "contract.abi[]",
+      "field": "*",
+      "reason": "ABI fragment entries under contract; same gap as QuoteOut.contract.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "QuoteOut",
+      "path": "contract.network",
+      "field": "*",
+      "reason": "Enum-constrained network sub-object under contract; same gap as QuoteOut.contract.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "path": "payer_rules",
+      "field": "*",
+      "reason": "Same payer_rules shape echoed back on the payin response; not modeled.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "path": "tracking_transaction.pse_instruction",
+      "field": "*",
+      "reason": "PSE-specific instruction sub-object under tracking_transaction; TrackingTransaction models only the common step/status/transaction_hash/completed_at fields, not the rail-specific instruction payloads.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "path": "tracking_transaction.ted_instruction",
+      "field": "*",
+      "reason": "TED-specific (Brazil) instruction sub-object under tracking_transaction; same gap as pse_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "path": "tracking_transaction.transfers_instruction",
+      "field": "*",
+      "reason": "Transfers-rail (Argentina CVU/CBU/ALIAS) instruction sub-object under tracking_transaction; same gap as pse_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "path": "tracking_transaction.pse_instruction",
+      "field": "*",
+      "reason": "Same gap as PayinOut.tracking_transaction.pse_instruction, on the create-response shape sharing TrackingTransaction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "path": "tracking_transaction.ted_instruction",
+      "field": "*",
+      "reason": "Same gap as PayinOut.tracking_transaction.ted_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "path": "tracking_transaction.transfers_instruction",
+      "field": "*",
+      "reason": "Same gap as PayinOut.tracking_transaction.transfers_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "path": "blindpay_bank_details.swift_receiving_bank",
+      "field": "*",
+      "reason": "International SWIFT receiving-bank sub-object; BankDetails models ach/wire/rtp/beneficiary/receiving_bank but not the SWIFT-specific receiving bank.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "path": "blindpay_bank_details.swift_receiving_bank",
+      "field": "*",
+      "reason": "Same gap as PayinOut.blindpay_bank_details.swift_receiving_bank.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "tracking_documents",
+      "field": "*",
+      "reason": "SWIFT payout document-request tracking sub-object; no TrackingDocuments class exists (same field already recorded above as a scalar-shaped unmodeled field on PayoutOut).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOnEvmOut",
+      "path": "tracking_documents",
+      "field": "*",
+      "reason": "Same gap as PayoutOut.tracking_documents, on the create-response shape.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "path": "jpm_track_data",
+      "field": "*",
+      "reason": "Internal JPMorgan/Zenus tracking payload; deliberately not surfaced to SDK consumers.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "path": "blockchain_wallet",
+      "field": "*",
+      "reason": "Embedded blockchain wallet object (network/address); VirtualAccount only models blockchain_wallet_id (the string id), not the embedded object.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "path": "us.swift_intermediary_bank",
+      "field": "*",
+      "reason": "SWIFT intermediary-bank sub-object; VirtualAccountUsDetails models swift_receiving_bank but not swift_intermediary_bank.",
       "owner": "eric@blindpay.com"
     }
   ]

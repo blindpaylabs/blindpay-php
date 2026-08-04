@@ -154,7 +154,9 @@ readonly class BankDetails
         public BankWire $wire,
         public BankRtp $rtp,
         public BankBeneficiary $beneficiary,
-        public BankReceivingBank $receivingBank
+        public BankReceivingBank $receivingBank,
+        public ?string $swiftAccountNumber = null,
+        public ?array $swiftReceivingBank = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -168,7 +170,9 @@ readonly class BankDetails
             wire: BankWire::fromArray($data['wire']),
             rtp: BankRtp::fromArray($data['rtp']),
             beneficiary: BankBeneficiary::fromArray($data['beneficiary']),
-            receivingBank: BankReceivingBank::fromArray($data['receiving_bank'])
+            receivingBank: BankReceivingBank::fromArray($data['receiving_bank']),
+            swiftAccountNumber: $data['swift_account_number'] ?? null,
+            swiftReceivingBank: $data['swift_receiving_bank'] ?? null
         );
     }
 
@@ -184,6 +188,8 @@ readonly class BankDetails
             'rtp' => $this->rtp->toArray(),
             'beneficiary' => $this->beneficiary->toArray(),
             'receiving_bank' => $this->receivingBank->toArray(),
+            'swift_account_number' => $this->swiftAccountNumber,
+            'swift_receiving_bank' => $this->swiftReceivingBank,
         ];
     }
 }

@@ -12,7 +12,11 @@ readonly class TrackingComplete extends BaseTracking
         string $step,
         public string $status,
         public string $transactionHash,
-        ?DateTimeImmutable $completedAt
+        public ?string $providerTransactionId = null,
+        public ?string $refundReason = null,
+        public ?string $gasFee = null,
+        public ?string $errorMessage = null,
+        ?DateTimeImmutable $completedAt = null
     ) {
         parent::__construct($step, $completedAt);
     }
@@ -23,6 +27,10 @@ readonly class TrackingComplete extends BaseTracking
             step: $data['step'],
             status: $data['status'],
             transactionHash: $data['transaction_hash'],
+            providerTransactionId: $data['provider_transaction_id'] ?? null,
+            refundReason: $data['refund_reason'] ?? null,
+            gasFee: $data['gas_fee'] ?? null,
+            errorMessage: $data['error_message'] ?? null,
             completedAt: isset($data['completed_at'])
                 ? new DateTimeImmutable($data['completed_at'])
                 : null
@@ -35,6 +43,10 @@ readonly class TrackingComplete extends BaseTracking
             'step' => $this->step,
             'status' => $this->status,
             'transaction_hash' => $this->transactionHash,
+            'provider_transaction_id' => $this->providerTransactionId,
+            'refund_reason' => $this->refundReason,
+            'gas_fee' => $this->gasFee,
+            'error_message' => $this->errorMessage,
             'completed_at' => $this->completedAt?->format('c'),
         ];
     }

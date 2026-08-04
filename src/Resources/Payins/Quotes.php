@@ -21,20 +21,44 @@ enum PaymentMethod: string
 readonly class PayerRules
 {
     public function __construct(
-        public array $pixAllowedTaxIds
+        public array $pixAllowedTaxIds,
+        public ?string $transfersAllowedTaxId = null,
+        public ?array $pseAllowedTaxIds = null,
+        public ?string $pseFullName = null,
+        public ?string $pseDocumentType = null,
+        public ?string $pseDocumentNumber = null,
+        public ?string $pseEmail = null,
+        public ?string $psePhone = null,
+        public ?string $pseBankCode = null
     ) {}
 
     public function toArray(): array
     {
         return [
             'pix_allowed_tax_ids' => $this->pixAllowedTaxIds,
+            'transfers_allowed_tax_id' => $this->transfersAllowedTaxId,
+            'pse_allowed_tax_ids' => $this->pseAllowedTaxIds,
+            'pse_full_name' => $this->pseFullName,
+            'pse_document_type' => $this->pseDocumentType,
+            'pse_document_number' => $this->pseDocumentNumber,
+            'pse_email' => $this->pseEmail,
+            'pse_phone' => $this->psePhone,
+            'pse_bank_code' => $this->pseBankCode,
         ];
     }
 
     public static function fromArray(array $data): self
     {
         return new self(
-            pixAllowedTaxIds: $data['pix_allowed_tax_ids'] ?? []
+            pixAllowedTaxIds: $data['pix_allowed_tax_ids'] ?? [],
+            transfersAllowedTaxId: $data['transfers_allowed_tax_id'] ?? null,
+            pseAllowedTaxIds: $data['pse_allowed_tax_ids'] ?? null,
+            pseFullName: $data['pse_full_name'] ?? null,
+            pseDocumentType: $data['pse_document_type'] ?? null,
+            pseDocumentNumber: $data['pse_document_number'] ?? null,
+            pseEmail: $data['pse_email'] ?? null,
+            psePhone: $data['pse_phone'] ?? null,
+            pseBankCode: $data['pse_bank_code'] ?? null
         );
     }
 }

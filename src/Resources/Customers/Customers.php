@@ -91,9 +91,18 @@ enum LimitIncreaseRequestSupportingDocumentType: string
     case INDIVIDUAL_BANK_STATEMENT = 'individual_bank_statement';
     case INDIVIDUAL_TAX_RETURN = 'individual_tax_return';
     case INDIVIDUAL_PROOF_OF_INCOME = 'individual_proof_of_income';
+    case INDIVIDUAL_PAY_STUB = 'individual_pay_stub';
+    case INDIVIDUAL_EMPLOYMENT_LETTER = 'individual_employment_letter';
+    case INDIVIDUAL_INVESTMENT_STATEMENT = 'individual_investment_statement';
+    case INDIVIDUAL_CRYPTO_EXCHANGE_STATEMENT = 'individual_crypto_exchange_statement';
+    case INDIVIDUAL_BLOCKCHAIN_WALLET_STATEMENT = 'individual_blockchain_wallet_statement';
     case BUSINESS_BANK_STATEMENT = 'business_bank_statement';
     case BUSINESS_FINANCIAL_STATEMENTS = 'business_financial_statements';
     case BUSINESS_TAX_RETURN = 'business_tax_return';
+    case BUSINESS_CONTRACT = 'business_contract';
+    case BUSINESS_ACCOUNTS_RECEIVABLE = 'business_accounts_receivable';
+    case BUSINESS_MERCHANT_PROCESSOR_STATEMENT = 'business_merchant_processor_statement';
+    case BUSINESS_SHAREHOLDER_LOAN = 'business_shareholder_loan';
 }
 
 enum OwnerTaxType: string

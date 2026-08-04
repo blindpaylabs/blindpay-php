@@ -21,7 +21,8 @@ readonly class VirtualAccountUsDetails
         public VirtualAccountBeneficiary $beneficiary,
         public VirtualAccountReceivingBank $receivingBank,
         public ?string $swiftAccountNumber = null,
-        public ?VirtualAccountSwiftReceivingBank $swiftReceivingBank = null
+        public ?VirtualAccountSwiftReceivingBank $swiftReceivingBank = null,
+        public ?array $swiftIntermediaryBank = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -35,7 +36,8 @@ readonly class VirtualAccountUsDetails
             beneficiary: VirtualAccountBeneficiary::fromArray($data['beneficiary']),
             receivingBank: VirtualAccountReceivingBank::fromArray($data['receiving_bank']),
             swiftAccountNumber: $data['swift_account_number'] ?? null,
-            swiftReceivingBank: isset($data['swift_receiving_bank']) ? VirtualAccountSwiftReceivingBank::fromArray($data['swift_receiving_bank']) : null
+            swiftReceivingBank: isset($data['swift_receiving_bank']) ? VirtualAccountSwiftReceivingBank::fromArray($data['swift_receiving_bank']) : null,
+            swiftIntermediaryBank: $data['swift_intermediary_bank'] ?? null
         );
     }
 
@@ -57,6 +59,10 @@ readonly class VirtualAccountUsDetails
 
         if ($this->swiftReceivingBank !== null) {
             $data['swift_receiving_bank'] = $this->swiftReceivingBank->toArray();
+        }
+
+        if ($this->swiftIntermediaryBank !== null) {
+            $data['swift_intermediary_bank'] = $this->swiftIntermediaryBank;
         }
 
         return $data;

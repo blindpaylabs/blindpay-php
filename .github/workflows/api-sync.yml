@@ -28,6 +28,41 @@ jobs:
         run: |
           git fetch origin api-sync-data
           git show origin/api-sync-data:.api-sync/spec-current.json > .api-sync/spec-current.json
+          git show origin/api-sync-data:.api-sync/delivery.json > /tmp/delivery.json
+
+      - name: Verify delivery manifest
+        env:
+          DISPATCH_SPEC_SHA256: ${{ github.event.client_payload.spec_sha256 }}
+        run: |
+          set -e
+          if [ ! -s .api-sync/spec-current.json ]; then
+            echo "::error::api-sync-data is missing .api-sync/spec-current.json"
+            exit 1
+          fi
+          if [ ! -s /tmp/delivery.json ]; then
+            echo "::error::api-sync-data is missing .api-sync/delivery.json"
+            exit 1
+          fi
+
+          MANIFEST_SHA256=$(php -r '$d = json_decode(file_get_contents("/tmp/delivery.json"), true); echo $d["spec_sha256"] ?? "";')
+          if [ -z "$MANIFEST_SHA256" ]; then
+            echo "::error::delivery.json has no spec_sha256"
+            exit 1
+          fi
+
+          ACTUAL_SHA256=$(sha256sum .api-sync/spec-current.json | awk '{print $1}')
+          if [ "$ACTUAL_SHA256" != "$MANIFEST_SHA256" ]; then
+            echo "::error::spec-current.json sha256 ($ACTUAL_SHA256) does not match delivery.json's spec_sha256 ($MANIFEST_SHA256)"
+            exit 1
+          fi
+
+          if [ -n "$DISPATCH_SPEC_SHA256" ] && [ "$DISPATCH_SPEC_SHA256" != "$MANIFEST_SHA256" ]; then
+            echo "::error::stale delivery: repository_dispatch spec_sha256 ($DISPATCH_SPEC_SHA256) does not match api-sync-data's delivery.json spec_sha256 ($MANIFEST_SHA256)"
+            exit 1
+          fi
+
+          echo "Delivery manifest verified: spec_sha256=$MANIFEST_SHA256"
+          cat /tmp/delivery.json
 
       - name: Create or reset the api-sync branch
         run: |
