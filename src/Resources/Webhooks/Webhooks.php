@@ -46,8 +46,8 @@ readonly class WebhookEndpoint
         public array $events,
         public string $lastEventAt,
         public string $instanceId,
-        public DateTimeImmutable $createdAt,
-        public DateTimeImmutable $updatedAt
+        public ?DateTimeImmutable $createdAt,
+        public ?DateTimeImmutable $updatedAt
     ) {}
 
     public static function fromArray(array $data): self
@@ -61,8 +61,12 @@ readonly class WebhookEndpoint
             ),
             lastEventAt: $data['last_event_at'],
             instanceId: $data['instance_id'],
-            createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at'])
+            createdAt: isset($data['created_at'])
+                ? new DateTimeImmutable($data['created_at'])
+                : null,
+            updatedAt: isset($data['updated_at'])
+                ? new DateTimeImmutable($data['updated_at'])
+                : null
         );
     }
 
@@ -77,8 +81,8 @@ readonly class WebhookEndpoint
             ),
             'last_event_at' => $this->lastEventAt,
             'instance_id' => $this->instanceId,
-            'created_at' => $this->createdAt->format(\DateTimeInterface::ATOM),
-            'updated_at' => $this->updatedAt->format(\DateTimeInterface::ATOM),
+            'created_at' => $this->createdAt?->format(\DateTimeInterface::ATOM),
+            'updated_at' => $this->updatedAt?->format(\DateTimeInterface::ATOM),
         ];
     }
 }

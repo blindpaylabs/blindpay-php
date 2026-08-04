@@ -12,9 +12,9 @@ readonly class BlockchainWallet
 {
     public function __construct(
         public string $id,
-        public string $name,
-        public Network $network,
-        public bool $isAccountAbstraction,
+        public ?string $name,
+        public ?Network $network,
+        public ?bool $isAccountAbstraction,
         public string $customerId,
         public ?string $address = null,
         public ?string $signatureTxHash = null
@@ -24,9 +24,9 @@ readonly class BlockchainWallet
     {
         return new self(
             id: $data['id'],
-            name: $data['name'],
-            network: Network::from($data['network']),
-            isAccountAbstraction: $data['is_account_abstraction'],
+            name: $data['name'] ?? null,
+            network: isset($data['network']) ? Network::from($data['network']) : null,
+            isAccountAbstraction: $data['is_account_abstraction'] ?? null,
             customerId: $data['customer_id'],
             address: $data['address'] ?? null,
             signatureTxHash: $data['signature_tx_hash'] ?? null

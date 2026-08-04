@@ -10,7 +10,7 @@ readonly class TrackingLiquidity extends BaseTracking
 {
     public function __construct(
         string $step,
-        public string $providerTransactionId,
+        public ?string $providerTransactionId,
         public string $providerStatus,
         public string $estimatedTimeOfArrival,
         ?DateTimeImmutable $completedAt
@@ -22,7 +22,7 @@ readonly class TrackingLiquidity extends BaseTracking
     {
         return new self(
             step: $data['step'],
-            providerTransactionId: $data['provider_transaction_id'],
+            providerTransactionId: $data['provider_transaction_id'] ?? null,
             providerStatus: $data['provider_status'],
             estimatedTimeOfArrival: $data['estimated_time_of_arrival'],
             completedAt: isset($data['completed_at'])

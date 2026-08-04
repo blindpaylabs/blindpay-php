@@ -13,13 +13,13 @@ use BlindPay\SDK\Types\StablecoinToken;
 readonly class VirtualAccountUsDetails
 {
     public function __construct(
-        public VirtualAccountUsAch $ach,
+        public ?VirtualAccountUsAch $ach,
         public VirtualAccountUsWire $wire,
-        public VirtualAccountUsRtp $rtp,
-        public string $swiftBicCode,
+        public ?VirtualAccountUsRtp $rtp,
+        public ?string $swiftBicCode,
         public string $accountType,
-        public VirtualAccountBeneficiary $beneficiary,
-        public VirtualAccountReceivingBank $receivingBank,
+        public ?VirtualAccountBeneficiary $beneficiary,
+        public ?VirtualAccountReceivingBank $receivingBank,
         public ?string $swiftAccountNumber = null,
         public ?VirtualAccountSwiftReceivingBank $swiftReceivingBank = null,
         public ?array $swiftIntermediaryBank = null
@@ -28,13 +28,13 @@ readonly class VirtualAccountUsDetails
     public static function fromArray(array $data): self
     {
         return new self(
-            ach: VirtualAccountUsAch::fromArray($data['ach']),
+            ach: isset($data['ach']) ? VirtualAccountUsAch::fromArray($data['ach']) : null,
             wire: VirtualAccountUsWire::fromArray($data['wire']),
-            rtp: VirtualAccountUsRtp::fromArray($data['rtp']),
-            swiftBicCode: $data['swift_bic_code'],
+            rtp: isset($data['rtp']) ? VirtualAccountUsRtp::fromArray($data['rtp']) : null,
+            swiftBicCode: $data['swift_bic_code'] ?? null,
             accountType: $data['account_type'],
-            beneficiary: VirtualAccountBeneficiary::fromArray($data['beneficiary']),
-            receivingBank: VirtualAccountReceivingBank::fromArray($data['receiving_bank']),
+            beneficiary: isset($data['beneficiary']) ? VirtualAccountBeneficiary::fromArray($data['beneficiary']) : null,
+            receivingBank: isset($data['receiving_bank']) ? VirtualAccountReceivingBank::fromArray($data['receiving_bank']) : null,
             swiftAccountNumber: $data['swift_account_number'] ?? null,
             swiftReceivingBank: isset($data['swift_receiving_bank']) ? VirtualAccountSwiftReceivingBank::fromArray($data['swift_receiving_bank']) : null,
             swiftIntermediaryBank: $data['swift_intermediary_bank'] ?? null
@@ -44,13 +44,13 @@ readonly class VirtualAccountUsDetails
     public function toArray(): array
     {
         $data = [
-            'ach' => $this->ach->toArray(),
+            'ach' => $this->ach?->toArray(),
             'wire' => $this->wire->toArray(),
-            'rtp' => $this->rtp->toArray(),
+            'rtp' => $this->rtp?->toArray(),
             'swift_bic_code' => $this->swiftBicCode,
             'account_type' => $this->accountType,
-            'beneficiary' => $this->beneficiary->toArray(),
-            'receiving_bank' => $this->receivingBank->toArray(),
+            'beneficiary' => $this->beneficiary?->toArray(),
+            'receiving_bank' => $this->receivingBank?->toArray(),
         ];
 
         if ($this->swiftAccountNumber !== null) {
@@ -173,7 +173,7 @@ readonly class VirtualAccountReceivingBank
     public function __construct(
         public string $name,
         public string $addressLine1,
-        public string $addressLine2
+        public ?string $addressLine2
     ) {}
 
     public static function fromArray(array $data): self
@@ -181,7 +181,7 @@ readonly class VirtualAccountReceivingBank
         return new self(
             name: $data['name'],
             addressLine1: $data['address_line_1'],
-            addressLine2: $data['address_line_2']
+            addressLine2: $data['address_line_2'] ?? null
         );
     }
 
@@ -228,7 +228,7 @@ readonly class VirtualAccount
         public string $id,
         public VirtualAccountUsDetails $us,
         public StablecoinToken $token,
-        public string $blockchainWalletId,
+        public ?string $blockchainWalletId,
         public ?BankingPartner $bankingPartner = null,
         public ?string $kycStatus = null
     ) {}
@@ -239,7 +239,7 @@ readonly class VirtualAccount
             id: $data['id'],
             us: VirtualAccountUsDetails::fromArray($data['us']),
             token: StablecoinToken::from($data['token']),
-            blockchainWalletId: $data['blockchain_wallet_id'],
+            blockchainWalletId: $data['blockchain_wallet_id'] ?? null,
             bankingPartner: isset($data['banking_partner']) ? BankingPartner::from($data['banking_partner']) : null,
             kycStatus: $data['kyc_status'] ?? null
         );

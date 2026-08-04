@@ -116,15 +116,15 @@ readonly class CreateQuoteResponse
     public function __construct(
         public string $id,
         public int $expiresAt,
-        public float $commercialQuotation,
-        public float $blindpayQuotation,
-        public float $receiverAmount,
-        public float $senderAmount,
-        public float $partnerFeeAmount,
-        public float $flatFee,
-        public QuoteContract $contract,
-        public float $customerLocalAmount,
-        public string $description
+        public ?float $commercialQuotation,
+        public ?float $blindpayQuotation,
+        public ?float $receiverAmount,
+        public ?float $senderAmount,
+        public ?float $partnerFeeAmount,
+        public ?float $flatFee,
+        public ?QuoteContract $contract,
+        public ?float $customerLocalAmount,
+        public ?string $description
     ) {}
 
     public static function fromArray(array $data): self
@@ -132,15 +132,15 @@ readonly class CreateQuoteResponse
         return new self(
             id: $data['id'],
             expiresAt: $data['expires_at'],
-            commercialQuotation: (float) $data['commercial_quotation'],
-            blindpayQuotation: (float) $data['blindpay_quotation'],
-            receiverAmount: (float) $data['receiver_amount'],
-            senderAmount: (float) $data['sender_amount'],
-            partnerFeeAmount: (float) $data['partner_fee_amount'],
-            flatFee: (float) $data['flat_fee'],
-            contract: QuoteContract::fromArray($data['contract']),
-            customerLocalAmount: (float) $data['customer_local_amount'],
-            description: $data['description']
+            commercialQuotation: isset($data['commercial_quotation']) ? (float) $data['commercial_quotation'] : null,
+            blindpayQuotation: isset($data['blindpay_quotation']) ? (float) $data['blindpay_quotation'] : null,
+            receiverAmount: isset($data['receiver_amount']) ? (float) $data['receiver_amount'] : null,
+            senderAmount: isset($data['sender_amount']) ? (float) $data['sender_amount'] : null,
+            partnerFeeAmount: isset($data['partner_fee_amount']) ? (float) $data['partner_fee_amount'] : null,
+            flatFee: isset($data['flat_fee']) ? (float) $data['flat_fee'] : null,
+            contract: isset($data['contract']) ? QuoteContract::fromArray($data['contract']) : null,
+            customerLocalAmount: isset($data['customer_local_amount']) ? (float) $data['customer_local_amount'] : null,
+            description: $data['description'] ?? null
         );
     }
 
@@ -155,7 +155,7 @@ readonly class CreateQuoteResponse
             'sender_amount' => $this->senderAmount,
             'partner_fee_amount' => $this->partnerFeeAmount,
             'flat_fee' => $this->flatFee,
-            'contract' => $this->contract->toArray(),
+            'contract' => $this->contract?->toArray(),
             'customer_local_amount' => $this->customerLocalAmount,
             'description' => $this->description,
         ];

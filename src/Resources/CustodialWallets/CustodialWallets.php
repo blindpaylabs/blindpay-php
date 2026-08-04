@@ -16,8 +16,8 @@ readonly class CustodialWallet
         public string $customerId,
         public string $instanceId,
         public Network $network,
-        public string $address,
-        public DateTimeImmutable $createdAt
+        public ?string $address,
+        public ?DateTimeImmutable $createdAt
     ) {}
 
     public static function fromArray(array $data): self
@@ -27,8 +27,10 @@ readonly class CustodialWallet
             customerId: $data['customer_id'],
             instanceId: $data['instance_id'],
             network: Network::from($data['network']),
-            address: $data['address'],
-            createdAt: new DateTimeImmutable($data['created_at'])
+            address: $data['address'] ?? null,
+            createdAt: isset($data['created_at'])
+                ? new DateTimeImmutable($data['created_at'])
+                : null
         );
     }
 }
