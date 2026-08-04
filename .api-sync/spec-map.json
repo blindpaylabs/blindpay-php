@@ -170,14 +170,14 @@
     {
       "spec": ["PayoutOut", "PayoutOnEvmOut"],
       "path": "tracking_payment",
-      "sdk": [ { "file": "src/Types/TrackingPayment.php", "class": "TrackingPayment" } ],
+      "sdk": [ { "file": "src/Types/PayoutTrackingPayment.php", "class": "PayoutTrackingPayment" } ],
       "note": "inline object, not a $ref'd component schema (no `Tracking*` schema exists in components.schemas); the same 20-property shape also recurs verbatim, unchecked here, in PayoutNewWebhookOut/PayoutUpdateWebhookOut/PayoutCompleteWebhookOut/PayoutPartnerFeeWebhookOut, which this SDK never deserializes (see 'webhook payloads' note below)."
     },
     {
       "spec": "PayinOut",
       "path": "tracking_payment",
-      "sdk": [ { "file": "src/Types/TrackingPayment.php", "class": "TrackingPayment" } ],
-      "note": "same SDK class as the payout-side tracking_payment, but PayinOut's inline tracking_payment is a DIFFERENT, smaller shape (step/provider_name/completed_at/review_source/review_context/approved_risk_sources) than the payout one. TrackingPayment models step/provider_name/completed_at plus 3 payout-only fields (provider_transaction_id/provider_status/estimated_time_of_arrival) that PayinOut's tracking_payment does not have."
+      "sdk": [ { "file": "src/Types/PayinTrackingPayment.php", "class": "PayinTrackingPayment" } ],
+      "note": "PayinOut's inline tracking_payment is a DIFFERENT, smaller shape (step/provider_name/completed_at/review_source/review_context/approved_risk_sources) than the payout one; previously shared with the payout-side TrackingPayment class, which threw a TypeError on payin fetch. Split into a payin-specific class (step/provider_name/completed_at) and PayoutTrackingPayment (step/provider_name/provider_transaction_id/provider_status/estimated_time_of_arrival/completed_at)."
     },
     { "spec": "CreateVirtualAccountIn", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "CreateVirtualAccountInput" } ] },
     { "spec": "UpdateVirtualAccountIn", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "UpdateVirtualAccountInput" } ] },
@@ -214,7 +214,7 @@
     { "spec": "AvailableNaicsList", "sdk": [ { "file": "src/Resources/Available/Available.php", "class": "NaicsCode" } ] },
     { "spec": "UploadIn", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "UploadInput" } ] },
     { "spec": "UploadOut", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "UploadResponse" } ] },
-    { "spec": "PaginationMetadata", "sdk": [ { "file": "src/Types/PaginationMetadata.php", "class": "PaginationMetadata" } ], "note": "referenced from the customers/payouts/payins/transfers list-response envelopes. next_page/prev_page type mismatch is a LIVE DEFECT, see known-divergences.json -- not fixed here." }
+    { "spec": "PaginationMetadata", "sdk": [ { "file": "src/Types/PaginationMetadata.php", "class": "PaginationMetadata" } ], "note": "referenced from the customers/payouts/payins/transfers list-response envelopes." }
   ],
   "webhookPayloadsNote": "This SDK never deserializes webhook request bodies into typed classes -- BlindPay::verifyWebhookSignature() only verifies the signature and returns bool; callers get the raw payload. Consequently no `*WebhookOut` schema (BankAccountWebhookOut, BlockchainWalletWebhookOut, CustomerNewWebhookOut, CustomerUpdateWebhookOut, CustomerDeleteWebhookOut, PayinNewWebhookOut, PayinUpdateWebhookOut, PayinCompleteWebhookOut, PayinPartnerFeeWebhookOut, PayoutNewWebhookOut, PayoutUpdateWebhookOut, PayoutCompleteWebhookOut, PayoutPartnerFeeWebhookOut, LimitIncreaseNewWebhookOut, LimitIncreaseUpdateWebhookOut, TosAcceptWebhookOut) is mapped below; this is a structural fact about the SDK, not an oversight, and shows up as non-blocking coverage gaps rather than reconciliation failures.",
   "ignore": {

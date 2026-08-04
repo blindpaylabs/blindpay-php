@@ -72,7 +72,8 @@ class CustodialWalletsTest extends TestCase
 
         $input = new CreateCustodialWalletInput(
             customerId: 're_000000000000',
-            network: Network::SOLANA
+            network: Network::SOLANA,
+            name: 'My Wallet'
         );
 
         $response = $this->blindpay->wallets->custodial->create($input);

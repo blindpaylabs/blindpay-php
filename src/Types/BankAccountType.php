@@ -7,6 +7,6 @@ namespace BlindPay\SDK\Types;
 enum BankAccountType: string
 {
     case CHECKING = 'checking';
-    case SAVINGS = 'savings';
+    case SAVINGS = 'saving';
     case TED = 'ted';
 }

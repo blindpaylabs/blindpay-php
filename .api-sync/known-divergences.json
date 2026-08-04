@@ -3,26 +3,10 @@
   "enumValues": [
     {
       "enum": "BankAccountType",
-      "specValue": "saving",
-      "sdkCase": "SAVINGS",
-      "sdkValue": "savings",
-      "reason": "LIVE DEFECT (not fixed in this PR): the API's wire value is 'saving' (singular); this SDK's case value is 'savings' (plural), so a PHP backed enum currently serializes the wrong string and a real 'saving' account_type response would fail to parse via BankAccountType::from(). To be fixed in its own deliberate PR that corrects the case value directly instead of adding a second near-duplicate case.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "enum": "BankAccountType",
       "specValue": null,
       "sdkCase": "TED",
       "sdkValue": "ted",
       "reason": "SDK-only case with no counterpart in the spec's account_type enum (which only has checking/saving). Pre-existing, unrelated to account_type modeling; not touched here.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "enum": "EstimatedAnnualRevenue",
-      "specValue": "250000000_plus",
-      "sdkCase": "RANGE_2500000000_PLUS",
-      "sdkValue": "2500000000_plus",
-      "reason": "The API's top revenue bucket is '250000000_plus' (250 million); this SDK's case value has an extra digit, '2500000000_plus' (2.5 billion), so a real API response for the top bucket would fail to parse via EstimatedAnnualRevenue::from(). Same shape of bug as BankAccountType.saving/savings -- to be fixed in its own deliberate PR that corrects the case value, not by adding a second near-duplicate case.",
       "owner": "eric@blindpay.com"
     }
   ],
@@ -43,24 +27,6 @@
       "schema": "CreatePayinQuoteOut",
       "field": "expires_at",
       "reason": "Same pre-existing mismatch as QuoteOut.expires_at, on the payin-quote equivalent (CreatePayinQuoteResponse). Here the field IS cast, `expiresAt: (int) $data['expires_at']`, so a fractional value would silently truncate rather than throw -- a real risk in disguise if the API ever returns one.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "PayinOut",
-      "field": "billing_fee_amount",
-      "reason": "LIVE DEFECT, VERIFIED BY RUNNING CODE (not fixed in this PR): spec declares billing_fee_amount as `number|null` (a fee in cents), Payin declares `public ?string $billingFeeAmount` with no cast in fromArray. Calling Payin::fromArray() with any present, non-null billing_fee_amount throws `TypeError: BlindPay\\SDK\\Resources\\Payins\\Payin::__construct(): Argument #35 ($billingFeeAmount) must be of type ?string, int given` -- reproduced directly, not theoretical. Every payin response where this fee is populated (end of month) fails to parse. Not fixed here: choosing the correct type (float? string with an explicit cast?) is a deliberate decision, pre-existing and identical between the last two spec snapshots (not new drift).",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "PaginationMetadata",
-      "field": "next_page",
-      "reason": "LIVE DEFECT, VERIFIED BY RUNNING CODE (not fixed in this PR): spec declares next_page as a nullable STRING cursor (`type: [\"string\",\"null\"]`, example `\"pi_123\"`, the ID of the first item in the next page), but PaginationMetadata declares `public int $nextPage` with no cast. Calling PaginationMetadata::fromArray() with any present, non-null next_page throws `TypeError: BlindPay\\SDK\\Types\\PaginationMetadata::__construct(): Argument #2 ($nextPage) must be of type int, string given` -- reproduced directly, not theoretical. PaginationMetadata backs the customers/payouts/payins/transfers list responses, so ANY paginated list response that actually has a next page fails to parse through this SDK. Not fixed here: the property type needs to become `?string`, a deliberate code change with its own PR.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "PaginationMetadata",
-      "field": "prev_page",
-      "reason": "Same live defect as PaginationMetadata.next_page, on the previous-page cursor (`public int $prevPage`, spec declares a nullable string). Not independently re-verified by execution but identical shape and identical code path.",
       "owner": "eric@blindpay.com"
     }
   ]

@@ -8,16 +8,16 @@ readonly class PaginationMetadata
 {
     public function __construct(
         public bool $hasMore,
-        public int $nextPage,
-        public int $prevPage
+        public ?string $nextPage = null,
+        public ?string $prevPage = null
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
             hasMore: $data['has_more'] ?? false,
-            nextPage: $data['next_page'] ?? 0,
-            prevPage: $data['prev_page'] ?? 0
+            nextPage: $data['next_page'] ?? null,
+            prevPage: $data['prev_page'] ?? null
         );
     }
 

@@ -12,12 +12,12 @@ use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Currency;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\PaginationParams;
+use BlindPay\SDK\Types\PayoutTrackingPayment;
 use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TrackingComplete;
 use BlindPay\SDK\Types\TrackingLiquidity;
 use BlindPay\SDK\Types\TrackingPartnerFee;
-use BlindPay\SDK\Types\TrackingPayment;
 use BlindPay\SDK\Types\TrackingTransaction;
 use BlindPay\SDK\Types\TransactionDocumentType;
 use BlindPay\SDK\Types\TransactionStatus;
@@ -48,7 +48,7 @@ readonly class Payout
         public string $quoteId,
         public string $instanceId,
         public TrackingTransaction $trackingTransaction,
-        public TrackingPayment $trackingPayment,
+        public PayoutTrackingPayment $trackingPayment,
         public TrackingLiquidity $trackingLiquidity,
         public TrackingComplete $trackingComplete,
         public TrackingPartnerFee $trackingPartnerFee,
@@ -123,7 +123,7 @@ readonly class Payout
             quoteId: $data['quote_id'],
             instanceId: $data['instance_id'],
             trackingTransaction: TrackingTransaction::fromArray($data['tracking_transaction']),
-            trackingPayment: TrackingPayment::fromArray($data['tracking_payment']),
+            trackingPayment: PayoutTrackingPayment::fromArray($data['tracking_payment']),
             trackingLiquidity: TrackingLiquidity::fromArray($data['tracking_liquidity']),
             trackingComplete: TrackingComplete::fromArray($data['tracking_complete']),
             trackingPartnerFee: TrackingPartnerFee::fromArray($data['tracking_partner_fee']),
@@ -324,7 +324,7 @@ readonly class CreateStellarPayoutResponse
         public string $senderWalletAddress,
         public string $customerId,
         public ?TrackingComplete $trackingComplete = null,
-        public ?TrackingPayment $trackingPayment = null,
+        public ?PayoutTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
         public ?TrackingLiquidity $trackingLiquidity = null
@@ -338,7 +338,7 @@ readonly class CreateStellarPayoutResponse
             senderWalletAddress: $data['sender_wallet_address'],
             customerId: $data['customer_id'],
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
-            trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
+            trackingPayment: isset($data['tracking_payment']) ? PayoutTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
             trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
             trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null
@@ -370,7 +370,7 @@ readonly class CreateEvmPayoutResponse
         public string $senderWalletAddress,
         public string $customerId,
         public ?TrackingComplete $trackingComplete = null,
-        public ?TrackingPayment $trackingPayment = null,
+        public ?PayoutTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
         public ?TrackingLiquidity $trackingLiquidity = null
@@ -384,7 +384,7 @@ readonly class CreateEvmPayoutResponse
             senderWalletAddress: $data['sender_wallet_address'],
             customerId: $data['customer_id'],
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
-            trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
+            trackingPayment: isset($data['tracking_payment']) ? PayoutTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
             trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
             trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null
@@ -416,7 +416,7 @@ readonly class CreateSolanaPayoutResponse
         public string $senderWalletAddress,
         public string $customerId,
         public ?TrackingComplete $trackingComplete = null,
-        public ?TrackingPayment $trackingPayment = null,
+        public ?PayoutTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
         public ?TrackingLiquidity $trackingLiquidity = null
@@ -430,7 +430,7 @@ readonly class CreateSolanaPayoutResponse
             senderWalletAddress: $data['sender_wallet_address'],
             customerId: $data['customer_id'],
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
-            trackingPayment: isset($data['tracking_payment']) ? TrackingPayment::fromArray($data['tracking_payment']) : null,
+            trackingPayment: isset($data['tracking_payment']) ? PayoutTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
             trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
             trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null
