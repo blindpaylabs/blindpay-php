@@ -20,8 +20,7 @@
     },
     {
       "spec": { "schema": "BankAccountOut", "property": "account_type" },
-      "sdk": { "file": "src/Types/BankAccountType.php", "class": "BankAccountType" },
-      "note": "KNOWN DIVERGENCE, see .api-sync/known-divergences.json: spec value 'saving' vs SDK case value 'savings'. Do not blind-add a new case for 'saving'; that would create a duplicate near-identical case instead of fixing the real one. Kept mapped on purpose so the divergence stays visible."
+      "sdk": { "file": "src/Types/BankAccountType.php", "class": "BankAccountType" }
     },
     {
       "spec": { "schema": "VirtualAccountOut", "property": "banking_partner" },
@@ -89,6 +88,58 @@
       "spec": { "schema": "PayoutOut", "property": "status" },
       "sdk": { "file": "src/Types/TransactionStatus.php", "class": "TransactionStatus" },
       "note": "union of PayoutOut/PayinOut/TransferOut.status; SDK's PENDING_REVIEW case has no counterpart in any of the three today, which is fine (SDK may accept a superset)."
+    },
+    {
+      "spec": { "schema": "BankAccountOut", "property": "ach_cop_document_type" },
+      "sdk": { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "AchCopDocument" }
+    },
+    {
+      "spec": { "schema": "BankAccountOut", "property": "transfers_type" },
+      "sdk": { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "ArgentinaTransfers" }
+    },
+    {
+      "spec": { "schema": "PayoutOut", "property": "transfers_type" },
+      "sdk": { "file": "src/Resources/Payouts/Payouts.php", "class": "ArgentinaTransferType" }
+    },
+    {
+      "spec": { "schema": "CustomerLimitIncreaseIn", "property": "supporting_document_type" },
+      "sdk": { "file": "src/Resources/Customers/Customers.php", "class": "LimitIncreaseRequestSupportingDocumentType" }
+    },
+    {
+      "spec": { "schema": "GetCustomerLimitIncreaseOut", "property": "status" },
+      "sdk": { "file": "src/Resources/Customers/Customers.php", "class": "LimitIncreaseRequestStatus" }
+    },
+    {
+      "spec": { "schema": "GetCustomerLimitIncreaseOut", "property": "supporting_document_type" },
+      "sdk": { "file": "src/Resources/Customers/Customers.php", "class": "LimitIncreaseRequestSupportingDocumentType" }
+    },
+    {
+      "spec": { "schema": "PayinOut", "property": "manual_execution_status" },
+      "sdk": { "file": "src/Types/ManualExecutionStatus.php", "class": "ManualExecutionStatus" }
+    },
+    {
+      "spec": { "schema": "PayoutOut", "property": "spei_protocol" },
+      "sdk": { "file": "src/Resources/Payouts/Payouts.php", "class": "SpeiProtocol" }
+    },
+    {
+      "spec": { "schema": "UpdateCustomerIn", "property": "id_doc_type" },
+      "sdk": { "file": "src/Resources/Customers/Customers.php", "class": "IdentificationDocument" }
+    },
+    {
+      "spec": { "schema": "UpdateCustomerIn", "property": "proof_of_address_doc_type" },
+      "sdk": { "file": "src/Resources/Customers/Customers.php", "class": "ProofOfAddressDocType" }
+    },
+    {
+      "spec": { "schema": "UpdateCustomerIn", "property": "purpose_of_transactions" },
+      "sdk": { "file": "src/Resources/Customers/Customers.php", "class": "PurposeOfTransactions" }
+    },
+    {
+      "spec": { "schema": "UpdateCustomerIn", "property": "source_of_funds_doc_type" },
+      "sdk": { "file": "src/Resources/Customers/Customers.php", "class": "SourceOfFundsDocType" }
+    },
+    {
+      "spec": { "schema": "UploadIn", "property": "bucket" },
+      "sdk": { "file": "src/Resources/Upload/Upload.php", "class": "UploadBucket" }
     }
   ],
   "typesNote": "Class-per-file below always refers to src/Resources/**/*.php unless the file starts with src/Types/.",
@@ -139,6 +190,7 @@
     { "spec": "QuoteIn", "sdk": [ { "file": "src/Resources/Quotes/Quotes.php", "class": "CreateQuoteInput" } ] },
     { "spec": "QuoteOut", "sdk": [ { "file": "src/Resources/Quotes/Quotes.php", "class": "CreateQuoteResponse" } ] },
     { "spec": "CreatePayinQuoteIn", "sdk": [ { "file": "src/Resources/Payins/Quotes.php", "class": "CreatePayinQuoteInput" } ] },
+    { "spec": "CreatePayinQuoteIn", "path": "payer_rules", "sdk": [ { "file": "src/Resources/Payins/Quotes.php", "class": "PayerRules" } ] },
     { "spec": "CreatePayinQuoteOut", "sdk": [ { "file": "src/Resources/Payins/Quotes.php", "class": "CreatePayinQuoteResponse" } ] },
     { "spec": "CreateTransferQuoteIn", "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "CreateTransferQuoteInput" } ] },
     { "spec": "CreateTransferQuoteOut", "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "CreateTransferQuoteResponse" } ] },
@@ -174,14 +226,96 @@
       "note": "inline object, not a $ref'd component schema (no `Tracking*` schema exists in components.schemas); the same 20-property shape also recurs verbatim, unchecked here, in PayoutNewWebhookOut/PayoutUpdateWebhookOut/PayoutCompleteWebhookOut/PayoutPartnerFeeWebhookOut, which this SDK never deserializes (see 'webhook payloads' note below)."
     },
     {
-      "spec": "PayinOut",
+      "spec": ["PayoutOut", "PayoutOnEvmOut"],
+      "path": "tracking_transaction",
+      "sdk": [ { "file": "src/Types/TrackingTransaction.php", "class": "TrackingTransaction" } ]
+    },
+    {
+      "spec": ["PayoutOut", "PayoutOnEvmOut"],
+      "path": "tracking_complete",
+      "sdk": [ { "file": "src/Types/TrackingComplete.php", "class": "TrackingComplete" } ]
+    },
+    {
+      "spec": ["PayoutOut", "PayoutOnEvmOut"],
+      "path": "tracking_liquidity",
+      "sdk": [ { "file": "src/Types/TrackingLiquidity.php", "class": "TrackingLiquidity" } ]
+    },
+    {
+      "spec": ["PayinOut", "CreatePayinOut"],
       "path": "tracking_payment",
       "sdk": [ { "file": "src/Types/PayinTrackingPayment.php", "class": "PayinTrackingPayment" } ],
       "note": "PayinOut's inline tracking_payment is a DIFFERENT, smaller shape (step/provider_name/completed_at/review_source/review_context/approved_risk_sources) than the payout one; previously shared with the payout-side TrackingPayment class, which threw a TypeError on payin fetch. Split into a payin-specific class (step/provider_name/completed_at) and PayoutTrackingPayment (step/provider_name/provider_transaction_id/provider_status/estimated_time_of_arrival/completed_at)."
     },
+    {
+      "spec": ["PayinOut", "CreatePayinOut"],
+      "path": "tracking_transaction",
+      "sdk": [ { "file": "src/Types/TrackingTransaction.php", "class": "TrackingTransaction" } ]
+    },
+    {
+      "spec": ["PayinOut", "CreatePayinOut"],
+      "path": "tracking_complete",
+      "sdk": [ { "file": "src/Types/TrackingComplete.php", "class": "TrackingComplete" } ]
+    },
+    {
+      "spec": ["PayinOut", "CreatePayinOut"],
+      "path": "blindpay_bank_details",
+      "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankDetails" } ]
+    },
+    {
+      "spec": ["PayinOut", "CreatePayinOut"],
+      "path": "blindpay_bank_details.ach",
+      "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankAch" } ]
+    },
+    {
+      "spec": ["PayinOut", "CreatePayinOut"],
+      "path": "blindpay_bank_details.wire",
+      "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankWire" } ]
+    },
+    {
+      "spec": ["PayinOut", "CreatePayinOut"],
+      "path": "blindpay_bank_details.rtp",
+      "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankRtp" } ]
+    },
+    {
+      "spec": ["PayinOut", "CreatePayinOut"],
+      "path": "blindpay_bank_details.beneficiary",
+      "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankBeneficiary" } ]
+    },
+    {
+      "spec": ["PayinOut", "CreatePayinOut"],
+      "path": "blindpay_bank_details.receiving_bank",
+      "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankReceivingBank" } ]
+    },
+    {
+      "spec": ["TransferOut", "CreateTransferOut"],
+      "path": "tracking_complete",
+      "sdk": [ { "file": "src/Types/TrackingComplete.php", "class": "TrackingComplete" } ]
+    },
+    {
+      "spec": ["TransferOut", "CreateTransferOut"],
+      "path": "tracking_paymaster",
+      "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "TransferTrackingPaymaster" } ]
+    },
+    {
+      "spec": ["TransferOut", "CreateTransferOut"],
+      "path": "tracking_bridge_swap",
+      "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "TransferTrackingBridgeSwap" } ]
+    },
+    {
+      "spec": ["TransferOut", "CreateTransferOut"],
+      "path": "tracking_transaction_monitoring",
+      "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "TransferTrackingTransactionMonitoring" } ]
+    },
     { "spec": "CreateVirtualAccountIn", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "CreateVirtualAccountInput" } ] },
     { "spec": "UpdateVirtualAccountIn", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "UpdateVirtualAccountInput" } ] },
     { "spec": "VirtualAccountOut", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccount" } ] },
+    { "spec": "VirtualAccountOut", "path": "us", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccountUsDetails" } ] },
+    { "spec": "VirtualAccountOut", "path": "us.ach", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccountUsAch" } ] },
+    { "spec": "VirtualAccountOut", "path": "us.wire", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccountUsWire" } ] },
+    { "spec": "VirtualAccountOut", "path": "us.rtp", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccountUsRtp" } ] },
+    { "spec": "VirtualAccountOut", "path": "us.beneficiary", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccountBeneficiary" } ] },
+    { "spec": "VirtualAccountOut", "path": "us.receiving_bank", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccountReceivingBank" } ] },
+    { "spec": "VirtualAccountOut", "path": "us.swift_receiving_bank", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccountSwiftReceivingBank" } ] },
     {
       "spec": "CreateBlockchainWalletIn",
       "discriminator": { "note": "body-shape discriminated: address vs signature hash", "sdkMethods": ["createWithAddress", "createWithHash"] },

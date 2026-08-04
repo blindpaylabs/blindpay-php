@@ -28,6 +28,114 @@
       "field": "expires_at",
       "reason": "Same pre-existing mismatch as QuoteOut.expires_at, on the payin-quote equivalent (CreatePayinQuoteResponse). Here the field IS cast, `expiresAt: (int) $data['expires_at']`, so a fractional value would silently truncate rather than throw -- a real risk in disguise if the API ever returns one.",
       "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "spei_protocol",
+      "reason": "Spec constrains spei_protocol to an enum (clabe/debitcard/phonenum). BankAccountListItem models it as a plain `?string`, not the SpeiProtocol backed enum that CreateSpeiInput/CreateSpeiResponse already use on the same rail -- so every spec value still parses without error, just without case-completeness checking on this shape. Recorded for visibility only.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "status",
+      "reason": "Covers PayinOut/CreatePayinOut's inline tracking_transaction.status (failed/completed) and tracking_transaction.status is a DIFFERENT, smaller enum than PayinOut's own top-level status (TransactionStatus, already mapped). TrackingTransaction models this sub-field as a plain `string`, not a backed enum.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "currency",
+      "reason": "Spec constrains currency to the Currency enum. Payin models it as a plain `string`; every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "payment_method",
+      "reason": "Spec constrains payment_method to the PaymentMethod enum (already mapped for other shapes). Payin models it as a plain `string`, not PaymentMethod; every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "pse_document_type",
+      "reason": "Spec constrains pse_document_type to a 2-value enum (CC/NIT). Payin models it as a plain `?string`; every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "type",
+      "reason": "Spec constrains type (deposit method) to an enum. Payin models it as a plain `string`; every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "OfframpWallet",
+      "field": "network",
+      "reason": "Spec constrains network to the Network enum (already mapped for other shapes, e.g. WalletOut). OfframpWallet models it as a plain `string`, not Network; every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "status",
+      "reason": "Covers PayoutOut/PayoutOnEvmOut's inline tracking_transaction.status (failed/found) and tracking_complete.status (tokens_refunded/paid) -- two DIFFERENT, smaller enums than PayoutOut's own top-level status (TransactionStatus, already mapped). TrackingTransaction/TrackingComplete model these sub-fields as plain `string`, not backed enums.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "estimated_time_of_arrival",
+      "reason": "Covers PayoutOut/PayoutOnEvmOut's inline tracking_payment.estimated_time_of_arrival and tracking_liquidity.estimated_time_of_arrival. Both are spec enums (5_min/5_30_min/30_min/2_hours/1_business_day/2_business_days/5_business_days); PayoutTrackingPayment and TrackingLiquidity model them as plain `?string`/`string`, not backed enums.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "provider_status",
+      "reason": "Covers PayoutOut/PayoutOnEvmOut's inline tracking_payment.provider_status and tracking_liquidity.provider_status. Both are spec enums; PayoutTrackingPayment and TrackingLiquidity model them as plain `?string`/`string`, not backed enums.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "provider_name",
+      "reason": "Covers PayoutOut/PayoutOnEvmOut's inline tracking_payment.provider_name, a spec enum of bank-provider display names. PayoutTrackingPayment models it as a plain `?string`, not a backed enum.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "ach_cop_document_type",
+      "reason": "Spec constrains ach_cop_document_type to an enum. Payout models it as a plain `?string`, not the AchCopDocument backed enum that BankAccounts already uses on the same rail; every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "field": "kyc_status",
+      "reason": "Same shape of divergence as CustomerOut.kyc_status above: spec constrains kyc_status to an enum, VirtualAccount models it as a plain `?string`, not a backed enum. Every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "field": "account_type",
+      "reason": "Spec constrains us.account_type to an enum (checking/saving). VirtualAccountUsDetails models it as a plain `string`, not BankAccountType; every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "WebhookEndpoint",
+      "field": "events",
+      "reason": "Spec constrains each item of the events array to the webhook-topic enum (WebhookEvents, already mapped). WebhookEndpoint models the whole array as plain `?array`, not a typed list of WebhookEvents; every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "WebhookEndpointIn",
+      "field": "events",
+      "reason": "Same divergence as WebhookEndpoint.events, on the create-input side (CreateWebhookEndpointInput).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "field": "provider_name",
+      "reason": "Covers PayinOut/CreatePayinOut's inline tracking_transaction.provider_name, a spec enum of payment-provider names. TrackingTransaction models it as a plain `?string`, not a backed enum; every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinQuoteIn",
+      "field": "pse_document_type",
+      "reason": "Spec constrains payer_rules.pse_document_type to a 2-value enum (CC/NIT). PayerRules models it as a plain `?string`; every spec value still parses without error.",
+      "owner": "eric@blindpay.com"
     }
   ]
 }

@@ -21,7 +21,9 @@ readonly class TransferTrackingTransactionMonitoring extends BaseTracking
 {
     public function __construct(
         string $step,
-        ?DateTimeImmutable $completedAt
+        public ?float $blockchainScreening = null,
+        public ?float $riskScore = null,
+        ?DateTimeImmutable $completedAt = null
     ) {
         parent::__construct($step, $completedAt);
     }
@@ -30,6 +32,8 @@ readonly class TransferTrackingTransactionMonitoring extends BaseTracking
     {
         return new self(
             step: $data['step'],
+            blockchainScreening: isset($data['blockchain_screening']) ? (float) $data['blockchain_screening'] : null,
+            riskScore: isset($data['risk_score']) ? (float) $data['risk_score'] : null,
             completedAt: isset($data['completed_at'])
                 ? new DateTimeImmutable($data['completed_at'])
                 : null
@@ -40,6 +44,8 @@ readonly class TransferTrackingTransactionMonitoring extends BaseTracking
     {
         return [
             'step' => $this->step,
+            'blockchain_screening' => $this->blockchainScreening,
+            'risk_score' => $this->riskScore,
             'completed_at' => $this->completedAt?->format('c'),
         ];
     }
@@ -49,7 +55,10 @@ readonly class TransferTrackingPaymaster extends BaseTracking
 {
     public function __construct(
         string $step,
-        ?DateTimeImmutable $completedAt
+        public ?string $transactionHash = null,
+        public ?string $gasFee = null,
+        public ?string $errorMessage = null,
+        ?DateTimeImmutable $completedAt = null
     ) {
         parent::__construct($step, $completedAt);
     }
@@ -58,6 +67,9 @@ readonly class TransferTrackingPaymaster extends BaseTracking
     {
         return new self(
             step: $data['step'],
+            transactionHash: $data['transaction_hash'] ?? null,
+            gasFee: $data['gas_fee'] ?? null,
+            errorMessage: $data['error_message'] ?? null,
             completedAt: isset($data['completed_at'])
                 ? new DateTimeImmutable($data['completed_at'])
                 : null
@@ -68,6 +80,9 @@ readonly class TransferTrackingPaymaster extends BaseTracking
     {
         return [
             'step' => $this->step,
+            'transaction_hash' => $this->transactionHash,
+            'gas_fee' => $this->gasFee,
+            'error_message' => $this->errorMessage,
             'completed_at' => $this->completedAt?->format('c'),
         ];
     }
@@ -77,7 +92,10 @@ readonly class TransferTrackingBridgeSwap extends BaseTracking
 {
     public function __construct(
         string $step,
-        ?DateTimeImmutable $completedAt
+        public ?string $transactionHash = null,
+        public ?string $gasFee = null,
+        public ?string $errorMessage = null,
+        ?DateTimeImmutable $completedAt = null
     ) {
         parent::__construct($step, $completedAt);
     }
@@ -86,6 +104,9 @@ readonly class TransferTrackingBridgeSwap extends BaseTracking
     {
         return new self(
             step: $data['step'],
+            transactionHash: $data['transaction_hash'] ?? null,
+            gasFee: $data['gas_fee'] ?? null,
+            errorMessage: $data['error_message'] ?? null,
             completedAt: isset($data['completed_at'])
                 ? new DateTimeImmutable($data['completed_at'])
                 : null
@@ -96,6 +117,9 @@ readonly class TransferTrackingBridgeSwap extends BaseTracking
     {
         return [
             'step' => $this->step,
+            'transaction_hash' => $this->transactionHash,
+            'gas_fee' => $this->gasFee,
+            'error_message' => $this->errorMessage,
             'completed_at' => $this->completedAt?->format('c'),
         ];
     }

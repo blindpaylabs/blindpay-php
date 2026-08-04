@@ -766,6 +766,186 @@ function reconcileEnums(array $map, array $newSpec, array $reachable, array $cla
 }
 
 // ---------------------------------------------------------------------------
+// Enum coverage (blocking): every enum-constrained property on a mapped schema must resolve to a
+// mapped enum symbol, or be a recorded ledger exclusion. Distinct from reconcileEnums(), which
+// checks completeness of an enum ALREADY in the map; this checks that no enum-bearing property
+// was ever silently left out of the map to begin with.
+// ---------------------------------------------------------------------------
+
+/** Whether $propSchema is enum-constrained: a direct `enum`, an `items.enum` (array of enum), or
+ * an `anyOf`/`oneOf` member carrying `enum`. */
+function isEnumConstrained(array $propSchema): bool
+{
+    if (isset($propSchema['enum'])) {
+        return true;
+    }
+    if (isset($propSchema['items']) && is_array($propSchema['items']) && isset($propSchema['items']['enum'])) {
+        return true;
+    }
+    foreach (['anyOf', 'oneOf'] as $key) {
+        if (! isset($propSchema[$key]) || ! is_array($propSchema[$key])) {
+            continue;
+        }
+        foreach ($propSchema[$key] as $sub) {
+            if (is_array($sub) && isset($sub['enum'])) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function computeEnumCoverageGaps(array $map, array $spec, array $reachable, array $classIndex, array $divergenceFieldIndex): array
+{
+    $enumClassSet = [];
+    foreach ($map['enums'] as $entry) {
+        if (isset($entry['sdk']['class'])) {
+            $enumClassSet[$entry['sdk']['class']] = true;
+        }
+    }
+
+    $gaps = [];
+    foreach ($map['types'] as $entry) {
+        // Discriminator fan-outs (>1 SDK class per entry) genuinely diverge per rail; not this
+        // check's job, same restriction reconcileTypes()/auditTypes() use.
+        if (count($entry['sdk']) !== 1) {
+            continue;
+        }
+        $schemas = typeSpecSchemas($entry);
+        $schemaPath = $entry['path'] ?? null;
+        $canonicalSchema = $schemas[0];
+
+        $info = $classIndex[$entry['sdk'][0]['class']] ?? null;
+        if ($info === null) {
+            continue;
+        }
+        $ctorTypesByParam = [];
+        foreach ($info['ctor']['params'] ?? [] as $param) {
+            $ctorTypesByParam[$param['name']] ??= $param['type'];
+        }
+
+        foreach ($schemas as $schemaName) {
+            if (! isset($reachable[$schemaName])) {
+                continue;
+            }
+            $specProps = $schemaPath !== null ? nestedProps($spec, $schemaName, $schemaPath) : schemaProps($spec, $schemaName);
+            if ($specProps === null) {
+                continue;
+            }
+
+            foreach ($specProps as $field) {
+                $propSchema = $schemaPath !== null
+                    ? nestedPropSchema($spec, $schemaName, $schemaPath, $field)
+                    : ($spec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
+                if (! isEnumConstrained($propSchema)) {
+                    continue;
+                }
+                if (isset($divergenceFieldIndex["{$canonicalSchema}|{$field}"])) {
+                    continue; // recorded exclusion, e.g. "modeled as a plain untyped field"
+                }
+                $phpType = $ctorTypesByParam[snakeToCamel($field)] ?? null;
+                if ($phpType === null) {
+                    continue; // not modeled via a promoted ctor property -- presence gaps are handled elsewhere
+                }
+                if (isset($enumClassSet[ltrim($phpType, '?')])) {
+                    continue; // resolves to a mapped enum symbol
+                }
+                $label = $schemaName.($schemaPath !== null ? ".{$schemaPath}" : '');
+                $gaps[] = "NEEDS_HUMAN: enum-constrained property {$label}.{$field} does not resolve to a mapped enum symbol (SDK models it as {$phpType}); add a spec-map.json enums entry or a known-divergences.json fields exclusion";
+            }
+        }
+    }
+    sort($gaps);
+
+    return $gaps;
+}
+
+// ---------------------------------------------------------------------------
+// Nested-object coverage (blocking): every inline object / array-of-object shape reachable under
+// a mapped schema must itself have a spec-map.json path entry, or a recorded intentional omission
+// in unmodeled.json (an entry with field "*" for that schema/path).
+// ---------------------------------------------------------------------------
+
+/** Recursively collect dotted paths (array items suffixed "[]") to every inline object or
+ * array-of-object shape under $node. $ref'd shapes are excluded -- they are separately reachable,
+ * mapped component schemas, not inline shapes owned by this schema. */
+function findNestedObjectShapes(array $node, string $basePath): array
+{
+    $out = [];
+    foreach ($node['properties'] ?? [] as $propName => $propSchema) {
+        if (isset($propSchema['$ref'])) {
+            continue;
+        }
+        $types = is_array($propSchema['type'] ?? null) ? $propSchema['type'] : [$propSchema['type'] ?? null];
+        if (in_array('object', $types, true) && isset($propSchema['properties'])) {
+            $path = "{$basePath}.{$propName}";
+            $out[] = $path;
+            $out = array_merge($out, findNestedObjectShapes($propSchema, $path));
+
+            continue;
+        }
+        $items = $propSchema['items'] ?? null;
+        if (in_array('array', $types, true) && is_array($items) && ! isset($items['$ref'])) {
+            $itemTypes = is_array($items['type'] ?? null) ? $items['type'] : [$items['type'] ?? null];
+            if (in_array('object', $itemTypes, true) && isset($items['properties'])) {
+                $path = "{$basePath}.{$propName}[]";
+                $out[] = $path;
+                $out = array_merge($out, findNestedObjectShapes($items, $path));
+            }
+        }
+    }
+
+    return $out;
+}
+
+function computeNestedObjectCoverageGaps(array $map, array $spec, array $reachable, array $unmodeledIndex): array
+{
+    $mappedPaths = [];
+    foreach ($map['types'] as $entry) {
+        $path = $entry['path'] ?? null;
+        if ($path === null) {
+            continue;
+        }
+        foreach (typeSpecSchemas($entry) as $s) {
+            $mappedPaths["{$s}|{$path}"] = true;
+        }
+    }
+
+    $mappedSchemas = [];
+    foreach ($map['types'] as $entry) {
+        foreach (typeSpecSchemas($entry) as $s) {
+            $mappedSchemas[$s] = true;
+        }
+    }
+
+    $gaps = [];
+    foreach (array_keys($mappedSchemas) as $schemaName) {
+        if (! isset($reachable[$schemaName])) {
+            continue;
+        }
+        $node = $spec['components']['schemas'][$schemaName] ?? null;
+        if ($node === null) {
+            continue;
+        }
+        foreach (findNestedObjectShapes($node, $schemaName) as $fullPath) {
+            $relPath = substr($fullPath, strlen($schemaName) + 1);
+            if (isset($mappedPaths["{$schemaName}|{$relPath}"])) {
+                continue;
+            }
+            if (isset($unmodeledIndex["{$schemaName}|{$relPath}|*"])) {
+                continue; // recorded intentional omission
+            }
+            $gaps[] = "NEEDS_HUMAN: nested object shape {$schemaName}.{$relPath} has no spec-map.json entry and no recorded omission; "
+                ."add a mapping or an unmodeled.json entry ({\"schema\":\"{$schemaName}\",\"path\":\"{$relPath}\",\"field\":\"*\"})";
+        }
+    }
+    sort($gaps);
+
+    return $gaps;
+}
+
+// ---------------------------------------------------------------------------
 // Reconciliation: types / fields
 // ---------------------------------------------------------------------------
 
@@ -1439,7 +1619,14 @@ function runCli(array $argv, string $root): void
 
     $coverage = computeCoverageReport($map, $newSpec, $reachableNew);
 
-    $needsHuman = array_merge($mapErrors, $structuralIssues, $enumNeedsHuman, $fieldNeedsHuman);
+    $enumCoverageGaps = empty($mapErrors)
+        ? computeEnumCoverageGaps($map, $newSpec, $reachableNew, $classIndex, $divergenceFieldIndex)
+        : [];
+    $nestedObjectGaps = empty($mapErrors)
+        ? computeNestedObjectCoverageGaps($map, $newSpec, $reachableNew, $unmodeledIndex)
+        : [];
+
+    $needsHuman = array_merge($mapErrors, $structuralIssues, $enumNeedsHuman, $fieldNeedsHuman, $enumCoverageGaps, $nestedObjectGaps);
 
     $applicable = array_merge($enumApplicable, $fieldApplicable);
     usort($applicable, fn ($a, $b) => $a['sortKey'] <=> $b['sortKey']);
