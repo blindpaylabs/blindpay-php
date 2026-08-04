@@ -14,4 +14,5 @@ enum Currency: string
     case MXN = 'MXN';
     case COP = 'COP';
     case ARS = 'ARS';
+    case EUR = 'EUR';
 }

@@ -47,6 +47,8 @@
         "test:coverage": "pest --coverage",
         "lint:check": "pint --test",
         "lint:fix": "pint",
-        "contract-check": "php scripts/contract-check.php"
+        "contract-check": "php scripts/contract-check.php",
+        "api-sync": "php scripts/api-sync.php --apply",
+        "api-sync:check": "php scripts/api-sync.php --check"
     }
 }

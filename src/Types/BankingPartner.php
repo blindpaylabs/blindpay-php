@@ -10,4 +10,5 @@ enum BankingPartner: string
     case CITI = 'citi';
     case HSBC = 'hsbc';
     case CFSB = 'cfsb';
+    case PORTAGE = 'portage';
 }

@@ -27,6 +27,66 @@ jobs:
           coverage: none
       - name: Verify SDK wire keys against the spec snapshot
         run: php scripts/contract-check.php
+  api-sync-check:
+    name: API sync check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - name: State reconciliation (spec-map.json + unmodeled.json + known-divergences.json vs spec-snapshot.json)
+        # Self-consistency gate: checks the committed code against the committed baseline, which is
+        # always present. .api-sync/spec-current.json is deliberately NOT committed -- it only
+        # exists transiently inside the api-sync.yml workflow run, fetched from api-sync-data.
+        run: php scripts/api-sync.php --check --spec=.api-sync/spec-snapshot.json
+      - name: Map validity (every spec-map.json entry resolves)
+        run: |
+          php -r '
+            define("API_SYNC_LIB_ONLY", true);
+            require "scripts/api-sync.php";
+            $map = loadJson(".api-sync/spec-map.json");
+            $classIndex = scanAllClasses(getcwd());
+            $errors = validateMap($map, $classIndex, getcwd());
+            if (! empty($errors)) {
+                fwrite(STDERR, "Map validity FAILED:\n");
+                foreach ($errors as $e) {
+                    fwrite(STDERR, " - {$e}\n");
+                }
+                exit(1);
+            }
+            fwrite(STDOUT, "Map validity OK: every spec-map.json entry resolves.\n");
+          '
+      - name: Determinism proof (apply into two scratch copies, diff byte-identical)
+        run: |
+          set -e
+          rm -rf /tmp/api-sync-determinism
+          mkdir -p /tmp/api-sync-determinism/a /tmp/api-sync-determinism/b
+          cp -R . /tmp/api-sync-determinism/a
+          cp -R . /tmp/api-sync-determinism/b
+          # Reports are written OUTSIDE the two trees being compared: --report's resolved path is
+          # an absolute, invocation-specific diagnostic (which directory you happened to run in),
+          # not part of the determinism guarantee, which is about the applied CODE being identical.
+          (cd /tmp/api-sync-determinism/a && php scripts/api-sync.php --apply --spec=.api-sync/spec-snapshot.json --report=/tmp/api-sync-determinism/report-a.json)
+          (cd /tmp/api-sync-determinism/b && php scripts/api-sync.php --apply --spec=.api-sync/spec-snapshot.json --report=/tmp/api-sync-determinism/report-b.json)
+          diff -rq --exclude=.git /tmp/api-sync-determinism/a /tmp/api-sync-determinism/b
+      - name: Coverage report (non-blocking -- spec operations/schemas with no SDK mapping)
+        if: always()
+        run: |
+          php scripts/api-sync.php --check --spec=.api-sync/spec-snapshot.json --report=/tmp/api-sync-report.json || true
+          php -r '
+            $r = json_decode(file_get_contents("/tmp/api-sync-report.json"), true);
+            $gaps = $r["coverageGaps"] ?? [];
+            echo "Reachable spec schemas with no spec-map.json mapping (non-blocking; expected: the Rfi family and upload/analyze):\n";
+            foreach ($gaps as $g) {
+                echo " - {$g}\n";
+            }
+            echo count($gaps)." total.\n";
+          '
+      - name: Type audit (non-blocking -- full state comparison, surfaces pre-existing type debt too, not just new drift)
+        if: always()
+        run: php scripts/api-sync.php --audit-types --spec=.api-sync/spec-snapshot.json
   snyk:
     uses: ./.github/workflows/snyk.yaml
     needs: [lint, tests]

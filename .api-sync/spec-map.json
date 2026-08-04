@@ -1,0 +1,231 @@
+{
+  "$schema": "Curated mapping from OpenAPI spec constructs to SDK symbols, used by scripts/api-sync.php for state reconciliation. `enums` pairs a spec enum-bearing property (or the webhooks map) with the SDK enum symbol that must contain every spec member. `types` pairs a spec schema (optionally a nested inline `path` within it, for shapes with no dedicated component schema) with the SDK class(es) that read/write it; `discriminator` is informational, documenting how a single flattened spec schema fans out into multiple SDK classes. `ignore.schemas` lists schemas this SDK deliberately does not model, with a reason. Verified by hand against src/ on 2026-08-03.",
+  "enums": [
+    {
+      "spec": { "kind": "webhookTopics" },
+      "sdk": { "file": "src/Resources/Webhooks/Webhooks.php", "class": "WebhookEvents" },
+      "note": "contract-check.php Direction B hard-fails if a spec webhooks map key has no matching case value here."
+    },
+    {
+      "spec": { "schema": "BankAccountOut", "property": "account_class" },
+      "sdk": { "file": "src/Types/AccountClass.php", "class": "AccountClass" }
+    },
+    {
+      "spec": { "schema": "CustomerOut", "property": "account_purpose" },
+      "sdk": { "file": "src/Types/AccountPurpose.php", "class": "AccountPurpose" }
+    },
+    {
+      "spec": { "schema": "CustomerOut", "property": "aml_status" },
+      "sdk": { "file": "src/Types/AmlStatus.php", "class": "AmlStatus" }
+    },
+    {
+      "spec": { "schema": "BankAccountOut", "property": "account_type" },
+      "sdk": { "file": "src/Types/BankAccountType.php", "class": "BankAccountType" },
+      "note": "KNOWN DIVERGENCE, see .api-sync/known-divergences.json: spec value 'saving' vs SDK case value 'savings'. Do not blind-add a new case for 'saving'; that would create a duplicate near-identical case instead of fixing the real one. Kept mapped on purpose so the divergence stays visible."
+    },
+    {
+      "spec": { "schema": "VirtualAccountOut", "property": "banking_partner" },
+      "sdk": { "file": "src/Types/BankingPartner.php", "class": "BankingPartner" }
+    },
+    {
+      "spec": { "schema": "CustomerOut", "property": "business_industry" },
+      "sdk": { "file": "src/Types/BusinessIndustry.php", "class": "BusinessIndustry" }
+    },
+    {
+      "spec": { "schema": "CustomerOut", "property": "business_type" },
+      "sdk": { "file": "src/Types/BusinessType.php", "class": "BusinessType" }
+    },
+    {
+      "spec": { "schema": "CustomerOut", "property": "country" },
+      "sdk": { "file": "src/Types/Country.php", "class": "Country" }
+    },
+    {
+      "spec": { "operation": "POST /v1/instances/{instance_id}/payin-quotes/fx", "property": "from" },
+      "sdk": { "file": "src/Types/Currency.php", "class": "Currency" },
+      "note": "inline (non-$ref) request body; the widest currency enum in the spec, superset of the quotes/fx operation's from/to."
+    },
+    {
+      "spec": { "schema": "QuoteIn", "property": "currency_type" },
+      "sdk": { "file": "src/Types/CurrencyType.php", "class": "CurrencyType" }
+    },
+    {
+      "spec": { "schema": "CustomerOut", "property": "estimated_annual_revenue" },
+      "sdk": { "file": "src/Types/EstimatedAnnualRevenue.php", "class": "EstimatedAnnualRevenue" },
+      "note": "KNOWN DIVERGENCE, see .api-sync/known-divergences.json: spec value '250000000_plus' vs SDK case value '2500000000_plus' (extra digit). Kept mapped on purpose so the divergence stays visible."
+    },
+    {
+      "spec": { "schema": "WalletOut", "property": "network" },
+      "sdk": { "file": "src/Types/Network.php", "class": "Network" }
+    },
+    {
+      "spec": { "schema": "PayinOut", "property": "payment_method" },
+      "sdk": { "file": "src/Types/PaymentMethod.php", "class": "PaymentMethod" }
+    },
+    {
+      "spec": { "schema": "BankAccountOut", "property": "type" },
+      "sdk": { "file": "src/Types/Rail.php", "class": "Rail" }
+    },
+    {
+      "spec": { "schema": "BankAccountOut", "property": "recipient_relationship" },
+      "sdk": { "file": "src/Types/RecipientRelationship.php", "class": "RecipientRelationship" }
+    },
+    {
+      "spec": { "schema": "CreateVirtualAccountIn", "property": "sole_proprietor_doc_type" },
+      "sdk": { "file": "src/Types/SoleProprietorDocType.php", "class": "SoleProprietorDocType" }
+    },
+    {
+      "spec": { "schema": "CustomerOut", "property": "source_of_wealth" },
+      "sdk": { "file": "src/Types/SourceOfWealth.php", "class": "SourceOfWealth" }
+    },
+    {
+      "spec": { "schema": "VirtualAccountOut", "property": "token" },
+      "sdk": { "file": "src/Types/StablecoinToken.php", "class": "StablecoinToken" }
+    },
+    {
+      "spec": { "schema": "PayoutOut", "property": "transaction_document_type" },
+      "sdk": { "file": "src/Types/TransactionDocumentType.php", "class": "TransactionDocumentType" }
+    },
+    {
+      "spec": { "schema": "PayoutOut", "property": "status" },
+      "sdk": { "file": "src/Types/TransactionStatus.php", "class": "TransactionStatus" },
+      "note": "union of PayoutOut/PayinOut/TransferOut.status; SDK's PENDING_REVIEW case has no counterpart in any of the three today, which is fine (SDK may accept a superset)."
+    }
+  ],
+  "typesNote": "Class-per-file below always refers to src/Resources/**/*.php unless the file starts with src/Types/.",
+  "types": [
+    { "spec": "BankAccountOut", "sdk": [ { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "BankAccountListItem" } ] },
+    {
+      "spec": "CreateBankAccountIn",
+      "discriminator": { "property": "type", "values": ["pix", "transfers_bitso", "spei_bitso", "ach_cop_bitso", "ach", "wire", "international_swift", "rtp", "pix_safe", "sepa"] },
+      "sdk": [
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreatePixInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateArgentinaTransfersInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateSpeiInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateColombiaAchInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateAchInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateWireInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateInternationalSwiftInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateRtpInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreatePixSafeInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateSepaInput" }
+      ],
+      "note": "spec's `type` enum also has `ted`, which this SDK does not implement (no createTed method) -- a known, pre-existing coverage gap, not modeled here, tracked as a Phase C item."
+    },
+    {
+      "spec": "CreateCustomerIn",
+      "discriminator": { "properties": ["type", "kyc_type"], "values": ["individual/standard", "individual/enhanced", "business/standard"] },
+      "sdk": [
+        { "file": "src/Resources/Customers/Customers.php", "class": "CreateIndividualWithStandardKYCInput" },
+        { "file": "src/Resources/Customers/Customers.php", "class": "CreateIndividualWithEnhancedKYCInput" },
+        { "file": "src/Resources/Customers/Customers.php", "class": "CreateBusinessWithStandardKYBInput" }
+      ],
+      "note": "spec's kyc_type also has `light`, and business kyc_type also has `enhanced`; neither is implemented by this SDK -- known, pre-existing coverage gaps, tracked as Phase C items."
+    },
+    {
+      "spec": "CustomerOut",
+      "discriminator": { "properties": ["type", "kyc_type"], "dispatchedBy": "Customers::mapCustomer()" },
+      "sdk": [
+        { "file": "src/Resources/Customers/Customers.php", "class": "BaseCustomer" },
+        { "file": "src/Resources/Customers/Customers.php", "class": "IndividualWithStandardKYC" },
+        { "file": "src/Resources/Customers/Customers.php", "class": "IndividualWithEnhancedKYC" },
+        { "file": "src/Resources/Customers/Customers.php", "class": "BusinessWithStandardKYB" }
+      ]
+    },
+    { "spec": "UpdateCustomerIn", "sdk": [ { "file": "src/Resources/Customers/Customers.php", "class": "UpdateCustomerInput" } ] },
+    { "spec": "CustomerLimitIncreaseIn", "sdk": [ { "file": "src/Resources/Customers/Customers.php", "class": "RequestLimitIncreaseInput" } ] },
+    { "spec": "CustomerLimitIncreaseOut", "sdk": [ { "file": "src/Resources/Customers/Customers.php", "class": "RequestLimitIncreaseResponse" } ] },
+    { "spec": "GetCustomerLimitIncreaseOut", "sdk": [ { "file": "src/Resources/Customers/Customers.php", "class": "LimitIncreaseRequest" } ] },
+    { "spec": "GetCustomerLimitsOut", "sdk": [ { "file": "src/Resources/Customers/Customers.php", "class": "GetCustomerLimitsResponse" } ] },
+    { "spec": "QuoteIn", "sdk": [ { "file": "src/Resources/Quotes/Quotes.php", "class": "CreateQuoteInput" } ] },
+    { "spec": "QuoteOut", "sdk": [ { "file": "src/Resources/Quotes/Quotes.php", "class": "CreateQuoteResponse" } ] },
+    { "spec": "CreatePayinQuoteIn", "sdk": [ { "file": "src/Resources/Payins/Quotes.php", "class": "CreatePayinQuoteInput" } ] },
+    { "spec": "CreatePayinQuoteOut", "sdk": [ { "file": "src/Resources/Payins/Quotes.php", "class": "CreatePayinQuoteResponse" } ] },
+    { "spec": "CreateTransferQuoteIn", "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "CreateTransferQuoteInput" } ] },
+    { "spec": "CreateTransferQuoteOut", "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "CreateTransferQuoteResponse" } ] },
+    { "spec": "CreateTransferIn", "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "CreateTransferInput" } ] },
+    { "spec": "CreateTransferOut", "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "Transfer" } ], "note": "Transfers::create() deserializes via Transfer::fromArray, the same class used for TransferOut." },
+    { "spec": "TransferOut", "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "Transfer" } ] },
+    { "spec": "PayinOut", "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "Payin" } ] },
+    { "spec": "CreatePayinOut", "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "CreateEvmPayinResponse" } ] },
+    { "spec": "PayoutOut", "sdk": [ { "file": "src/Resources/Payouts/Payouts.php", "class": "Payout" } ] },
+    {
+      "spec": "PayoutOnEvmOut",
+      "discriminator": { "note": "one shared response shape returned by createStellar/createEvm/createSolana", "sdkMethods": ["createStellar", "createEvm", "createSolana"] },
+      "sdk": [
+        { "file": "src/Resources/Payouts/Payouts.php", "class": "CreateStellarPayoutResponse" },
+        { "file": "src/Resources/Payouts/Payouts.php", "class": "CreateEvmPayoutResponse" },
+        { "file": "src/Resources/Payouts/Payouts.php", "class": "CreateSolanaPayoutResponse" }
+      ]
+    },
+    {
+      "spec": "PayoutOnEvmIn",
+      "sdk": [
+        { "file": "src/Resources/Payouts/Payouts.php", "class": "CreateStellarPayoutInput" },
+        { "file": "src/Resources/Payouts/Payouts.php", "class": "CreateEvmPayoutInput" },
+        { "file": "src/Resources/Payouts/Payouts.php", "class": "CreateSolanaPayoutInput" }
+      ]
+    },
+    { "spec": "PayoutOnStellarAuthorizeIn", "sdk": [ { "file": "src/Resources/Payouts/Payouts.php", "class": "AuthorizeStellarTokenInput" } ] },
+    { "spec": "SubmitPayoutDocumentsIn", "sdk": [ { "file": "src/Resources/Payouts/Payouts.php", "class": "SubmitPayoutDocumentsInput" } ] },
+    {
+      "spec": ["PayoutOut", "PayoutOnEvmOut"],
+      "path": "tracking_payment",
+      "sdk": [ { "file": "src/Types/TrackingPayment.php", "class": "TrackingPayment" } ],
+      "note": "inline object, not a $ref'd component schema (no `Tracking*` schema exists in components.schemas); the same 20-property shape also recurs verbatim, unchecked here, in PayoutNewWebhookOut/PayoutUpdateWebhookOut/PayoutCompleteWebhookOut/PayoutPartnerFeeWebhookOut, which this SDK never deserializes (see 'webhook payloads' note below)."
+    },
+    {
+      "spec": "PayinOut",
+      "path": "tracking_payment",
+      "sdk": [ { "file": "src/Types/TrackingPayment.php", "class": "TrackingPayment" } ],
+      "note": "same SDK class as the payout-side tracking_payment, but PayinOut's inline tracking_payment is a DIFFERENT, smaller shape (step/provider_name/completed_at/review_source/review_context/approved_risk_sources) than the payout one. TrackingPayment models step/provider_name/completed_at plus 3 payout-only fields (provider_transaction_id/provider_status/estimated_time_of_arrival) that PayinOut's tracking_payment does not have."
+    },
+    { "spec": "CreateVirtualAccountIn", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "CreateVirtualAccountInput" } ] },
+    { "spec": "UpdateVirtualAccountIn", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "UpdateVirtualAccountInput" } ] },
+    { "spec": "VirtualAccountOut", "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccount" } ] },
+    {
+      "spec": "CreateBlockchainWalletIn",
+      "discriminator": { "note": "body-shape discriminated: address vs signature hash", "sdkMethods": ["createWithAddress", "createWithHash"] },
+      "sdk": [
+        { "file": "src/Resources/Wallets/BlockchainWallets.php", "class": "CreateBlockchainWalletWithAddressInput" },
+        { "file": "src/Resources/Wallets/BlockchainWallets.php", "class": "CreateBlockchainWalletWithHashInput" }
+      ]
+    },
+    { "spec": "BlockchainWalletOut", "sdk": [ { "file": "src/Resources/Wallets/BlockchainWallets.php", "class": "BlockchainWallet" } ] },
+    { "spec": "BlockchainWalletMessageOut", "sdk": [ { "file": "src/Resources/Wallets/BlockchainWallets.php", "class": "GetBlockchainWalletMessageResponse" } ] },
+    { "spec": "OfframpWallet", "sdk": [ { "file": "src/Resources/Wallets/OfframpWallets.php", "class": "OfframpWallet" } ] },
+    { "spec": "CreateWalletIn", "sdk": [ { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "CreateCustodialWalletInput" } ], "note": "`/customers/{id}/wallets` is the custodial-wallets resource, not offramp wallets -- do not confuse with CreateOfframpWalletInput." },
+    { "spec": "WalletOut", "sdk": [ { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "CustodialWallet" } ] },
+    { "spec": "WalletBalanceOut", "sdk": [ { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "CustodialWalletBalanceResponse" } ] },
+    { "spec": "WalletTokenOut", "sdk": [ { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "WalletTokenBalance" } ], "note": "embedded under WalletBalanceOut.USDC/USDT/USDB and WalletInboundSchemaOut.token; a real $ref'd component, not inline." },
+    { "spec": "WebhookEndpoint", "sdk": [ { "file": "src/Resources/Webhooks/Webhooks.php", "class": "WebhookEndpoint" } ] },
+    { "spec": "WebhookEndpointIn", "sdk": [ { "file": "src/Resources/Webhooks/Webhooks.php", "class": "CreateWebhookEndpointInput" } ] },
+    { "spec": "WebhookEndpointOut", "sdk": [ { "file": "src/Resources/Webhooks/Webhooks.php", "class": "CreateWebhookEndpointResponse" } ] },
+    { "spec": "InitiateTosIn", "sdk": [ { "file": "src/Resources/TermsOfService/TermsOfService.php", "class": "InitiateInput" } ] },
+    { "spec": "InitiateTosOut", "sdk": [ { "file": "src/Resources/TermsOfService/TermsOfService.php", "class": "InitiateResponse" } ] },
+    { "spec": "PortalAccessOut", "sdk": [ { "file": "src/Resources/Webhooks/Webhooks.php", "class": "GetPortalAccessUrlResponse" } ] },
+    { "spec": "MigrateInstanceOwnershipIn", "sdk": [ { "file": "src/Resources/Ownership/Ownership.php", "class": "MigrateInstanceOwnershipIn" } ] },
+    { "spec": "UpdateInstanceIn", "sdk": [ { "file": "src/Resources/Instances/Instances.php", "class": "UpdateInstanceInput" } ] },
+    { "spec": "UpdateInstanceMemberIn", "sdk": [ { "file": "src/Resources/Instances/Instances.php", "class": "UpdateMemberRoleInput" } ], "note": "class has no toArray; the `user_role` wire key is built inline in Instances::updateMemberRole(), not on this DTO." },
+    { "spec": "GetFeesOut", "sdk": [ { "file": "src/Resources/Fees/Fees.php", "class": "FeesResponse" } ] },
+    { "spec": "FeeOptions", "sdk": [ { "file": "src/Resources/Fees/Fees.php", "class": "FeeOptions" } ] },
+    { "spec": "SwiftCodeItem", "sdk": [ { "file": "src/Resources/Available/Available.php", "class": "SwiftCodeBankDetails" } ], "note": "spec uses camelCase wire keys here, unlike the rest of the API; SDK matches it verbatim." },
+    { "spec": "AvailableRails", "sdk": [ { "file": "src/Resources/Available/Available.php", "class": "RailInfo" } ] },
+    { "spec": "AvailableBankDetails", "sdk": [ { "file": "src/Resources/Available/Available.php", "class": "BankDetail" } ] },
+    { "spec": "AvailableNaicsList", "sdk": [ { "file": "src/Resources/Available/Available.php", "class": "NaicsCode" } ] },
+    { "spec": "UploadIn", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "UploadInput" } ] },
+    { "spec": "UploadOut", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "UploadResponse" } ] },
+    { "spec": "PaginationMetadata", "sdk": [ { "file": "src/Types/PaginationMetadata.php", "class": "PaginationMetadata" } ], "note": "referenced from the customers/payouts/payins/transfers list-response envelopes. next_page/prev_page type mismatch is a LIVE DEFECT, see known-divergences.json -- not fixed here." }
+  ],
+  "webhookPayloadsNote": "This SDK never deserializes webhook request bodies into typed classes -- BlindPay::verifyWebhookSignature() only verifies the signature and returns bool; callers get the raw payload. Consequently no `*WebhookOut` schema (BankAccountWebhookOut, BlockchainWalletWebhookOut, CustomerNewWebhookOut, CustomerUpdateWebhookOut, CustomerDeleteWebhookOut, PayinNewWebhookOut, PayinUpdateWebhookOut, PayinCompleteWebhookOut, PayinPartnerFeeWebhookOut, PayoutNewWebhookOut, PayoutUpdateWebhookOut, PayoutCompleteWebhookOut, PayoutPartnerFeeWebhookOut, LimitIncreaseNewWebhookOut, LimitIncreaseUpdateWebhookOut, TosAcceptWebhookOut) is mapped below; this is a structural fact about the SDK, not an oversight, and shows up as non-blocking coverage gaps rather than reconciliation failures.",
+  "ignore": {
+    "schemas": [
+      { "schema": "LedgerOperation", "reason": "Unreferenced by any public operation or webhook (zero $ref anywhere in the spec) -- an orphan schema left over in components.schemas. Confirmed identical between .api-sync/spec-snapshot.json and the current spec." },
+      { "schema": "Rfi", "reason": "RFI (request-for-information) resource is not implemented by this SDK. 4 operations, tracked as a Phase C item per the design doc." },
+      { "schema": "RfiField", "reason": "Part of the unimplemented RFI resource, see Rfi." },
+      { "schema": "RfiSection", "reason": "Part of the unimplemented RFI resource, see Rfi." },
+      { "schema": "InstanceRfi", "reason": "Part of the unimplemented RFI resource, see Rfi." },
+      { "schema": "UploadAnalyzeIn", "reason": "POST /v1/upload/analyze is not implemented by this SDK. Tracked as a Phase C item per the design doc." },
+      { "schema": "UploadAnalyzeOut", "reason": "Part of the unimplemented upload/analyze operation, see UploadAnalyzeIn." }
+    ]
+  }
+}

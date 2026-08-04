@@ -15,30 +15,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Fetch API sync data
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Fetch the new spec from api-sync-data
         run: |
-          mkdir -p /tmp/api-sync
           git fetch origin api-sync-data
-          git show origin/api-sync-data:.api-sync/changelog.md > /tmp/api-sync/changelog.md
-          echo "=== Changelog ==="
-          cat /tmp/api-sync/changelog.md
+          git show origin/api-sync-data:.api-sync/spec-current.json > .api-sync/spec-current.json
 
-      - name: Check for existing api-sync PR
-        id: check-pr
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_NUMBER=$(gh pr list --head api-sync --json number --jq '.[0].number // empty')
-          if [ -n "$PR_NUMBER" ]; then
-            echo "existing_pr=$PR_NUMBER" >> $GITHUB_OUTPUT
-            echo "Found existing api-sync PR: #$PR_NUMBER"
-          else
-            echo "existing_pr=" >> $GITHUB_OUTPUT
-            echo "No existing api-sync PR found"
-          fi
-
-      - name: Create or checkout api-sync branch
+      - name: Create or reset the api-sync branch
         run: |
           git fetch origin api-sync 2>/dev/null || true
           if git rev-parse --verify origin/api-sync >/dev/null 2>&1; then
@@ -48,63 +39,78 @@ jobs:
             git checkout -b api-sync
           fi
 
-      - name: Apply changes with Claude Code
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: '--model claude-opus-5 --allowedTools "Bash(*),Read,Edit,Write,Glob,Grep"'
-          prompt: |
-            You are updating this SDK to match API changes. Read CLAUDE.md for this SDK's conventions.
+      - name: Run the patcher
+        id: patch
+        run: |
+          set +e
+          php scripts/api-sync.php --apply --report=/tmp/api-sync-report.json
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -e
 
-            The changelog is at /tmp/api-sync/changelog.md — it contains ALL the information you need.
-            Do NOT read openapi.json. The changelog is self-contained.
+      - name: Fail loudly on needs-human
+        if: steps.patch.outputs.exit_code != '0'
+        run: |
+          echo "::error::api-sync found drift it cannot apply mechanically -- a human must decide. See the patcher output above, and update .api-sync/spec-map.json, .api-sync/unmodeled.json or .api-sync/known-divergences.json accordingly."
+          cat /tmp/api-sync-report.json || true
+          exit 1
 
-            INSTRUCTIONS:
-            1. Read CLAUDE.md thoroughly for this SDK's patterns and conventions.
-            2. Read /tmp/api-sync/changelog.md — it lists every enum type with every value, every field to add, and every change to make.
-            3. Implement ALL changes. Go through the changelog section by section:
-               - Section 1 (Enum Types): For each enum listed, check if the SDK has it. If missing, create it. If it exists, add any missing values. The changelog lists ALL values — add the ones that don't exist yet.
-               - Section 2 (Receiver Fields): Add each listed field to the receiver input/output types.
-               - Section 3 (Version): Minor bump.
-            4. Do not skip ANY enum or field. Every item in the changelog must be addressed.
-            5. Follow CLAUDE.md patterns exactly for naming, typing, and file organization.
-            6. MINOR version bump only.
-            7. Run lint and type check commands (see CLAUDE.md). Fix any errors until clean.
-            8. Do NOT create commits — just modify the files.
+      - name: Check for changes
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain -- . ':!.github')" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Exit quietly, nothing to sync
+        if: steps.changes.outputs.has_changes == 'false'
+        run: echo "No pending drift. Nothing to sync."
+
+      - name: Determine version bump
+        if: steps.changes.outputs.has_changes == 'true'
+        id: bump
+        run: |
+          BUMP=$(php -r '$r = json_decode(file_get_contents("/tmp/api-sync-report.json"), true); echo $r["bump"]["type"] ?? "patch";')
+          VERSION=$(php -r '$r = json_decode(file_get_contents("/tmp/api-sync-report.json"), true); echo $r["bump"]["version"] ?? "";')
+          echo "type=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push
-        id: commit
+        if: steps.changes.outputs.has_changes == 'true'
         run: |
           git remote set-url origin "https://x-access-token:${{ secrets.SDK_SYNC_PAT }}@github.com/${{ github.repository }}.git"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -- .github/workflows/ 2>/dev/null || true
           git add -A
           git reset HEAD .github/workflows/ 2>/dev/null || true
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          echo "has_changes=true" >> $GITHUB_OUTPUT
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "feat: sync SDK with API changes"
+          git commit -m "${{ steps.bump.outputs.type == 'minor' && 'feat' || 'fix' }}: sync SDK with API changes (${{ steps.bump.outputs.type }}, v${{ steps.bump.outputs.version }})"
           git push --force-with-lease origin api-sync
 
       - name: Create or update PR
-        if: steps.commit.outputs.has_changes == 'true'
+        if: steps.changes.outputs.has_changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.SDK_SYNC_PAT }}
         run: |
-          EXISTING_PR="${{ steps.check-pr.outputs.existing_pr }}"
+          PR_NUMBER=$(gh pr list --head api-sync --json number --jq '.[0].number // empty')
+          BODY="Automated deterministic sync from the latest API spec.
 
-          if [ -n "$EXISTING_PR" ]; then
-            echo "Updating existing PR #$EXISTING_PR"
-            gh pr comment "$EXISTING_PR" --body "Updated with latest API changes."
+          Version bump: **${{ steps.bump.outputs.type }}** -> \`${{ steps.bump.outputs.version }}\`
+
+          Generated by \`php scripts/api-sync.php --apply\`. See the workflow run for the full report."
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "Updating existing PR #$PR_NUMBER"
+            gh pr edit "$PR_NUMBER" --body "$BODY"
           else
             gh pr create \
-              --title "feat: sync SDK with API changes" \
-              --body "Automated SDK update from API changes." \
+              --title "sync: SDK with API changes" \
+              --body "$BODY" \
               --base main \
               --head api-sync \
               --label api-sync
+            PR_NUMBER=$(gh pr list --head api-sync --json number --jq '.[0].number')
           fi
+
+          gh pr merge "$PR_NUMBER" --auto --squash
