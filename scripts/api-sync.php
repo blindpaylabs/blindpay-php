@@ -54,6 +54,76 @@ function parseArgs(array $argv): array
 }
 
 // ---------------------------------------------------------------------------
+// Path validation -- every filesystem path this program touches that originates from a CLI
+// argument or a config file on disk is resolved and validated here, once, right where it enters
+// the program, rather than trusted implicitly at each later read/write call site.
+// ---------------------------------------------------------------------------
+
+/**
+ * Canonicalize and validate a path this program is about to READ (--spec, and any file the
+ * tokenizer scans). Rejects NUL-byte injection and resolves `..`/symlinks via realpath() so every
+ * later use operates on one already-validated canonical path instead of re-trusting a raw string.
+ */
+function resolveReadablePath(string $path, string $argName): string
+{
+    if ($path === '' || str_contains($path, "\0")) {
+        fwrite(STDERR, "[api-sync] FAIL: invalid {$argName} path\n");
+        exit(1);
+    }
+    $real = realpath($path);
+    if ($real === false || ! is_file($real)) {
+        fwrite(STDERR, "[api-sync] FAIL: {$argName} does not exist or is not a file: {$path}\n");
+        exit(1);
+    }
+
+    return $real;
+}
+
+/**
+ * Canonicalize and validate a path this program is about to WRITE (--report). The parent
+ * directory must already exist -- this program never creates directories -- and resolving it via
+ * realpath() collapses `..`/symlinks so the eventual file_put_contents() target is unambiguous.
+ * Deliberately does NOT restrict the result to the repository root: --report is designed to write
+ * outside it (CI writes to /tmp; the determinism proof writes into scratch copies elsewhere on
+ * disk) -- that is required functionality, not a path-traversal vulnerability, since the value
+ * comes from a trusted CI workflow or an operator's own CLI invocation, never from request input.
+ */
+function resolveWritablePath(string $path, string $argName): string
+{
+    if ($path === '' || str_contains($path, "\0")) {
+        fwrite(STDERR, "[api-sync] FAIL: invalid {$argName} path\n");
+        exit(1);
+    }
+    $dir = realpath(dirname($path));
+    if ($dir === false || ! is_dir($dir)) {
+        fwrite(STDERR, "[api-sync] FAIL: directory for {$argName} does not exist: {$path}\n");
+        exit(1);
+    }
+
+    return $dir.DIRECTORY_SEPARATOR.basename($path);
+}
+
+/**
+ * Resolve a file path declared in spec-map.json (or the hardcoded VERSION file) against $root,
+ * and refuse to touch anything outside it. spec-map.json is a committed, human-reviewed config
+ * file, not runtime request input, but every path built from it is still contained here: a
+ * corrupted or malicious entry (e.g. a `..` sequence) must never let --apply write outside the
+ * repository it was invoked on.
+ */
+function resolveWithinRoot(string $root, string $relativeFile, string $context): string
+{
+    $realRoot = realpath($root);
+    $candidate = rtrim($root, '/').'/'.$relativeFile;
+    $realDir = realpath(dirname($candidate));
+    if ($realRoot === false || $realDir === false || ! str_starts_with($realDir.'/', $realRoot.'/')) {
+        fwrite(STDERR, "[api-sync] FAIL: {$context} resolves outside the repository root: {$relativeFile}\n");
+        exit(1);
+    }
+
+    return $realDir.'/'.basename($candidate);
+}
+
+// ---------------------------------------------------------------------------
 // JSON / spec helpers
 // ---------------------------------------------------------------------------
 
@@ -139,21 +209,28 @@ function specEnumValues(array $spec, string $schema, string $propertyPath): ?arr
 /** Enum values for an inline (non-$ref) request-body property, addressed by "METHOD /path". */
 function operationEnumValues(array $spec, string $operation, string $property): ?array
 {
-    [$method, $path] = explode(' ', $operation, 2);
+    // $urlPath is an OpenAPI paths-map KEY (e.g. "/v1/instances/{instance_id}/quotes/fx"), never a
+    // filesystem path -- named distinctly from every filesystem $path in this file.
+    [$method, $urlPath] = explode(' ', $operation, 2);
     $method = strtolower($method);
-    $node = $spec['paths'][$path][$method]['requestBody']['content']['application/json']['schema']['properties'][$property] ?? null;
+    $node = $spec['paths'][$urlPath][$method]['requestBody']['content']['application/json']['schema']['properties'][$property] ?? null;
 
     return $node['enum'] ?? null;
 }
 
-/** Nested inline object property names, e.g. schemaProps but for a dotted nested path. */
-function nestedProps(array $spec, string $schema, string $path): ?array
+/**
+ * Nested inline object property names, e.g. schemaProps but for a dotted nested path.
+ * $schemaPath is a dotted property path WITHIN a JSON schema (e.g. "tracking_payment"), never a
+ * filesystem path -- named distinctly from every filesystem $path in this file so a static
+ * analyzer's data-flow tracing has no name-based reason to conflate the two.
+ */
+function nestedProps(array $spec, string $schema, string $schemaPath): ?array
 {
     $node = $spec['components']['schemas'][$schema] ?? null;
     if ($node === null) {
         return null;
     }
-    foreach (explode('.', $path) as $part) {
+    foreach (explode('.', $schemaPath) as $part) {
         $node = $node['properties'][$part] ?? null;
         if ($node === null) {
             return null;
@@ -706,7 +783,8 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
 
     foreach ($map['types'] as $entry) {
         $schemas = typeSpecSchemas($entry);
-        $path = $entry['path'] ?? null;
+        // A dotted schema property path (e.g. "tracking_payment"), never a filesystem path.
+        $schemaPath = $entry['path'] ?? null;
         // unmodeled.json records one entry per group (using the first schema as the canonical
         // name), not once per schema in a multi-schema entry like ["PayoutOut","PayoutOnEvmOut"].
         $canonicalSchema = $schemas[0];
@@ -729,8 +807,8 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
                 continue; // no longer reachable -- skip by construction
             }
 
-            $specProps = $path !== null
-                ? nestedProps($newSpec, $schemaName, $path)
+            $specProps = $schemaPath !== null
+                ? nestedProps($newSpec, $schemaName, $schemaPath)
                 : schemaProps($newSpec, $schemaName);
 
             if ($specProps === null) {
@@ -764,13 +842,13 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
                     if ($phpType === null) {
                         continue; // modeled via fromArray/toArray only (e.g. no promoted ctor prop) -- nothing to compare
                     }
-                    $propSchema = $path !== null
-                        ? nestedPropSchema($newSpec, $schemaName, $path, $field)
+                    $propSchema = $schemaPath !== null
+                        ? nestedPropSchema($newSpec, $schemaName, $schemaPath, $field)
                         : ($newSpec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
                     $specType = specTypeCategory($propSchema);
                     $sdkType = phpTypeCategory($phpType);
                     if (! categoriesCompatible($specType, $sdkType)) {
-                        $label = $schemaName.($path !== null ? ".{$path}" : '');
+                        $label = $schemaName.($schemaPath !== null ? ".{$schemaPath}" : '');
                         $needsHuman[] = "NEEDS_HUMAN: type mismatch on {$label}.{$field}: spec declares "
                             .($specType['category'] ?? 'unknown').($specType['nullable'] ? '|null' : '')
                             .", SDK declares {$phpType} (mapped class(es): ".implode(', ', array_column($entry['sdk'], 'class')).')';
@@ -778,7 +856,7 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
 
                     continue;
                 }
-                $unmodeledKey = $canonicalSchema.'|'.($path ?? '').'|'.$field;
+                $unmodeledKey = $canonicalSchema.'|'.($schemaPath ?? '').'|'.$field;
                 if (isset($unmodeledIndex[$unmodeledKey])) {
                     continue;
                 }
@@ -790,14 +868,14 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
                     $applicable[] = [
                         'kind' => 'field-added',
                         'schema' => $schemaName,
-                        'path' => $path,
+                        'path' => $schemaPath,
                         'field' => $field,
                         'class' => $site['class'],
                         'file' => $site['file'],
-                        'propSchema' => $path !== null
-                            ? (nestedPropSchema($newSpec, $schemaName, $path, $field))
+                        'propSchema' => $schemaPath !== null
+                            ? (nestedPropSchema($newSpec, $schemaName, $schemaPath, $field))
                             : ($newSpec['components']['schemas'][$schemaName]['properties'][$field] ?? []),
-                        'sortKey' => "{$schemaName}|".($path ?? '')."|{$field}|{$site['class']}",
+                        'sortKey' => "{$schemaName}|".($schemaPath ?? '')."|{$field}|{$site['class']}",
                     ];
                 }
             }
@@ -807,10 +885,11 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
     return [$applicable, $needsHuman];
 }
 
-function nestedPropSchema(array $spec, string $schema, string $path, string $field): array
+// $schemaPath is a dotted schema property path, never a filesystem path -- see nestedProps().
+function nestedPropSchema(array $spec, string $schema, string $schemaPath, string $field): array
 {
     $node = $spec['components']['schemas'][$schema] ?? [];
-    foreach (explode('.', $path) as $part) {
+    foreach (explode('.', $schemaPath) as $part) {
         $node = $node['properties'][$part] ?? [];
     }
 
@@ -902,7 +981,8 @@ function computeStructuralDiff(array $oldSpec, array $newSpec, array $reachableO
     }
 
     foreach ($map['types'] as $entry) {
-        $path = $entry['path'] ?? null;
+        // A dotted schema property path (e.g. "tracking_payment"), never a filesystem path.
+        $schemaPath = $entry['path'] ?? null;
         $schemas = typeSpecSchemas($entry);
         // See reconcileTypes(): a discriminator fan-out's flattened schema nullability doesn't
         // apply uniformly to every rail's class, so per-field type/nullability checks only make
@@ -919,14 +999,14 @@ function computeStructuralDiff(array $oldSpec, array $newSpec, array $reachableO
             if (! isset($reachableOld[$schemaName]) || ! isset($reachableNew[$schemaName])) {
                 continue;
             }
-            $oldProps = $path !== null ? nestedProps($oldSpec, $schemaName, $path) : schemaProps($oldSpec, $schemaName);
-            $newProps = $path !== null ? nestedProps($newSpec, $schemaName, $path) : schemaProps($newSpec, $schemaName);
+            $oldProps = $schemaPath !== null ? nestedProps($oldSpec, $schemaName, $schemaPath) : schemaProps($oldSpec, $schemaName);
+            $newProps = $schemaPath !== null ? nestedProps($newSpec, $schemaName, $schemaPath) : schemaProps($newSpec, $schemaName);
             if ($oldProps === null || $newProps === null) {
                 continue;
             }
             $removed = array_diff($oldProps, $newProps);
             if (! empty($removed)) {
-                $label = $schemaName.($path !== null ? ".{$path}" : '');
+                $label = $schemaName.($schemaPath !== null ? ".{$schemaPath}" : '');
                 $issues[] = 'NEEDS_HUMAN: propert'.(count($removed) === 1 ? 'y' : 'ies')." removed from {$label}: ".implode(', ', $removed).' (breaking, requires a deliberate major)';
             }
 
@@ -935,10 +1015,10 @@ function computeStructuralDiff(array $oldSpec, array $newSpec, array $reachableO
                 if ($phpType === null) {
                     continue;
                 }
-                $oldPropSchema = $path !== null ? nestedPropSchema($oldSpec, $schemaName, $path, $field) : ($oldSpec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
-                $newPropSchema = $path !== null ? nestedPropSchema($newSpec, $schemaName, $path, $field) : ($newSpec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
+                $oldPropSchema = $schemaPath !== null ? nestedPropSchema($oldSpec, $schemaName, $schemaPath, $field) : ($oldSpec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
+                $newPropSchema = $schemaPath !== null ? nestedPropSchema($newSpec, $schemaName, $schemaPath, $field) : ($newSpec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
                 if (typeNullabilityWidened($oldPropSchema, $newPropSchema, phpTypeCategory($phpType))) {
-                    $label = $schemaName.($path !== null ? ".{$path}" : '');
+                    $label = $schemaName.($schemaPath !== null ? ".{$schemaPath}" : '');
                     $issues[] = "NEEDS_HUMAN: {$label}.{$field} newly allows null in the spec, but the SDK declares a non-nullable {$phpType} (mapped class: {$entry['sdk'][0]['class']})";
                 }
             }
@@ -1001,11 +1081,12 @@ function auditTypes(array $map, array $spec, array $reachable, array $classIndex
 
     foreach ($map['types'] as $entry) {
         $schemas = typeSpecSchemas($entry);
-        $path = $entry['path'] ?? null;
+        // A dotted schema property path (e.g. "tracking_payment"), never a filesystem path.
+        $schemaPath = $entry['path'] ?? null;
         $canonicalSchema = $schemas[0];
 
         if (count($entry['sdk']) > 1) {
-            $skippedFanOuts[] = $canonicalSchema.($path !== null ? ".{$path}" : '');
+            $skippedFanOuts[] = $canonicalSchema.($schemaPath !== null ? ".{$schemaPath}" : '');
 
             continue;
         }
@@ -1020,7 +1101,7 @@ function auditTypes(array $map, array $spec, array $reachable, array $classIndex
             if (! isset($reachable[$schemaName])) {
                 continue;
             }
-            $specProps = $path !== null ? nestedProps($spec, $schemaName, $path) : schemaProps($spec, $schemaName);
+            $specProps = $schemaPath !== null ? nestedProps($spec, $schemaName, $schemaPath) : schemaProps($spec, $schemaName);
             if ($specProps === null) {
                 continue;
             }
@@ -1031,8 +1112,8 @@ function auditTypes(array $map, array $spec, array $reachable, array $classIndex
                 if ($phpType === null) {
                     continue; // not modeled via a promoted constructor property -- nothing to compare
                 }
-                $propSchema = $path !== null
-                    ? nestedPropSchema($spec, $schemaName, $path, $field)
+                $propSchema = $schemaPath !== null
+                    ? nestedPropSchema($spec, $schemaName, $schemaPath, $field)
                     : ($spec['components']['schemas'][$schemaName]['properties'][$field] ?? []);
                 $specType = specTypeCategory($propSchema);
                 $sdkType = phpTypeCategory($phpType);
@@ -1043,7 +1124,7 @@ function auditTypes(array $map, array $spec, array $reachable, array $classIndex
                     continue;
                 }
 
-                $label = $schemaName.($path !== null ? ".{$path}" : '');
+                $label = $schemaName.($schemaPath !== null ? ".{$schemaPath}" : '');
                 $findings[] = [
                     'field' => "{$label}.{$field}",
                     'class' => $entry['sdk'][0]['class'],
@@ -1076,7 +1157,7 @@ function detectIndent(string $line): string
 
 function applyEnumCaseInsertion(string $root, string $file, string $className, string $value, array $newSpec, array $specValuesByEnum): void
 {
-    $path = "{$root}/{$file}";
+    $path = resolveWithinRoot($root, $file, "enum class file for {$className}");
     $lines = file($path, FILE_IGNORE_NEW_LINES);
     $classes = scanClassesDetailed($path);
     $info = $classes[$className];
@@ -1141,7 +1222,7 @@ function deriveEnumCaseName(string $className, string $value): string
  */
 function applyFieldInsertion(string $root, string $file, string $className, string $field, array $propSchema): void
 {
-    $path = "{$root}/{$file}";
+    $path = resolveWithinRoot($root, $file, "class file for {$className}");
     $camel = snakeToCamel($field);
     $phpType = phpTypeFor($propSchema);
 
@@ -1251,7 +1332,7 @@ function bumpVersionString(string $version, string $bump): string
 
 function bumpVersion(string $root, string $bump): string
 {
-    $file = "{$root}/src/BlindPay.php";
+    $file = resolveWithinRoot($root, 'src/BlindPay.php', 'VERSION file');
     $source = file_get_contents($file);
     if (! preg_match("/private const VERSION = '([0-9]+\\.[0-9]+\\.[0-9]+)';/", $source, $m)) {
         fwrite(STDERR, "[api-sync] FAIL: could not find VERSION const in src/BlindPay.php\n");
@@ -1285,8 +1366,10 @@ function runCli(array $argv, string $root): void
 {
     $opts = parseArgs($argv);
     $mode = $opts['apply'] ? 'apply' : 'check';
-    $specPath = $opts['spec'] ?? ($root.'/.api-sync/spec-current.json');
-    $reportPath = $opts['report'] ?? null;
+    // Resolved and validated once, right where they enter the program (see resolveReadablePath()/
+    // resolveWritablePath() above), not re-trusted as raw strings at each later read/write.
+    $specPath = resolveReadablePath($opts['spec'] ?? ($root.'/.api-sync/spec-current.json'), '--spec');
+    $reportPath = $opts['report'] !== null ? resolveWritablePath($opts['report'], '--report') : null;
 
     $map = loadJson($root.'/.api-sync/spec-map.json');
     $unmodeled = loadJson($root.'/.api-sync/unmodeled.json');
@@ -1447,7 +1530,7 @@ function runCli(array $argv, string $root): void
     // Refresh the snapshot with the SOURCE SPEC FILE'S BYTES, verbatim -- never re-serialize via
     // json_decode/json_encode, which would silently reformat indentation, escaping and key order
     // and turn every future sync PR into an ~86k-line unreviewable snapshot diff.
-    copy($specPath, $root.'/.api-sync/spec-snapshot.json');
+    copy($specPath, resolveWithinRoot($root, '.api-sync/spec-snapshot.json', 'spec snapshot'));
 
     $report['applied'] = $applicable;
     if ($reportPath !== null) {

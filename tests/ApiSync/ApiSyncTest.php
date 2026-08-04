@@ -718,6 +718,146 @@ class ApiSyncTest extends TestCase
         $this->assertNotEmpty(array_filter($output, fn ($l) => str_contains($l, 'WidgetOut.name')));
     }
 
+    // ---- path validation: every path from a CLI arg or spec-map.json is resolved and validated
+    // ---- before any read/write touches it, and writes derived from spec-map.json cannot escape
+    // ---- the repository root.
+
+    #[Test]
+    public function resolve_readable_path_accepts_an_existing_file_and_returns_its_canonical_form(): void
+    {
+        $file = "{$this->fixtureRoot}/src/BlindPay.php";
+        file_put_contents($file, "<?php\n");
+
+        $resolved = resolveReadablePath($file, '--spec');
+
+        $this->assertSame(realpath($file), $resolved);
+    }
+
+    #[Test]
+    public function resolve_readable_path_rejects_a_nul_byte(): void
+    {
+        // A NUL byte cannot survive in a real argv element (execve() argv strings are
+        // NUL-terminated), so this is tested as a direct unit call, isolated in a subprocess since
+        // resolveReadablePath() calls exit(1) on rejection, which would otherwise kill the test
+        // runner. The `"\0"` is a PHP string escape evaluated at runtime by the subprocess, not a
+        // raw byte passed through shell argv.
+        [$output, $exitCode] = $this->runPhpSnippetInSubprocess(
+            'resolveReadablePath("/tmp/whatever"."\0".".json", "--spec");'
+        );
+
+        $this->assertSame(1, $exitCode);
+        $this->assertNotEmpty(array_filter($output, fn ($l) => str_contains($l, 'invalid --spec path')));
+    }
+
+    #[Test]
+    public function resolve_readable_path_rejects_a_file_that_does_not_exist(): void
+    {
+        [$output, $exitCode] = $this->runCliSubprocess(['--check', '--spec='."{$this->fixtureRoot}/does-not-exist.json"]);
+
+        $this->assertSame(1, $exitCode);
+        $this->assertNotEmpty(array_filter($output, fn ($l) => str_contains($l, 'does not exist')));
+    }
+
+    #[Test]
+    public function resolve_writable_path_rejects_a_parent_directory_that_does_not_exist(): void
+    {
+        [$output, $exitCode] = $this->runCliSubprocess([
+            '--check',
+            '--spec='."{$this->fixtureRoot}/.api-sync/spec-snapshot.json",
+            '--report='."{$this->fixtureRoot}/no-such-dir/report.json",
+        ]);
+
+        $this->assertSame(1, $exitCode);
+        $this->assertNotEmpty(array_filter($output, fn ($l) => str_contains($l, 'directory for --report does not exist')));
+    }
+
+    #[Test]
+    public function resolve_writable_path_accepts_a_destination_outside_the_repository_root(): void
+    {
+        // Required, legitimate functionality: CI writes --report to /tmp; the determinism proof
+        // writes into scratch copies elsewhere on disk. Writable paths are deliberately NOT
+        // restricted to the repository root (only spec-map.json-driven writes are, see below).
+        $outside = sys_get_temp_dir().'/blindpay-api-sync-report-'.bin2hex(random_bytes(6)).'.json';
+
+        $resolved = resolveWritablePath($outside, '--report');
+
+        $this->assertSame(realpath(dirname($outside)).'/'.basename($outside), $resolved);
+    }
+
+    #[Test]
+    public function resolve_within_root_accepts_a_legitimate_spec_map_file(): void
+    {
+        $resolved = resolveWithinRoot($this->fixtureRoot, 'src/Resources/Widgets/Widgets.php', 'class file');
+
+        $this->assertSame(realpath("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php"), $resolved);
+    }
+
+    #[Test]
+    public function resolve_within_root_refuses_a_path_that_escapes_the_repository_root(): void
+    {
+        // Simulates a corrupted or malicious spec-map.json entry trying to write outside the repo.
+        // Unit-tested directly against resolveWithinRoot(): going through the full CLI, validateMap()
+        // would independently catch this first (the named class isn't actually declared at the
+        // claimed file), which is good defense in depth but would mask the check this test targets.
+        $escapeDir = dirname($this->fixtureRoot).'/escape-target-'.basename($this->fixtureRoot);
+        mkdir($escapeDir, 0777, true);
+
+        try {
+            [$output, $exitCode] = $this->runPhpSnippetInSubprocess(sprintf(
+                'resolveWithinRoot(%s, %s, "class file");',
+                var_export($this->fixtureRoot, true),
+                var_export('../'.basename($escapeDir).'/evil.php', true)
+            ));
+
+            $this->assertSame(1, $exitCode);
+            $this->assertNotEmpty(array_filter($output, fn ($l) => str_contains($l, 'resolves outside the repository root')));
+            $this->assertFileDoesNotExist("{$escapeDir}/evil.php");
+        } finally {
+            $this->removeDirectory($escapeDir);
+        }
+    }
+
+    /** @return array{0: array<int, string>, 1: int} */
+    private function runCliSubprocess(array $args): array
+    {
+        mkdir("{$this->fixtureRoot}/.api-sync", 0777, true);
+        mkdir("{$this->fixtureRoot}/scripts", 0777, true);
+        copy(__DIR__.'/../../scripts/api-sync.php', "{$this->fixtureRoot}/scripts/api-sync.php");
+        file_put_contents("{$this->fixtureRoot}/src/BlindPay.php", "<?php\nclass BlindPay { private const VERSION = '1.0.0'; }\n");
+        file_put_contents("{$this->fixtureRoot}/.api-sync/spec-map.json", json_encode($this->widgetMap()));
+        file_put_contents("{$this->fixtureRoot}/.api-sync/unmodeled.json", json_encode(['entries' => []]));
+        file_put_contents("{$this->fixtureRoot}/.api-sync/known-divergences.json", json_encode(['enumValues' => [], 'fields' => []]));
+        file_put_contents("{$this->fixtureRoot}/.api-sync/spec-snapshot.json", json_encode($this->baseSpec()));
+
+        $cmd = 'php '.escapeshellarg("{$this->fixtureRoot}/scripts/api-sync.php");
+        foreach ($args as $arg) {
+            $cmd .= ' '.escapeshellarg($arg);
+        }
+        exec($cmd.' 2>&1', $output, $exitCode);
+
+        return [$output, $exitCode];
+    }
+
+    /**
+     * Runs one PHP statement in a fresh subprocess that has already `require_once`'d api-sync.php
+     * in lib-only mode, so a helper under test that calls exit() on failure doesn't kill the test
+     * runner. Used to unit-test resolveReadablePath()/resolveWithinRoot()'s exit(1) paths directly.
+     *
+     * @return array{0: array<int, string>, 1: int}
+     */
+    private function runPhpSnippetInSubprocess(string $statement): array
+    {
+        $script = $this->fixtureRoot.'/snippet.php';
+        file_put_contents($script, sprintf(
+            "<?php\ndefine('API_SYNC_LIB_ONLY', true);\nrequire %s;\n%s\n",
+            var_export(__DIR__.'/../../scripts/api-sync.php', true),
+            $statement
+        ));
+        exec('php '.escapeshellarg($script).' 2>&1', $output, $exitCode);
+
+        return [$output, $exitCode];
+    }
+
     // ---- snapshot refresh must copy bytes verbatim, never re-serialize ----
 
     #[Test]

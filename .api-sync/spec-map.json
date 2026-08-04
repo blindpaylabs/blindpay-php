@@ -213,7 +213,8 @@
     { "spec": "AvailableBankDetails", "sdk": [ { "file": "src/Resources/Available/Available.php", "class": "BankDetail" } ] },
     { "spec": "AvailableNaicsList", "sdk": [ { "file": "src/Resources/Available/Available.php", "class": "NaicsCode" } ] },
     { "spec": "UploadIn", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "UploadInput" } ] },
-    { "spec": "UploadOut", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "UploadResponse" } ] }
+    { "spec": "UploadOut", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "UploadResponse" } ] },
+    { "spec": "PaginationMetadata", "sdk": [ { "file": "src/Types/PaginationMetadata.php", "class": "PaginationMetadata" } ], "note": "referenced from the customers/payouts/payins/transfers list-response envelopes. next_page/prev_page type mismatch is a LIVE DEFECT, see known-divergences.json -- not fixed here." }
   ],
   "webhookPayloadsNote": "This SDK never deserializes webhook request bodies into typed classes -- BlindPay::verifyWebhookSignature() only verifies the signature and returns bool; callers get the raw payload. Consequently no `*WebhookOut` schema (BankAccountWebhookOut, BlockchainWalletWebhookOut, CustomerNewWebhookOut, CustomerUpdateWebhookOut, CustomerDeleteWebhookOut, PayinNewWebhookOut, PayinUpdateWebhookOut, PayinCompleteWebhookOut, PayinPartnerFeeWebhookOut, PayoutNewWebhookOut, PayoutUpdateWebhookOut, PayoutCompleteWebhookOut, PayoutPartnerFeeWebhookOut, LimitIncreaseNewWebhookOut, LimitIncreaseUpdateWebhookOut, TosAcceptWebhookOut) is mapped below; this is a structural fact about the SDK, not an oversight, and shows up as non-blocking coverage gaps rather than reconciliation failures.",
   "ignore": {
