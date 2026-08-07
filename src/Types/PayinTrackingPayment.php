@@ -11,6 +11,8 @@ readonly class PayinTrackingPayment extends BaseTracking
     public function __construct(
         string $step,
         public ?string $providerName = null,
+        public ?array $reviewContexts = null,
+        public ?array $reviewSources = null,
         ?DateTimeImmutable $completedAt = null
     ) {
         parent::__construct($step, $completedAt);
@@ -21,7 +23,9 @@ readonly class PayinTrackingPayment extends BaseTracking
         return new self(
             step: $data['step'],
             providerName: $data['provider_name'] ?? null,
-            completedAt: isset($data['completed_at'])
+            completedAt: isset($data['completed_at']),
+            reviewContexts: $data['review_contexts'] ?? null,
+            reviewSources: $data['review_sources'] ?? null
                 ? new DateTimeImmutable($data['completed_at'])
                 : null
         );
@@ -33,6 +37,8 @@ readonly class PayinTrackingPayment extends BaseTracking
             'step' => $this->step,
             'provider_name' => $this->providerName,
             'completed_at' => $this->completedAt?->format('c'),
+            'review_contexts' => $this->reviewContexts,
+            'review_sources' => $this->reviewSources,
         ];
     }
 }
