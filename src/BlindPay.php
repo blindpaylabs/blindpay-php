@@ -39,7 +39,7 @@ class BlindPay implements ApiClientInterface
 {
     private const BASE_URL = 'https://api.blindpay.com/v1/';
 
-    private const VERSION = '3.4.0';
+    private const VERSION = '3.4.1';
 
     private Client $httpClient;
 
