@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\BankAccounts;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\BlindPayApiResponse;
@@ -50,29 +51,29 @@ readonly class BankAccountListItem
      */
     public function __construct(
         public string $id,
-        public Rail $type,
+        public Rail|string $type,
         public string $name,
         public ?string $pixKey,
         public ?string $beneficiaryName,
         public ?string $routingNumber,
         public ?string $accountNumber,
-        public ?BankAccountType $accountType,
-        public ?AccountClass $accountClass,
+        public BankAccountType|string|null $accountType,
+        public AccountClass|string|null $accountClass,
         public ?string $addressLine1,
         public ?string $addressLine2,
         public ?string $city,
         public ?string $stateProvinceRegion,
-        public ?Country $country,
+        public Country|string|null $country,
         public ?string $postalCode,
         public ?string $speiProtocol,
         public ?string $speiInstitutionCode,
         public ?string $speiClabe,
-        public ?ArgentinaTransfers $transfersType,
+        public ArgentinaTransfers|string|null $transfersType,
         public ?string $transfersAccount,
         public ?string $achCopBeneficiaryFirstName,
         public ?string $achCopBeneficiaryLastName,
         public ?string $achCopDocumentId,
-        public ?AchCopDocument $achCopDocumentType,
+        public AchCopDocument|string|null $achCopDocumentType,
         public ?string $achCopEmail,
         public ?string $achCopBankCode,
         public ?string $achCopBankAccount,
@@ -81,21 +82,21 @@ readonly class BankAccountListItem
         public ?string $swiftAccountNumberIban,
         public ?string $swiftBeneficiaryAddressLine1,
         public ?string $swiftBeneficiaryAddressLine2,
-        public ?Country $swiftBeneficiaryCountry,
+        public Country|string|null $swiftBeneficiaryCountry,
         public ?string $swiftBeneficiaryCity,
         public ?string $swiftBeneficiaryStateProvinceRegion,
         public ?string $swiftBeneficiaryPostalCode,
         public ?string $swiftBankName,
         public ?string $swiftBankAddressLine1,
         public ?string $swiftBankAddressLine2,
-        public ?Country $swiftBankCountry,
+        public Country|string|null $swiftBankCountry,
         public ?string $swiftBankCity,
         public ?string $swiftBankStateProvinceRegion,
         public ?string $swiftBankPostalCode,
         public ?string $swiftIntermediaryBankSwiftCodeBic,
         public ?string $swiftIntermediaryBankAccountNumberIban,
         public ?string $swiftIntermediaryBankName,
-        public ?Country $swiftIntermediaryBankCountry,
+        public Country|string|null $swiftIntermediaryBankCountry,
         public ?string $tronWalletHash,
         public ?array $offrampWallets,
         public ?DateTimeImmutable $createdAt,
@@ -109,29 +110,29 @@ readonly class BankAccountListItem
     {
         return new self(
             id: $data['id'],
-            type: Rail::from($data['type']),
+            type: Decode::enum(Rail::class, $data['type']),
             name: $data['name'],
             pixKey: $data['pix_key'] ?? null,
             beneficiaryName: $data['beneficiary_name'] ?? null,
             routingNumber: $data['routing_number'] ?? null,
             accountNumber: $data['account_number'] ?? null,
-            accountType: isset($data['account_type']) ? BankAccountType::from($data['account_type']) : null,
-            accountClass: isset($data['account_class']) ? AccountClass::from($data['account_class']) : null,
+            accountType: Decode::enum(BankAccountType::class, $data['account_type'] ?? null),
+            accountClass: Decode::enum(AccountClass::class, $data['account_class'] ?? null),
             addressLine1: $data['address_line_1'] ?? null,
             addressLine2: $data['address_line_2'] ?? null,
             city: $data['city'] ?? null,
             stateProvinceRegion: $data['state_province_region'] ?? null,
-            country: isset($data['country']) ? Country::from($data['country']) : null,
+            country: Decode::enum(Country::class, $data['country'] ?? null),
             postalCode: $data['postal_code'] ?? null,
             speiProtocol: $data['spei_protocol'] ?? null,
             speiInstitutionCode: $data['spei_institution_code'] ?? null,
             speiClabe: $data['spei_clabe'] ?? null,
-            transfersType: isset($data['transfers_type']) ? ArgentinaTransfers::from($data['transfers_type']) : null,
+            transfersType: Decode::enum(ArgentinaTransfers::class, $data['transfers_type'] ?? null),
             transfersAccount: $data['transfers_account'] ?? null,
             achCopBeneficiaryFirstName: $data['ach_cop_beneficiary_first_name'] ?? null,
             achCopBeneficiaryLastName: $data['ach_cop_beneficiary_last_name'] ?? null,
             achCopDocumentId: $data['ach_cop_document_id'] ?? null,
-            achCopDocumentType: isset($data['ach_cop_document_type']) ? AchCopDocument::from($data['ach_cop_document_type']) : null,
+            achCopDocumentType: Decode::enum(AchCopDocument::class, $data['ach_cop_document_type'] ?? null),
             achCopEmail: $data['ach_cop_email'] ?? null,
             achCopBankCode: $data['ach_cop_bank_code'] ?? null,
             achCopBankAccount: $data['ach_cop_bank_account'] ?? null,
@@ -140,21 +141,21 @@ readonly class BankAccountListItem
             swiftAccountNumberIban: $data['swift_account_number_iban'] ?? null,
             swiftBeneficiaryAddressLine1: $data['swift_beneficiary_address_line_1'] ?? null,
             swiftBeneficiaryAddressLine2: $data['swift_beneficiary_address_line_2'] ?? null,
-            swiftBeneficiaryCountry: isset($data['swift_beneficiary_country']) ? Country::from($data['swift_beneficiary_country']) : null,
+            swiftBeneficiaryCountry: Decode::enum(Country::class, $data['swift_beneficiary_country'] ?? null),
             swiftBeneficiaryCity: $data['swift_beneficiary_city'] ?? null,
             swiftBeneficiaryStateProvinceRegion: $data['swift_beneficiary_state_province_region'] ?? null,
             swiftBeneficiaryPostalCode: $data['swift_beneficiary_postal_code'] ?? null,
             swiftBankName: $data['swift_bank_name'] ?? null,
             swiftBankAddressLine1: $data['swift_bank_address_line_1'] ?? null,
             swiftBankAddressLine2: $data['swift_bank_address_line_2'] ?? null,
-            swiftBankCountry: isset($data['swift_bank_country']) ? Country::from($data['swift_bank_country']) : null,
+            swiftBankCountry: Decode::enum(Country::class, $data['swift_bank_country'] ?? null),
             swiftBankCity: $data['swift_bank_city'] ?? null,
             swiftBankStateProvinceRegion: $data['swift_bank_state_province_region'] ?? null,
             swiftBankPostalCode: $data['swift_bank_postal_code'] ?? null,
             swiftIntermediaryBankSwiftCodeBic: $data['swift_intermediary_bank_swift_code_bic'] ?? null,
             swiftIntermediaryBankAccountNumberIban: $data['swift_intermediary_bank_account_number_iban'] ?? null,
             swiftIntermediaryBankName: $data['swift_intermediary_bank_name'] ?? null,
-            swiftIntermediaryBankCountry: isset($data['swift_intermediary_bank_country']) ? Country::from($data['swift_intermediary_bank_country']) : null,
+            swiftIntermediaryBankCountry: Decode::enum(Country::class, $data['swift_intermediary_bank_country'] ?? null),
             tronWalletHash: $data['tron_wallet_hash'] ?? null,
             offrampWallets: $data['offramp_wallets'] ?? null,
             createdAt: isset($data['created_at'])
@@ -196,6 +197,11 @@ readonly class GetBankAccountInput
     ) {}
 }
 
+/**
+ * @deprecated Never matched the API (BankAccountOut has none of customer_id, account_holder_name,
+ *             bank_name, is_primary or updated_at), so decoding always failed. get() returns a
+ *             BankAccountListItem, the type the API's BankAccountOut maps to.
+ */
 readonly class BankAccountResponse
 {
     public function __construct(
@@ -1056,7 +1062,7 @@ class BankAccounts
      * Get a specific bank account
      *
      * @param GetBankAccountInput $input
-     * @return BlindPayApiResponse<BankAccountResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function get(GetBankAccountInput $input): BlindPayApiResponse
     {
@@ -1072,7 +1078,7 @@ class BankAccounts
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
-                BankAccountResponse::fromArray($response->data)
+                BankAccountListItem::fromArray($response->data)
             );
         }
 

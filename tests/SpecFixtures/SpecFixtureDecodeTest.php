@@ -102,8 +102,6 @@ final class SpecFixtureDecodeTest extends TestCase
         'GET /v1/instances/{instance_id}/customers' => 'audit 8.12',
         'GET /v1/instances/{instance_id}/customers/{id}' => 'audit 8.12',
         'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => 'per-rail create responses: nullable fields read as required (audit 4.7)',
-        'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => 'audit 8.14 (Rail)',
-        'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{id}' => 'audit 8.8',
         'POST /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => 'audit 8.15',
         'GET /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => 'audit 8.15',
         'GET /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts/{id}' => 'audit 8.15',

@@ -7,6 +7,7 @@ namespace BlindPay\SDK\Tests\Resources;
 use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\Resources\BankAccounts\AchCopDocument;
 use BlindPay\SDK\Resources\BankAccounts\ArgentinaTransfers;
+use BlindPay\SDK\Resources\BankAccounts\BankAccountListItem;
 use BlindPay\SDK\Resources\BankAccounts\CreateAchInput;
 use BlindPay\SDK\Resources\BankAccounts\CreateArgentinaTransfersInput;
 use BlindPay\SDK\Resources\BankAccounts\CreateColombiaAchInput;
@@ -21,6 +22,7 @@ use BlindPay\SDK\Resources\BankAccounts\SpeiProtocol;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\Country;
+use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\RecipientRelationship;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -495,19 +497,17 @@ class BankAccountsTest extends TestCase
     #[Test]
     public function it_gets_a_bank_account(): void
     {
+        // BankAccountOut: the same shape list() returns per item.
         $mockedBankAccount = [
             'id' => 'ba_000000000000',
-            'customer_id' => 'rcv_123',
-            'account_holder_name' => 'Individual full name or business name',
+            'type' => 'ach',
+            'name' => 'Main checking',
+            'beneficiary_name' => 'Individual full name or business name',
             'account_number' => '1001001234',
             'routing_number' => '012345678',
             'account_type' => 'checking',
-            'bank_name' => 'Bank Name',
-            'swift_code' => '123456789',
-            'iban' => null,
-            'is_primary' => false,
+            'account_class' => 'individual',
             'created_at' => '2021-01-01T00:00:00Z',
-            'updated_at' => '2021-01-01T00:00:00Z',
         ];
 
         $this->mockResponse($mockedBankAccount);
@@ -521,16 +521,14 @@ class BankAccountsTest extends TestCase
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
+        $this->assertInstanceOf(BankAccountListItem::class, $response->data);
         $this->assertEquals('ba_000000000000', $response->data->id);
-        $this->assertEquals('rcv_123', $response->data->customerId);
-        $this->assertEquals('Individual full name or business name', $response->data->accountHolderName);
+        $this->assertSame(Rail::ACH, $response->data->type);
+        $this->assertEquals('Main checking', $response->data->name);
+        $this->assertEquals('Individual full name or business name', $response->data->beneficiaryName);
         $this->assertEquals('1001001234', $response->data->accountNumber);
         $this->assertEquals('012345678', $response->data->routingNumber);
         $this->assertEquals(BankAccountType::CHECKING, $response->data->accountType);
-        $this->assertEquals('Bank Name', $response->data->bankName);
-        $this->assertEquals('123456789', $response->data->swiftCode);
-        $this->assertNull($response->data->iban);
-        $this->assertFalse($response->data->isPrimary);
     }
 
     #[Test]
