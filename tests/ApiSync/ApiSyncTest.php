@@ -1089,6 +1089,148 @@ class ApiSyncTest extends TestCase
         $this->assertPhpFileParses("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php");
     }
 
+    // ---- regression: v3.4.1 spliced new arguments into a multi-line ternary ----
+
+    /** A class shaped like PayinTrackingPayment before v3.4.1: a non-promoted last constructor
+     * parameter, and multi-line last elements in both fromArray and toArray. */
+    private function writeMultiLineTrackingFixture(string $namespace): string
+    {
+        $file = "{$this->fixtureRoot}/src/Types/TrackingFixture.php";
+        file_put_contents($file, <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace {$namespace};
+
+            use DateTimeImmutable;
+
+            abstract readonly class BaseTrackingFixture
+            {
+                public function __construct(
+                    public string \$step,
+                    public ?DateTimeImmutable \$completedAt
+                ) {}
+            }
+
+            readonly class TrackingFixture extends BaseTrackingFixture
+            {
+                public function __construct(
+                    string \$step,
+                    public ?string \$providerName = null,
+                    ?DateTimeImmutable \$completedAt = null
+                ) {
+                    parent::__construct(\$step, \$completedAt);
+                }
+
+                public static function fromArray(array \$data): self
+                {
+                    return new self(
+                        step: \$data['step'],
+                        providerName: \$data['provider_name'] ?? null,
+                        completedAt: isset(\$data['completed_at'])
+                            ? new DateTimeImmutable(\$data['completed_at'])
+                            : null
+                    );
+                }
+
+                public function toArray(): array
+                {
+                    return [
+                        'step' => \$this->step,
+                        'completed_at' => \$this->completedAt !== null
+                            ? \$this->completedAt->format('c')
+                            : null,
+                    ];
+                }
+            }
+
+            PHP);
+
+        return $file;
+    }
+
+    #[Test]
+    public function field_insertion_appends_after_a_multi_line_last_argument_instead_of_splitting_it(): void
+    {
+        $namespace = 'BlindPay\\SDK\\Tests\\ApiSyncRegression\\N'.bin2hex(random_bytes(6));
+        $file = $this->writeMultiLineTrackingFixture($namespace);
+
+        foreach (['review_contexts', 'review_sources'] as $field) {
+            applyFieldInsertion($this->fixtureRoot, 'src/Types/TrackingFixture.php', 'TrackingFixture', $field, ['type' => ['array', 'null']]);
+        }
+
+        $source = file_get_contents($file);
+        $this->assertStringContainsString(<<<'PHP'
+                        completedAt: isset($data['completed_at'])
+                            ? new DateTimeImmutable($data['completed_at'])
+                            : null,
+                        reviewContexts: $data['review_contexts'] ?? null,
+                        reviewSources: $data['review_sources'] ?? null
+                    );
+            PHP, $source);
+        $this->assertStringContainsString(<<<'PHP'
+                    ?DateTimeImmutable $completedAt = null,
+                    public ?array $reviewContexts = null,
+                    public ?array $reviewSources = null
+                ) {
+            PHP, $source);
+        $this->assertStringContainsString(<<<'PHP'
+                            : null,
+                        'review_contexts' => $this->reviewContexts,
+                        'review_sources' => $this->reviewSources,
+                    ];
+            PHP, $source);
+        $this->assertPhpFileParses($file);
+
+        // `php -l` accepted the v3.4.1 output too (the bug was a TypeError at runtime), so also
+        // execute the patched fromArray/toArray.
+        require $file;
+        $class = "{$namespace}\\TrackingFixture";
+        $decoded = $class::fromArray([
+            'step' => 'processing',
+            'completed_at' => '2026-01-01T00:00:00Z',
+            'review_contexts' => [['source' => 'x']],
+            'review_sources' => ['manual'],
+        ]);
+        $this->assertInstanceOf(\DateTimeImmutable::class, $decoded->completedAt);
+        $this->assertSame([['source' => 'x']], $decoded->reviewContexts);
+        $this->assertSame(['manual'], $decoded->reviewSources);
+        $this->assertSame(['manual'], $decoded->toArray()['review_sources']);
+        $this->assertNull($class::fromArray(['step' => 'on_hold'])->completedAt);
+    }
+
+    #[Test]
+    public function field_insertion_refuses_to_splice_when_the_closing_paren_shares_the_last_argument_line(): void
+    {
+        file_put_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php", <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            namespace BlindPay\SDK\Resources\Widgets;
+
+            readonly class WidgetInline
+            {
+                public function __construct(
+                    public string $id
+                ) {}
+
+                public static function fromArray(array $data): self
+                {
+                    return new self(
+                        id: $data['id']);
+                }
+            }
+
+            PHP);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('closing delimiter shares a line');
+
+        applyFieldInsertion($this->fixtureRoot, 'src/Resources/Widgets/Widgets.php', 'WidgetInline', 'label', ['type' => 'string']);
+    }
+
     // ---- map validity ----
 
     #[Test]
