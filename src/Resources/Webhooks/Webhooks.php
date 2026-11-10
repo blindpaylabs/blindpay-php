@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Webhooks;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use DateTimeImmutable;
 
@@ -43,13 +44,13 @@ enum WebhookEvents: string
 readonly class WebhookEndpoint
 {
     /**
-     * @param  WebhookEvents[]  $events
+     * @param  array<WebhookEvents|string>  $events  an event this SDK version does not know yet is kept as its raw name
      */
     public function __construct(
         public string $id,
         public string $url,
         public array $events,
-        public string $lastEventAt,
+        public ?string $lastEventAt,
         public string $instanceId,
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt
@@ -61,10 +62,10 @@ readonly class WebhookEndpoint
             id: $data['id'],
             url: $data['url'],
             events: array_map(
-                fn (string $event) => WebhookEvents::from($event),
+                fn (string $event) => Decode::enum(WebhookEvents::class, $event),
                 $data['events']
             ),
-            lastEventAt: $data['last_event_at'],
+            lastEventAt: $data['last_event_at'] ?? null,
             instanceId: $data['instance_id'],
             createdAt: isset($data['created_at'])
                 ? new DateTimeImmutable($data['created_at'])
@@ -81,7 +82,7 @@ readonly class WebhookEndpoint
             'id' => $this->id,
             'url' => $this->url,
             'events' => array_map(
-                fn (WebhookEvents $event) => $event->value,
+                fn (WebhookEvents|string $event) => $event instanceof WebhookEvents ? $event->value : $event,
                 $this->events
             ),
             'last_event_at' => $this->lastEventAt,

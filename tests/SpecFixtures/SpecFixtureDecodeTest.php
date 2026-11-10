@@ -108,7 +108,6 @@ final class SpecFixtureDecodeTest extends TestCase
         'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets' => 'external_id nullable (audit 4.8)',
         'POST /v1/instances/{instance_id}/quotes' => 'expires_at nullable (audit 4.2)',
         'POST /v1/instances/{instance_id}/quotes/fx' => 'instance_flat_fee optional (audit 4.2)',
-        'GET /v1/instances/{instance_id}/webhook-endpoints' => 'audit 8.14 (WebhookEvents)',
         'GET /v1/instances/{instance_id}/partner-fees' => 'audit 8.10',
         'GET /v1/instances/{instance_id}/partner-fees/{id}' => 'audit 8.10',
         'GET /v1/available/bank-details' => 'BankDetail.required optional (audit 4.15)',
