@@ -106,6 +106,10 @@ readonly class SwiftCodeBankDetails
 
 readonly class NaicsCode
 {
+    /**
+     * @param  string  $code  the NAICS code (wire key `value`), e.g. "339910"
+     * @param  string  $title  the display label (wire key `label`), e.g. "(339910) Jewelry and Silverware Manufacturing"
+     */
     public function __construct(
         public string $code,
         public string $title
@@ -114,8 +118,8 @@ readonly class NaicsCode
     public static function fromArray(array $data): self
     {
         return new self(
-            code: $data['code'],
-            title: $data['title']
+            code: $data['value'],
+            title: $data['label']
         );
     }
 }

@@ -208,4 +208,21 @@ class AvailableTest extends TestCase
         $this->assertEquals('United States', $response->data[0]->country);
         $this->assertEquals('united-states', $response->data[0]->countrySlug);
     }
+
+    #[Test]
+    public function it_gets_naics_codes(): void
+    {
+        // AvailableNaicsList: [{label, value}]
+        $this->mockResponse([
+            ['label' => '(339910) Jewelry and Silverware Manufacturing', 'value' => '339910'],
+        ]);
+
+        $response = $this->blindpay->available->getNaicsCodes();
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->error);
+        $this->assertCount(1, $response->data);
+        $this->assertSame('339910', $response->data[0]->code);
+        $this->assertSame('(339910) Jewelry and Silverware Manufacturing', $response->data[0]->title);
+    }
 }
