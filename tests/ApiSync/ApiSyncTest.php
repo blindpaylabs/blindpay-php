@@ -1040,6 +1040,23 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
+    public function an_open_enum_union_is_compatible_with_a_spec_enum_or_string_and_carries_nullability(): void
+    {
+        $this->assertSame(['category' => 'string', 'nullable' => false, 'className' => null], phpTypeCategory('WidgetColor|string'));
+        $this->assertSame(['category' => 'string', 'nullable' => true, 'className' => null], phpTypeCategory('WidgetColor|string|null'));
+        $this->assertSame('ambiguous', phpTypeCategory('int|float')['category']);
+        $this->assertTrue(categoriesCompatible(['category' => 'enum', 'nullable' => false], phpTypeCategory('WidgetColor|string')));
+        $this->assertTrue(categoriesCompatible(['category' => 'string', 'nullable' => true], phpTypeCategory('WidgetColor|string|null')));
+        $this->assertFalse(categoriesCompatible(['category' => 'integer', 'nullable' => false], phpTypeCategory('WidgetColor|string')));
+
+        // end to end: the open-enum property passes reconciliation against an enum spec property
+        $source = file_get_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php");
+        file_put_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php", str_replace('public WidgetColor $color', 'public WidgetColor|string $color', $source));
+        [, $needsHuman] = reconcileTypes($this->widgetMap(), $this->baseSpec(), computeReachable($this->baseSpec()), scanAllClasses($this->fixtureRoot), []);
+        $this->assertEmpty($needsHuman);
+    }
+
+    #[Test]
     public function an_enum_backed_sdk_property_whose_spec_constraint_degrades_to_a_bare_string_is_needs_human(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);

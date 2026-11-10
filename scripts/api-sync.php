@@ -716,19 +716,27 @@ function specTypeCategory(array $propSchema): array
 }
 
 /**
- * Normalize a PHP promoted-property type declaration (e.g. "?string", "Network", "?array")
- * into {category, nullable}. A bare class/enum name normalizes to 'object'.
+ * Normalize a PHP promoted-property type declaration (e.g. "?string", "Network", "?array",
+ * "Network|string|null") into {category, nullable}. A bare class/enum name normalizes to 'object'.
+ * The open-enum union `SomeEnum|string` (a known wire value decodes to the enum case, an unknown
+ * one is kept as its raw string; see Internal\Decode::enum()) normalizes to 'string', which
+ * accepts every value of a spec enum or plain string. Any other union is 'ambiguous'.
  */
 function phpTypeCategory(?string $phpType): array
 {
     if ($phpType === null || $phpType === '') {
         return ['category' => null, 'nullable' => null, 'className' => null];
     }
-    $nullable = str_starts_with($phpType, '?');
-    $base = ltrim($phpType, '?');
-    if (str_contains($base, '|')) {
+    $parts = explode('|', ltrim($phpType, '?'));
+    $nullable = str_starts_with($phpType, '?') || in_array('null', $parts, true);
+    $parts = array_values(array_diff($parts, ['null']));
+    if (count($parts) === 2 && in_array('string', $parts, true)) {
+        return ['category' => 'string', 'nullable' => $nullable, 'className' => null];
+    }
+    if (count($parts) !== 1) {
         return ['category' => 'ambiguous', 'nullable' => $nullable, 'className' => null];
     }
+    $base = $parts[0];
     $scalarMap = ['string' => 'string', 'int' => 'integer', 'float' => 'number', 'bool' => 'boolean', 'array' => 'array'];
     $category = $scalarMap[$base] ?? 'object';
 
