@@ -23,11 +23,11 @@ readonly class PayinTrackingPayment extends BaseTracking
         return new self(
             step: $data['step'],
             providerName: $data['provider_name'] ?? null,
-            completedAt: isset($data['completed_at']),
+            completedAt: isset($data['completed_at'])
+                ? new DateTimeImmutable($data['completed_at'])
+                : null,
             reviewContexts: $data['review_contexts'] ?? null,
             reviewSources: $data['review_sources'] ?? null
-                ? new DateTimeImmutable($data['completed_at'])
-                : null
         );
     }
 
