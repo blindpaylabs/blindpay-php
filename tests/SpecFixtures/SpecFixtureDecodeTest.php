@@ -99,8 +99,6 @@ final class SpecFixtureDecodeTest extends TestCase
     private const PENDING = [
         'GET /v1/instances/{id}/members' => 'InstanceMember.created_at nullable, role enum closed (audit 4.14)',
         'GET /v1/instances/{instance_id}/customers/{customer_id}/limit-increase' => 'LimitIncreaseRequestStatus closed (audit 4.6)',
-        'GET /v1/instances/{instance_id}/customers' => 'audit 8.12',
-        'GET /v1/instances/{instance_id}/customers/{id}' => 'audit 8.12',
         'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => 'per-rail create responses: nullable fields read as required (audit 4.7)',
         'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets' => 'external_id nullable (audit 4.8)',
         'POST /v1/instances/{instance_id}/quotes' => 'expires_at nullable (audit 4.2)',

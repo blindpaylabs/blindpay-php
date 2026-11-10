@@ -34,4 +34,13 @@ final class Decode
 
         return $enum::tryFrom($value) ?? (string) $value;
     }
+
+    /**
+     * The wire value of a property decoded with enum(): the case's backing value, or the raw
+     * string kept for an unknown value.
+     */
+    public static function wire(BackedEnum|string|null $value): string|int|null
+    {
+        return $value instanceof BackedEnum ? $value->value : $value;
+    }
 }
