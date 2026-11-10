@@ -11,8 +11,8 @@ readonly class TrackingLiquidity extends BaseTracking
     public function __construct(
         string $step,
         public ?string $providerTransactionId,
-        public string $providerStatus,
-        public string $estimatedTimeOfArrival,
+        public ?string $providerStatus,
+        public ?string $estimatedTimeOfArrival,
         ?DateTimeImmutable $completedAt
     ) {
         parent::__construct($step, $completedAt);
@@ -23,8 +23,8 @@ readonly class TrackingLiquidity extends BaseTracking
         return new self(
             step: $data['step'],
             providerTransactionId: $data['provider_transaction_id'] ?? null,
-            providerStatus: $data['provider_status'],
-            estimatedTimeOfArrival: $data['estimated_time_of_arrival'],
+            providerStatus: $data['provider_status'] ?? null,
+            estimatedTimeOfArrival: $data['estimated_time_of_arrival'] ?? null,
             completedAt: isset($data['completed_at'])
                 ? new DateTimeImmutable($data['completed_at'])
                 : null
