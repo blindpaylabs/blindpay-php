@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Internal;
 
 use BackedEnum;
+use ReflectionEnum;
 
 /**
  * Forward-compatible decoding helpers for response DTOs.
@@ -31,6 +32,10 @@ final class Decode
         if (! is_string($value) && ! is_int($value)) {
             return (string) json_encode($value);
         }
+        // tryFrom() is strictly typed: match the enum's backing type so it can never throw.
+        $value = (new ReflectionEnum($enum))->getBackingType()?->getName() === 'int' && ctype_digit((string) $value)
+            ? (int) $value
+            : (string) $value;
 
         return $enum::tryFrom($value) ?? (string) $value;
     }
