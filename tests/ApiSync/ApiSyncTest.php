@@ -1231,6 +1231,71 @@ class ApiSyncTest extends TestCase
         applyFieldInsertion($this->fixtureRoot, 'src/Resources/Widgets/Widgets.php', 'WidgetInline', 'label', ['type' => 'string']);
     }
 
+    #[Test]
+    public function field_insertion_extends_a_toarray_literal_wrapped_in_array_filter(): void
+    {
+        file_put_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php", <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            namespace BlindPay\SDK\Resources\Widgets;
+
+            readonly class WidgetUpdateInput
+            {
+                public function __construct(
+                    public ?string $name = null
+                ) {}
+
+                public function toArray(): array
+                {
+                    return array_filter([
+                        'name' => $this->name,
+                    ], fn ($value) => $value !== null);
+                }
+            }
+
+            PHP);
+
+        applyFieldInsertion($this->fixtureRoot, 'src/Resources/Widgets/Widgets.php', 'WidgetUpdateInput', 'label', ['type' => 'string']);
+
+        $source = file_get_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php");
+        $this->assertStringContainsString("            'name' => \$this->name,\n            'label' => \$this->label,\n        ], fn", $source);
+        $this->assertPhpFileParses("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php");
+    }
+
+    #[Test]
+    public function field_insertion_fails_loudly_instead_of_skipping_a_fromarray_it_cannot_anchor(): void
+    {
+        file_put_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php", <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            namespace BlindPay\SDK\Resources\Widgets;
+
+            readonly class WidgetFactory
+            {
+                public function __construct(
+                    public string $id
+                ) {}
+
+                public static function fromArray(array $data): self
+                {
+                    $args = ['id' => $data['id']];
+
+                    return new WidgetFactory(...$args);
+                }
+            }
+
+            PHP);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('no `new self(...)` call found');
+
+        applyFieldInsertion($this->fixtureRoot, 'src/Resources/Widgets/Widgets.php', 'WidgetFactory', 'label', ['type' => 'string']);
+    }
+
     // ---- map validity ----
 
     #[Test]

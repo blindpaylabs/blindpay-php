@@ -505,11 +505,12 @@ function scanClassesDetailed(string $path): array
         if ($currentFunction === 'toArray' && $currentClass !== null && isset($classes[$currentClass])) {
             $ta = &$classes[$currentClass]['toArray'];
 
-            // the array literal the method builds: `return [` or `$data = [` (first one wins)
-            if (! is_array($t) && $text === '[' && ! isset($ta['literal']) && $i > 0
-                && ((is_array($tokens[$i - 1]) && $tokens[$i - 1][0] === T_RETURN)
-                    || ($tokens[$i - 1] === '=' && isset($tokens[$i - 2]) && is_array($tokens[$i - 2])
-                        && $tokens[$i - 2][0] === T_VARIABLE && $tokens[$i - 2][1] === '$data'))
+            // the keyed array literal the method builds -- `return [`, `$data = [`, or wrapped as in
+            // `return array_filter([` -- is the first `[` whose first element is `'key' =>`
+            if (! is_array($t) && $text === '[' && ! isset($ta['literal'])
+                && isset($tokens[$i + 1], $tokens[$i + 2])
+                && is_array($tokens[$i + 1]) && $tokens[$i + 1][0] === T_CONSTANT_ENCAPSED_STRING
+                && is_array($tokens[$i + 2]) && $tokens[$i + 2][0] === T_DOUBLE_ARROW
             ) {
                 $ta['literal'] = scanListAnchor($tokens, $startLines, $endLines, $i);
             }
@@ -2075,17 +2076,22 @@ function applyFieldInsertion(string $root, string $file, string $className, stri
 
     // 1) constructor promoted property -- appended after the LAST parameter (promoted or not), so
     // it is always syntactically safe and never lands before a later parameter.
-    if ($info['ctor'] !== null && ! empty($info['ctor']['params']) && isset($info['ctor']['list'])) {
-        spliceListElement($lines, $info['ctor']['list'], "public ?{$phpType} \${$camel} = null", "{$className}::__construct parameters");
-        file_put_contents($path, implode("\n", $lines)."\n");
-        $lines = file($path, FILE_IGNORE_NEW_LINES);
-        $classes = scanClassesDetailed($path);
-        $info = $classes[$className];
+    if ($info['ctor'] === null || empty($info['ctor']['params']) || ! isset($info['ctor']['list'])) {
+        throw new RuntimeException("api-sync: cannot insert '{$field}' into {$className}: no constructor with promoted properties found");
     }
+    spliceListElement($lines, $info['ctor']['list'], "public ?{$phpType} \${$camel} = null", "{$className}::__construct parameters");
+    file_put_contents($path, implode("\n", $lines)."\n");
+    $lines = file($path, FILE_IGNORE_NEW_LINES);
+    $classes = scanClassesDetailed($path);
+    $info = $classes[$className];
 
-    // 2) fromArray argument -- only if the method builds `new self(...)`; appended after the end of
-    // the last argument expression, which may span several lines.
-    if ($info['fromArray'] !== null && isset($info['fromArray']['call']) && ! $info['fromArray']['call']['empty']) {
+    // 2) fromArray argument -- appended after the end of the last `new self(...)` argument
+    // expression, which may span several lines. A fromArray we cannot anchor is a hard failure:
+    // silently skipping it would leave a constructor property that is never populated.
+    if ($info['fromArray'] !== null) {
+        if (! isset($info['fromArray']['call'])) {
+            throw new RuntimeException("api-sync: cannot insert '{$field}' into {$className}::fromArray: no `new self(...)` call found");
+        }
         spliceListElement($lines, $info['fromArray']['call'], "{$camel}: \$data['{$field}'] ?? null", "{$className}::fromArray new self(...) arguments");
         file_put_contents($path, implode("\n", $lines)."\n");
         $lines = file($path, FILE_IGNORE_NEW_LINES);
@@ -2095,10 +2101,14 @@ function applyFieldInsertion(string $root, string $file, string $className, stri
 
     // 3) toArray line -- only if the method exists, honoring the class's own style.
     $ta = $info['toArray'];
-    if ($ta['style'] === 'literal' && isset($ta['literal'])) {
+    if (($ta['style'] === 'literal' && ! isset($ta['literal']))
+        || ($ta['style'] === 'conditional' && ! isset($ta['conditionalReturnLine']))) {
+        throw new RuntimeException("api-sync: cannot insert '{$field}' into {$className}::toArray: unrecognised layout");
+    }
+    if ($ta['style'] === 'literal') {
         spliceListElement($lines, $ta['literal'], "'{$field}' => \$this->{$camel}", "{$className}::toArray array literal");
         file_put_contents($path, implode("\n", $lines)."\n");
-    } elseif ($ta['style'] === 'conditional' && isset($ta['conditionalReturnLine'])) {
+    } elseif ($ta['style'] === 'conditional') {
         $returnLine = $ta['conditionalReturnLine'];
         $indent = detectIndent($lines[$returnLine - 1]);
         $block = [
