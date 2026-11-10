@@ -104,7 +104,7 @@ readonly class ExampleResponse
 {
     public function __construct(
         public string $id,
-        public TransactionStatus $status,
+        public TransactionStatus|string $status,
         public ?string $optionalField = null
     ) {}
 
@@ -112,7 +112,7 @@ readonly class ExampleResponse
     {
         return new self(
             id: $data['id'],
-            status: TransactionStatus::from($data['status']),
+            status: Decode::enum(TransactionStatus::class, $data['status']),
             optionalField: $data['optional_field'] ?? null
         );
     }
@@ -120,10 +120,10 @@ readonly class ExampleResponse
 ```
 
 Key rules:
-- Required fields: access directly as `$data['key']`
+- Required fields: access directly as `$data['key']`. "Required" means listed in the spec schema's `required` AND not nullable; anything else is optional.
 - Optional/nullable fields: use `$data['key'] ?? null`
-- Enum fields: use `EnumName::from($data['key'])`
-- Optional enum fields: `isset($data['key']) ? EnumName::from($data['key']) : null`
+- Enum fields in **response** types: never `EnumName::from()` (it throws on any value the API adds later). Use the open-enum pattern: `Decode::enum(EnumName::class, $data['key'])`, typed `EnumName|string` (unknown values are kept as the raw string). Optional: `Decode::enum(EnumName::class, $data['key'] ?? null)`, typed `EnumName|string|null`. In a `toArray()` of such a type, serialise with `Decode::wire($this->field)`. Request (input) enums stay closed.
+- Every response type must decode all variants of its shared spec fixture (`tests/Fixtures/spec`, exercised by `tests/SpecFixtures/SpecFixtureDecodeTest.php`); its `PENDING` list may only shrink.
 - Nested objects: `NestedType::fromArray($data['key'])`
 - Optional nested objects: `isset($data['key']) ? NestedType::fromArray($data['key']) : null`
 - Float fields: `(float) $data['key']`
