@@ -105,9 +105,6 @@ final class SpecFixtureDecodeTest extends TestCase
         'POST /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => 'audit 8.15',
         'GET /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => 'audit 8.15',
         'GET /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts/{id}' => 'audit 8.15',
-        'POST /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets' => 'audit 8.14 (Network)',
-        'GET /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets' => 'audit 8.14 (Network)',
-        'GET /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets/{id}' => 'audit 8.14 (Network)',
         'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets' => 'external_id nullable (audit 4.8)',
         'POST /v1/instances/{instance_id}/quotes' => 'expires_at nullable (audit 4.2)',
         'POST /v1/instances/{instance_id}/quotes/fx' => 'instance_flat_fee optional (audit 4.2)',
@@ -116,7 +113,6 @@ final class SpecFixtureDecodeTest extends TestCase
         'GET /v1/instances/{instance_id}/partner-fees/{id}' => 'audit 8.10',
         'GET /v1/available/bank-details' => 'BankDetail.required optional (audit 4.15)',
         'GET /v1/available/naics' => 'audit 8.11',
-        'POST /v1/instances/{instance_id}/mint-usdb-solana' => 'audit 8.13',
         'POST /v1/instances/{instance_id}/prepare-delegate-solana' => 'transaction optional (audit 4.11)',
     ];
 
