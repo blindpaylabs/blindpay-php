@@ -744,6 +744,18 @@ function phpTypeCategory(?string $phpType): array
 }
 
 /**
+ * The enum/class symbol a promoted-property type names: "?Network" and the open-enum unions
+ * "Network|string" / "Network|string|null" all give "Network". Any other type is returned with
+ * only a leading `?` stripped.
+ */
+function openEnumSymbol(string $phpType): string
+{
+    $parts = array_values(array_diff(explode('|', ltrim($phpType, '?')), ['string', 'null']));
+
+    return count($parts) === 1 ? $parts[0] : ltrim($phpType, '?');
+}
+
+/**
  * Whether a spec property's base representation and an SDK property's base representation are
  * compatible enough that a real spec value is guaranteed to decode correctly. Nullability is
  * deliberately NOT considered here -- see typeNullabilityWidened() below for why. Deliberately
@@ -989,7 +1001,7 @@ function computeEnumCoverageGaps(array $map, array $spec, array $reachable, arra
                 if ($phpType === null) {
                     continue; // not modeled via a promoted ctor property -- presence gaps are handled elsewhere
                 }
-                if (isset($enumClassSet[ltrim($phpType, '?')])) {
+                if (isset($enumClassSet[openEnumSymbol($phpType)])) {
                     continue; // resolves to a mapped enum symbol
                 }
                 $label = $schemaName.($schemaPath !== null ? ".{$schemaPath}" : '');

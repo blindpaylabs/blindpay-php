@@ -1048,6 +1048,9 @@ class ApiSyncTest extends TestCase
         $this->assertTrue(categoriesCompatible(['category' => 'enum', 'nullable' => false], phpTypeCategory('WidgetColor|string')));
         $this->assertTrue(categoriesCompatible(['category' => 'string', 'nullable' => true], phpTypeCategory('WidgetColor|string|null')));
         $this->assertFalse(categoriesCompatible(['category' => 'integer', 'nullable' => false], phpTypeCategory('WidgetColor|string')));
+        $this->assertSame('WidgetColor', openEnumSymbol('WidgetColor|string|null'));
+        $this->assertSame('WidgetColor', openEnumSymbol('?WidgetColor'));
+        $this->assertSame('string', openEnumSymbol('?string'));
 
         // end to end: the open-enum property passes reconciliation against an enum spec property
         $source = file_get_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php");
