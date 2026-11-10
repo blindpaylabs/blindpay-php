@@ -140,16 +140,23 @@ class CustodialWalletsTest extends TestCase
     #[Test]
     public function it_gets_custodial_wallet_balance(): void
     {
+        // WalletBalanceOut: per-token WalletTokenOut entries keyed by symbol.
         $mockedBalance = [
             'USDC' => [
-                'amount' => 150.50,
-                'token' => 'USDC',
+                'id' => 'tk_000000000001',
                 'address' => 'So1ana1234567890',
+                'symbol' => 'USDC',
+                'amount' => 150.50,
+                'earning_amount' => 0,
+                'total_amount' => 150.50,
             ],
             'USDT' => [
-                'amount' => 0.0,
-                'token' => 'USDT',
+                'id' => 'tk_000000000002',
                 'address' => 'So1ana1234567890',
+                'symbol' => 'USDT',
+                'amount' => 0.0,
+                'earning_amount' => 0,
+                'total_amount' => 0.0,
             ],
             'USDB' => null,
         ];
