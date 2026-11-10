@@ -19,6 +19,7 @@ enum WebhookEvents: string
     case PAYOUT_COMPLETE = 'payout.complete';
     case PAYOUT_PARTNER_FEE = 'payout.partnerFee';
     case BLOCKCHAIN_WALLET_NEW = 'blockchainWallet.new';
+    case BLOCKCHAIN_WALLET_UPDATE = 'blockchainWallet.update';
     case PAYIN_NEW = 'payin.new';
     case PAYIN_UPDATE = 'payin.update';
     case PAYIN_COMPLETE = 'payin.complete';
@@ -33,6 +34,10 @@ enum WebhookEvents: string
     case VIRTUAL_ACCOUNT_COMPLETE = 'virtualAccount.complete';
     case WALLET_INBOUND = 'wallet.inbound';
     case WALLET_NEW = 'wallet.new';
+    case WALLET_UPDATE = 'wallet.update';
+    case PAYABLE_NEW = 'payable.new';
+    case PAYABLE_UPDATE = 'payable.update';
+    case PAYABLE_COMPLETE = 'payable.complete';
 }
 
 readonly class WebhookEndpoint

@@ -34,7 +34,12 @@ enum AchCopDocument: string
 
 enum SpeiProtocol: string
 {
+    case CLABE = 'clabe';
+    case DEBITCARD = 'debitcard';
+    case PHONENUM = 'phonenum';
+    /** @deprecated Not a valid spei_protocol value; the API rejects it. Use CLABE, DEBITCARD or PHONENUM. */
     case SPEI = 'SPEI';
+    /** @deprecated Not a valid spei_protocol value; the API rejects it. Use CLABE, DEBITCARD or PHONENUM. */
     case STP = 'STP';
 }
 

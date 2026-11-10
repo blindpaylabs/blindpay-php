@@ -19,4 +19,8 @@ enum Network: string
     case TRON = 'tron';
     case SOLANA = 'solana';
     case SOLANA_DEVNET = 'solana_devnet';
+    case TEMPO = 'tempo';
+    case TEMPO_TESTNET = 'tempo_testnet';
+    case ARC = 'arc';
+    case ARC_TESTNET = 'arc_testnet';
 }
