@@ -17,7 +17,8 @@ readonly class PartnerFee
         public float $payoutFlatFee,
         public float $payinPercentageFee,
         public float $payinFlatFee,
-        public string $evmWalletAddress,
+        /** @deprecated Not returned by the API (no evm_wallet_address on partner fees); always null. */
+        public ?string $evmWalletAddress,
         public ?string $stellarWalletAddress = null
     ) {}
 
@@ -31,7 +32,7 @@ readonly class PartnerFee
             payoutFlatFee: (float) $data['payout_flat_fee'],
             payinPercentageFee: (float) $data['payin_percentage_fee'],
             payinFlatFee: (float) $data['payin_flat_fee'],
-            evmWalletAddress: $data['evm_wallet_address'],
+            evmWalletAddress: $data['evm_wallet_address'] ?? null,
             stellarWalletAddress: $data['stellar_wallet_address'] ?? null
         );
     }
@@ -123,7 +124,8 @@ readonly class GetPartnerFeeResponse
     public function __construct(
         public string $id,
         public string $instanceId,
-        public string $evmWalletAddress,
+        /** @deprecated Not returned by the API (no evm_wallet_address on partner fees); always null. */
+        public ?string $evmWalletAddress,
         public string $name,
         public float $payinFlatFee,
         public float $payinPercentageFee,
@@ -137,7 +139,7 @@ readonly class GetPartnerFeeResponse
         return new self(
             id: $data['id'],
             instanceId: $data['instance_id'],
-            evmWalletAddress: $data['evm_wallet_address'],
+            evmWalletAddress: $data['evm_wallet_address'] ?? null,
             name: $data['name'],
             payinFlatFee: (float) $data['payin_flat_fee'],
             payinPercentageFee: (float) $data['payin_percentage_fee'],
