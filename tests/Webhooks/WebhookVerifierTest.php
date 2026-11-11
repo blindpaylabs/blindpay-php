@@ -34,7 +34,7 @@ final class WebhookVerifierTest extends TestCase
     }
 
     #[Test]
-    public function the_shared_vector_file_has_all_fourteen_cases(): void
+    public function it_loads_all_fourteen_shared_vectors(): void
     {
         $this->assertCount(14, self::fixture()['vectors']);
         $this->assertSame(WebhookVerifier::DEFAULT_TOLERANCE, self::fixture()['tolerance_seconds']);
@@ -55,7 +55,7 @@ final class WebhookVerifierTest extends TestCase
     }
 
     #[Test]
-    public function header_names_are_case_insensitive_and_values_may_be_lists(): void
+    public function it_reads_header_names_case_insensitively_and_accepts_list_values(): void
     {
         $v = self::valid();
         $headers = [
@@ -81,7 +81,7 @@ final class WebhookVerifierTest extends TestCase
     }
 
     #[Test]
-    public function malformed_secrets_return_false_instead_of_throwing(): void
+    public function it_returns_false_for_malformed_secrets_instead_of_throwing(): void
     {
         $v = self::valid();
 
@@ -91,7 +91,7 @@ final class WebhookVerifierTest extends TestCase
     }
 
     #[Test]
-    public function a_custom_tolerance_is_honoured(): void
+    public function it_honours_a_custom_tolerance(): void
     {
         $v = self::valid();
 
@@ -100,7 +100,7 @@ final class WebhookVerifierTest extends TestCase
     }
 
     #[Test]
-    public function the_deprecated_client_method_verifies_real_headers_and_rejects_replays(): void
+    public function it_verifies_real_headers_and_rejects_replays_in_the_deprecated_client_method(): void
     {
         $blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000');
         $secret = self::valid()['secret'];

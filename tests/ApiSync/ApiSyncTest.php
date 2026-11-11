@@ -1040,7 +1040,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_open_enum_union_is_compatible_with_a_spec_enum_or_string_and_carries_nullability(): void
+    public function it_treats_an_open_enum_union_as_compatible_with_a_spec_enum_or_string_and_carries_nullability(): void
     {
         $this->assertSame(['category' => 'string', 'nullable' => false, 'className' => null], phpTypeCategory('WidgetColor|string'));
         $this->assertSame(['category' => 'string', 'nullable' => true, 'className' => null], phpTypeCategory('WidgetColor|string|null'));
@@ -1171,7 +1171,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function field_insertion_appends_after_a_multi_line_last_argument_instead_of_splitting_it(): void
+    public function it_appends_a_field_after_a_multi_line_last_argument_instead_of_splitting_it(): void
     {
         $namespace = 'BlindPay\\SDK\\Tests\\ApiSyncRegression\\N'.bin2hex(random_bytes(6));
         $file = $this->writeMultiLineTrackingFixture($namespace);
@@ -1221,7 +1221,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function field_insertion_refuses_to_splice_when_the_closing_paren_shares_the_last_argument_line(): void
+    public function it_refuses_to_splice_a_field_when_the_closing_paren_shares_the_last_argument_line(): void
     {
         file_put_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php", <<<'PHP'
             <?php
@@ -1252,7 +1252,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function field_insertion_extends_a_toarray_literal_wrapped_in_array_filter(): void
+    public function it_extends_a_toarray_literal_wrapped_in_array_filter(): void
     {
         file_put_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php", <<<'PHP'
             <?php
@@ -1285,7 +1285,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function field_insertion_fails_loudly_instead_of_skipping_a_fromarray_it_cannot_anchor(): void
+    public function it_fails_loudly_instead_of_skipping_a_fromarray_it_cannot_anchor(): void
     {
         file_put_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php", <<<'PHP'
             <?php
