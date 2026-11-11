@@ -50,7 +50,7 @@ final class WebhookEventTest extends TestCase
     }
 
     #[Test]
-    public function it_fixtures_cover_every_event_type_in_the_sdk(): void
+    public function it_covers_every_event_type_in_the_fixtures(): void
     {
         $events = array_unique(array_map(fn (array $case) => $case[0], self::fixtures()));
         $known = array_map(fn (WebhookEvents $e) => $e->value, WebhookEvents::cases());
@@ -81,7 +81,7 @@ final class WebhookEventTest extends TestCase
     }
 
     #[Test]
-    public function it_payloads_get_the_documented_types(): void
+    public function it_decodes_payloads_into_the_documented_types(): void
     {
         $decode = fn (string $event) => WebhookEvent::fromArray(json_decode((string) file_get_contents(__DIR__."/../Fixtures/spec/webhooks/{$event}.json"), true)['variants']['full']);
 
@@ -113,7 +113,7 @@ final class WebhookEventTest extends TestCase
     }
 
     #[Test]
-    public function it_known_event_with_an_undecodable_payload_throws(): void
+    public function it_throws_on_a_known_event_with_an_undecodable_payload(): void
     {
         $payload = '{"webhook_event":"payout.complete","id":"po_1"}';
 

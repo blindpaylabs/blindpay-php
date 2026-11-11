@@ -32,6 +32,9 @@ final class Transport implements ApiClientInterface
     /** cURL errnos raised before any byte of the request was sent (DNS, connect). */
     private const NOTHING_SENT_ERRNOS = [6, 7];
 
+    /** CURLE_URL_MALFORMAT: the request could not be built. */
+    private const MALFORMED_URL_ERRNO = 3;
+
     private readonly Client $client;
 
     /** @var array<string, string> */
@@ -127,7 +130,7 @@ final class Transport implements ApiClientInterface
             }
         }
         foreach ($options->headers as $name => $value) {
-            if (! $this->hasHeader($headers, (string) $name)) {
+            if (! $this->isReservedOrPresentHeader($headers, (string) $name)) {
                 $headers[(string) $name] = $value;
             }
         }
@@ -166,6 +169,9 @@ final class Transport implements ApiClientInterface
             try {
                 $response = $this->client->request($method, $path, $request);
             } catch (TransferException $e) {
+                if (($this->handlerContext($e)['errno'] ?? null) === self::MALFORMED_URL_ERRNO) {
+                    return $this->buildError($e, $key);
+                }
                 // A status line may have arrived before the transfer failed (e.g. a timeout while
                 // reading the body). Then the server has handled the request, so it is treated as
                 // that response, never as "no response" (a mutation 5xx must not be resent).
@@ -192,12 +198,7 @@ final class Transport implements ApiClientInterface
                     ));
                 }
             } catch (Throwable $e) {
-                // Not a transfer failure (e.g. an invalid request): retrying cannot help.
-                return BlindPayApiResponse::error(new ErrorResponse(
-                    message: 'The request could not be sent: '.$e->getMessage(),
-                    idempotencyKey: $key,
-                    type: ErrorType::VALIDATION,
-                ));
+                return $this->buildError($e, $key);
             }
 
             $status = $response->getStatusCode();
@@ -222,7 +223,7 @@ final class Transport implements ApiClientInterface
                 return $this->success($raw, $status, $requestId, $response, $key);
             }
 
-            $error = $this->apiError($status, $raw, $response, $requestId, $key);
+            $error = $this->apiError($method, $status, $raw, $response, $requestId, $key);
             if ($attempt < $this->maxRetries && RetryPolicy::shouldRetryResponse($method, $key !== null, $multipart !== null, $status, $error->message, $error->code)) {
                 $retryAfter = $response->getHeaderLine('Retry-After');
                 ($this->sleep)(RetryPolicy::delay($attempt, $retryAfter !== '' ? $retryAfter : null, $this->random));
@@ -239,11 +240,11 @@ final class Transport implements ApiClientInterface
     {
         $replayed = strtolower($response->getHeaderLine('Idempotency-Replayed')) === 'true';
         if (trim($raw) === '') {
-            return BlindPayApiResponse::success(null, $requestId, $replayed);
+            return BlindPayApiResponse::success(null, $requestId, $replayed, $status, $key, $this->flattenHeaders($response));
         }
 
         try {
-            return BlindPayApiResponse::success(json_decode($raw, true, 512, JSON_THROW_ON_ERROR), $requestId, $replayed);
+            return BlindPayApiResponse::success(json_decode($raw, true, 512, JSON_THROW_ON_ERROR), $requestId, $replayed, $status, $key, $this->flattenHeaders($response));
         } catch (JsonException $e) {
             return BlindPayApiResponse::error(new ErrorResponse(
                 message: "The API returned HTTP {$status} with a body that is not valid JSON: {$e->getMessage()}",
@@ -256,7 +257,7 @@ final class Transport implements ApiClientInterface
         }
     }
 
-    private function apiError(int $status, string $raw, ResponseInterface $response, ?string $requestId, ?string $key): ErrorResponse
+    private function apiError(string $method, int $status, string $raw, ResponseInterface $response, ?string $requestId, ?string $key): ErrorResponse
     {
         try {
             $body = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
@@ -277,7 +278,7 @@ final class Transport implements ApiClientInterface
             traceId: $parsed?->traceId,
             requestId: $requestId,
             idempotencyKey: $key,
-            retryable: RetryPolicy::isRetryableStatus($status, $message, $parsed?->code),
+            retryable: RetryPolicy::isRetryableStatus($method, $key !== null, $status, $message, $parsed?->code),
             type: ErrorType::API,
             headers: $this->flattenHeaders($response),
         );
@@ -295,7 +296,7 @@ final class Transport implements ApiClientInterface
     }
 
     /** @param array<string, string> $headers */
-    private function hasHeader(array $headers, string $name): bool
+    private function isReservedOrPresentHeader(array $headers, string $name): bool
     {
         foreach (array_keys($headers) as $existing) {
             if (strcasecmp($existing, $name) === 0) {
@@ -304,6 +305,20 @@ final class Transport implements ApiClientInterface
         }
 
         return strcasecmp($name, 'Idempotency-Key') === 0 || strcasecmp($name, 'Content-Type') === 0;
+    }
+
+    /**
+     * The request could not be built or sent at all (e.g. an invalid URL): retrying cannot help.
+     *
+     * @return BlindPayApiResponse<never>
+     */
+    private function buildError(Throwable $e, ?string $key): BlindPayApiResponse
+    {
+        return BlindPayApiResponse::error(new ErrorResponse(
+            message: 'The request could not be sent: '.$e->getMessage(),
+            idempotencyKey: $key,
+            type: ErrorType::VALIDATION,
+        ));
     }
 
     /** @return array<string, mixed> */

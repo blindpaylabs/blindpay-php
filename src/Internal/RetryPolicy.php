@@ -64,16 +64,21 @@ final class RetryPolicy
     }
 
     /**
-     * Whether the caller may resend the same request (with the same key): what the SDK would retry
-     * itself, plus mutation 5xx (row 7), which only the caller may resend, after checking state.
+     * Whether the caller may resend the same request: what the SDK would retry itself, plus a
+     * mutation 5xx that carried an idempotency key, which only the caller may resend (with that
+     * key, after checking state). A mutation 408 is not retryable: the handler may have run.
      */
-    public static function isRetryableStatus(int $status, ?string $message, ?string $code): bool
+    public static function isRetryableStatus(string $method, bool $hasIdempotencyKey, int $status, ?string $message, ?string $code): bool
     {
-        if ($status === 429 || $status === 408 || ($status === 409 && $message === 'idempotency_key_in_flight')) {
+        $mutation = self::isMutation($method);
+        if ($status === 429 || ($status === 409 && $message === 'idempotency_key_in_flight')) {
             return true;
         }
+        if ($status === 408) {
+            return ! $mutation;
+        }
 
-        return $status >= 500 && ! in_array($code, self::TERMINAL_5XX_CODES, true);
+        return $status >= 500 && ! in_array($code, self::TERMINAL_5XX_CODES, true) && (! $mutation || $hasIdempotencyKey);
     }
 
     /**

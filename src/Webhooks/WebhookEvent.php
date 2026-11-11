@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK\Webhooks;
 
+use BlindPay\SDK\Internal\ErrorGuard;
 use BlindPay\SDK\Resources\BankAccounts\BankAccountListItem;
 use BlindPay\SDK\Resources\CustodialWallets\CustodialWallet;
 use BlindPay\SDK\Resources\Customers\BusinessWithStandardKYB;
@@ -87,16 +88,10 @@ final readonly class WebhookEvent
             return new self($name, null, $body);
         }
 
-        set_error_handler(static function (int $severity, string $message): bool {
-            throw new \ErrorException($message, 0, $severity);
-        }, E_WARNING | E_NOTICE);
-
         try {
-            $data = self::decode($type, $body);
+            $data = ErrorGuard::run(fn () => self::decode($type, $body));
         } catch (\Throwable $e) {
             throw new WebhookException("The {$name} payload could not be decoded: {$e->getMessage()}", previous: $e instanceof \Exception ? $e : null);
-        } finally {
-            restore_error_handler();
         }
 
         return new self($type, $data, $body);

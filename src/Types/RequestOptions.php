@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK\Types;
 
+use BlindPay\SDK\Internal\BlindPayException;
+
 /**
  * Per-request options, accepted as the last argument of every resource method.
  *
  *     $blindpay->payouts->createEvm($input, new RequestOptions(idempotencyKey: $orderId));
  *
- * Options never change the shared client; each call sees only its own.
+ * Options never change the shared client; each call sees only its own. A non-positive timeout
+ * throws BlindPayException, like the client constructor.
  */
 final readonly class RequestOptions
 {
@@ -26,5 +29,9 @@ final readonly class RequestOptions
         public ?string $idempotencyKey = null,
         public ?float $timeout = null,
         public array $headers = [],
-    ) {}
+    ) {
+        if ($timeout !== null && $timeout <= 0) {
+            throw BlindPayException::configuration('timeout must be greater than 0 seconds');
+        }
+    }
 }

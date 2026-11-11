@@ -20,7 +20,7 @@ use ReflectionNamedType;
 final class RequestOptionsGuardTest extends TestCase
 {
     #[Test]
-    public function it_every_resource_method_accepts_request_options_last(): void
+    public function it_accepts_request_options_last_on_every_resource_method(): void
     {
         $blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000');
         $missing = [];

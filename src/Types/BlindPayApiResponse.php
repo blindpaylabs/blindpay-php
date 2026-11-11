@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Types;
 
 use BlindPay\SDK\BlindPayApiException;
-use ErrorException;
+use BlindPay\SDK\Internal\ErrorGuard;
 use Throwable;
 
 /**
@@ -20,28 +20,30 @@ readonly class BlindPayApiResponse
      * @param  T|null  $data
      * @param  string|null  $requestId  the `X-Request-Id` response header
      * @param  bool  $idempotencyReplayed  true when the API replayed a stored response for the idempotency key
+     * @param  int|null  $status  HTTP status of the response, when one was received
+     * @param  string|null  $idempotencyKey  the `Idempotency-Key` the request carried
+     * @param  array<string, string>  $headers  response headers (lower-cased names)
      */
     public function __construct(
         public mixed $data,
         public ?ErrorResponse $error,
         public ?string $requestId = null,
         public bool $idempotencyReplayed = false,
+        public ?int $status = null,
+        public ?string $idempotencyKey = null,
+        public array $headers = [],
     ) {}
 
     /**
      * @template TSuccess
      *
      * @param  TSuccess  $data
+     * @param  array<string, string>  $headers
      * @return self<TSuccess>
      */
-    public static function success(mixed $data, ?string $requestId = null, bool $idempotencyReplayed = false): self
+    public static function success(mixed $data, ?string $requestId = null, bool $idempotencyReplayed = false, ?int $status = null, ?string $idempotencyKey = null, array $headers = []): self
     {
-        return new self(
-            data: $data,
-            error: null,
-            requestId: $requestId,
-            idempotencyReplayed: $idempotencyReplayed,
-        );
+        return new self($data, null, $requestId, $idempotencyReplayed, $status, $idempotencyKey, $headers);
     }
 
     /**
@@ -53,6 +55,9 @@ readonly class BlindPayApiResponse
             data: null,
             error: $error,
             requestId: $error->requestId,
+            status: $error->status,
+            idempotencyKey: $error->idempotencyKey,
+            headers: $error->headers,
         );
     }
 
@@ -72,23 +77,20 @@ readonly class BlindPayApiResponse
             return $this;
         }
 
-        set_error_handler(static function (int $severity, string $message): bool {
-            throw new ErrorException($message, 0, $severity);
-        }, E_WARNING | E_NOTICE | E_USER_WARNING | E_USER_NOTICE);
-
         try {
-            $data = $decode($this->data);
+            $data = ErrorGuard::run(fn () => $decode($this->data));
         } catch (Throwable $e) {
             return self::error(new ErrorResponse(
                 message: 'Failed to decode the API response: '.$e->getMessage(),
+                status: $this->status,
                 requestId: $this->requestId,
+                idempotencyKey: $this->idempotencyKey,
                 type: ErrorType::DECODE,
+                headers: $this->headers,
             ));
-        } finally {
-            restore_error_handler();
         }
 
-        return new self($data, null, $this->requestId, $this->idempotencyReplayed);
+        return new self($data, null, $this->requestId, $this->idempotencyReplayed, $this->status, $this->idempotencyKey, $this->headers);
     }
 
     public function isSuccess(): bool

@@ -38,20 +38,20 @@ final class RequestBodiesTest extends TestCase
     }
 
     #[Test]
-    public function it_offramp_update_sends_an_explicit_null_to_clear_the_partner_fee(): void
+    public function it_sends_an_explicit_null_to_clear_an_offramp_partner_fee(): void
     {
         $this->assertSame(['partner_fee_id' => null], $this->send(fn (BlindPay $b) => $b->wallets->offramp->update(new UpdateOfframpWalletInput('cu_1', 'ba_1', 'ow_1', null))));
         $this->assertSame(['partner_fee_id' => 'fe_1'], $this->send(fn (BlindPay $b) => $b->wallets->offramp->update(new UpdateOfframpWalletInput('cu_1', 'ba_1', 'ow_1', 'fe_1'))));
     }
 
     #[Test]
-    public function it_set_self_custody_sends_the_flag(): void
+    public function it_sends_the_self_custody_flag(): void
     {
         $this->assertSame(['is_self_custody' => false], $this->send(fn (BlindPay $b) => $b->wallets->blockchain->setSelfCustody(new SetSelfCustodyInput('cu_1', 'bw_1', false)), ['id' => 'bw_1', 'name' => 'x', 'network' => 'base', 'customer_id' => 'cu_1']));
     }
 
     #[Test]
-    public function it_rfi_submit_sends_the_answers_as_the_whole_body(): void
+    public function it_sends_rfi_answers_as_the_whole_body(): void
     {
         $answers = ['occupation' => 'engineer', 'proof' => 'https://files.blindpay.com/p.pdf'];
 
@@ -60,7 +60,7 @@ final class RequestBodiesTest extends TestCase
     }
 
     #[Test]
-    public function it_rfi_get_returns_null_data_when_no_rfi_is_open(): void
+    public function it_returns_null_data_when_no_rfi_is_open(): void
     {
         foreach ([fn (BlindPay $b) => $b->customers->rfi->get('cu_1'), fn (BlindPay $b) => $b->instances->rfi->get()] as $call) {
             $stack = HandlerStack::create(new MockHandler([new Response(200, ['Content-Type' => 'application/json'], 'null')]));
@@ -72,14 +72,14 @@ final class RequestBodiesTest extends TestCase
     }
 
     #[Test]
-    public function it_plaid_link_sends_the_redirect_url_only_when_given(): void
+    public function it_sends_the_plaid_redirect_url_only_when_given(): void
     {
         $this->assertSame(['redirect_url' => 'https://x'], $this->send(fn (BlindPay $b) => $b->customers->bankAccounts->createPlaidLink('cu_1', 'https://x'), ['url' => 'https://plaid']));
         $this->assertSame([], $this->send(fn (BlindPay $b) => $b->customers->bankAccounts->createPlaidLink('cu_1'), ['url' => 'https://plaid']));
     }
 
     #[Test]
-    public function it_light_kyc_customer_can_be_created_with_only_the_required_fields(): void
+    public function it_creates_a_light_kyc_customer_with_only_the_required_fields(): void
     {
         $body = $this->send(fn (BlindPay $b) => $b->customers->create(new CreateCustomerInput(
             AccountClass::INDIVIDUAL,
@@ -93,7 +93,7 @@ final class RequestBodiesTest extends TestCase
     }
 
     #[Test]
-    public function it_payable_create_sends_only_what_was_set(): void
+    public function it_sends_only_the_payable_fields_that_were_set(): void
     {
         $payable = ['id' => 'pa_1', 'instance_id' => 'in_000000000000', 'customer_id' => 'cu_1', 'currency' => 'USD', 'status' => 'draft', 'amount' => 300000];
 
