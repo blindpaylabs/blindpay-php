@@ -61,6 +61,36 @@ final class WebhookVerifier
     }
 
     /**
+     * Verify a delivery and decode it into a typed WebhookEvent. Unknown event types do not fail:
+     * they come back with the raw name as `type` and a null `data`.
+     *
+     *     try {
+     *         $event = WebhookVerifier::constructEvent(file_get_contents('php://input'), getallheaders(), $secret);
+     *     } catch (WebhookException) {
+     *         http_response_code(400);
+     *         exit;
+     *     }
+     *
+     * @param  array<string, string|string[]>  $headers
+     *
+     * @throws WebhookException when the signature or timestamp does not verify, or the body is not
+     *                          a JSON object with a `webhook_event`
+     */
+    public static function constructEvent(string $payload, array $headers, string $secret, int $tolerance = self::DEFAULT_TOLERANCE, ?int $now = null): WebhookEvent
+    {
+        if (! self::verify($payload, $headers, $secret, $tolerance, $now)) {
+            throw new WebhookException('The webhook signature or timestamp could not be verified.');
+        }
+
+        $body = json_decode($payload, true);
+        if (! is_array($body) || array_is_list($body)) {
+            throw new WebhookException('The webhook body is not a JSON object.');
+        }
+
+        return WebhookEvent::fromArray($body);
+    }
+
+    /**
      * @internal Shared by verify() and the deprecated BlindPay::verifyWebhookSignature().
      */
     public static function verifySignature(string $payload, string $id, string $timestamp, string $signatureHeader, string $secret, int $tolerance, int $now): bool

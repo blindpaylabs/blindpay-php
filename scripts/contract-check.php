@@ -2,7 +2,7 @@
 
 /**
  * Contract check: verifies the SDK's declared wire keys against the committed
- * OpenAPI spec snapshot at .api-sync/spec-snapshot.json.
+ * OpenAPI spec snapshot at .api-sync/spec-snapshot.json (or the file given with --spec=PATH).
  *
  * Direction A (hard fail): every string key the SDK reads via `$var['key']` inside a
  * fromArray() method, or writes via `'key' => ...` inside a toArray() method, must
@@ -23,6 +23,11 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 $specPath = $root.'/.api-sync/spec-snapshot.json';
+foreach (array_slice($argv, 1) as $arg) {
+    if (str_starts_with($arg, '--spec=')) {
+        $specPath = substr($arg, strlen('--spec='));
+    }
+}
 $allowlistPath = $root.'/.api-sync/contract-allowlist.json';
 
 function fail(string $message): never

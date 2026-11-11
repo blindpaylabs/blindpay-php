@@ -174,6 +174,90 @@
       "field": "retryable",
       "reason": "SDK-side metadata in ErrorResponse::toArray() (the X-Request-Id response header, the SDK's retry classification); not an API wire key.",
       "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayableLineItem",
+      "field": "quantity",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayableLineItem",
+      "field": "price",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "line_items",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "note",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "discount",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "taxes",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "boleto_barcode",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "pix_qrcode",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "document_file",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "due_date",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "scheduled_at",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "payout_id",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "bank_account",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payable",
+      "field": "last_attempt_status",
+      "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
     }
   ]
 }
