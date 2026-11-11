@@ -194,14 +194,14 @@ readonly class PrepareSolanaDelegationTransactionResponse
 {
     public function __construct(
         public bool $success,
-        public string $transaction
+        public ?string $transaction
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
             success: $data['success'],
-            transaction: $data['transaction']
+            transaction: $data['transaction'] ?? null
         );
     }
 }

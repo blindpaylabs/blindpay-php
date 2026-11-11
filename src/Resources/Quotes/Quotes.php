@@ -115,7 +115,7 @@ readonly class CreateQuoteResponse
 {
     public function __construct(
         public string $id,
-        public int $expiresAt,
+        public ?int $expiresAt,
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
         public ?float $receiverAmount,
@@ -131,7 +131,7 @@ readonly class CreateQuoteResponse
     {
         return new self(
             id: $data['id'],
-            expiresAt: $data['expires_at'],
+            expiresAt: isset($data['expires_at']) ? (int) $data['expires_at'] : null,
             commercialQuotation: isset($data['commercial_quotation']) ? (float) $data['commercial_quotation'] : null,
             blindpayQuotation: isset($data['blindpay_quotation']) ? (float) $data['blindpay_quotation'] : null,
             receiverAmount: isset($data['receiver_amount']) ? (float) $data['receiver_amount'] : null,
@@ -185,20 +185,20 @@ readonly class GetFxRateInput
 readonly class GetFxRateResponse
 {
     public function __construct(
-        public float $commercialQuotation,
-        public float $blindpayQuotation,
+        public ?float $commercialQuotation,
+        public ?float $blindpayQuotation,
         public float $resultAmount,
-        public float $instanceFlatFee,
+        public ?float $instanceFlatFee,
         public float $instancePercentageFee
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
-            commercialQuotation: (float) $data['commercial_quotation'],
-            blindpayQuotation: (float) $data['blindpay_quotation'],
+            commercialQuotation: isset($data['commercial_quotation']) ? (float) $data['commercial_quotation'] : null,
+            blindpayQuotation: isset($data['blindpay_quotation']) ? (float) $data['blindpay_quotation'] : null,
             resultAmount: (float) $data['result_amount'],
-            instanceFlatFee: (float) $data['instance_flat_fee'],
+            instanceFlatFee: isset($data['instance_flat_fee']) ? (float) $data['instance_flat_fee'] : null,
             instancePercentageFee: (float) $data['instance_percentage_fee']
         );
     }

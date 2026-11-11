@@ -116,13 +116,7 @@ final class SpecFixtureDecodeTest extends TestCase
      * only shrink: it_keeps_pending_operations_failing fails when an entry starts passing, so remove it.
      */
     private const PENDING = [
-        'GET /v1/instances/{id}/members' => 'InstanceMember.created_at nullable (audit 4.14)',
-        'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => 'per-rail create responses: nullable fields read as required (audit 4.7)',
-        'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets' => 'external_id nullable (audit 4.8)',
-        'POST /v1/instances/{instance_id}/quotes' => 'expires_at nullable (audit 4.2)',
-        'POST /v1/instances/{instance_id}/quotes/fx' => 'instance_flat_fee optional (audit 4.2)',
-        'GET /v1/available/bank-details' => 'BankDetail.required optional (audit 4.15)',
-        'POST /v1/instances/{instance_id}/prepare-delegate-solana' => 'transaction optional (audit 4.11)',
+        'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => 'the ten per-rail Create*Response types read their own rail fields as required. The API echoes those from the request, so live creates decode; only the spec\'s all-rail shape (every rail field nullable) fails. Not a crash fix, left for v4 (audit 4.7)',
     ];
 
     /** Operations the SDK has no method for yet (v4). */

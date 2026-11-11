@@ -54,7 +54,7 @@ readonly class BankDetail
         public string $regex,
         public string $key,
         public array $items,
-        public bool $required
+        public ?bool $required
     ) {}
 
     public static function fromArray(array $data): self
@@ -71,7 +71,7 @@ readonly class BankDetail
             regex: $data['regex'],
             key: $data['key'],
             items: $items,
-            required: $data['required']
+            required: $data['required'] ?? null
         );
     }
 }
