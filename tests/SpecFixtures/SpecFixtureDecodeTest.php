@@ -65,12 +65,15 @@ use BlindPay\SDK\Types\Currency;
 use BlindPay\SDK\Types\CurrencyType;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\Rail;
+use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Types\SourceOfWealth;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TransactionDocumentType;
 use Closure;
 use ErrorException;
 use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -138,7 +141,7 @@ final class SpecFixtureDecodeTest extends TestCase
         'POST /v1/presign',
     ];
 
-    /** @return array<string, Closure(BlindPay): BlindPayApiResponse> */
+    /** @return array<string, Closure(BlindPay, ?RequestOptions): BlindPayApiResponse> */
     private static function calls(): array
     {
         $c = 'cu_000000000000';
@@ -146,18 +149,18 @@ final class SpecFixtureDecodeTest extends TestCase
 
         return [
             // Instances
-            'PUT /v1/instances/{id}' => fn (BlindPay $b) => $b->instances->update(new UpdateInstanceInput('Acme')),
-            'DELETE /v1/instances/{id}' => fn (BlindPay $b) => $b->instances->delete(),
-            'GET /v1/instances/{id}/members' => fn (BlindPay $b) => $b->instances->getMembers(),
-            'DELETE /v1/instances/{id}/members/{user_id}' => fn (BlindPay $b) => $b->instances->deleteMember($id),
-            'PUT /v1/instances/{id}/members/{user_id}' => fn (BlindPay $b) => $b->instances->updateMemberRole(new UpdateMemberRoleInput($id, InstanceMemberRole::cases()[0])),
-            'POST /v1/instances/{id}/ownership' => fn (BlindPay $b) => $b->ownership->migrate(new MigrateInstanceOwnershipIn($id)),
-            'POST /v1/e/instances/{instance_id}/tos' => fn (BlindPay $b) => $b->instances->tos->initiate(new InitiateInput('key')),
+            'PUT /v1/instances/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->update(new UpdateInstanceInput('Acme'), $o),
+            'DELETE /v1/instances/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->delete($o),
+            'GET /v1/instances/{id}/members' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->getMembers($o),
+            'DELETE /v1/instances/{id}/members/{user_id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->deleteMember($id, $o),
+            'PUT /v1/instances/{id}/members/{user_id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->updateMemberRole(new UpdateMemberRoleInput($id, InstanceMemberRole::cases()[0]), $o),
+            'POST /v1/instances/{id}/ownership' => fn (BlindPay $b, ?RequestOptions $o) => $b->ownership->migrate(new MigrateInstanceOwnershipIn($id), $o),
+            'POST /v1/e/instances/{instance_id}/tos' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->tos->initiate(new InitiateInput('key'), $o),
 
             // Customers
-            'POST /v1/instances/{instance_id}/customers/{customer_id}/limit-increase' => fn (BlindPay $b) => $b->customers->requestLimitIncrease(new RequestLimitIncreaseInput($c, 100.0, 1000.0, 50.0, 'https://example.com/doc.pdf', LimitIncreaseRequestSupportingDocumentType::cases()[0])),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/limit-increase' => fn (BlindPay $b) => $b->customers->getLimitIncreaseRequests($c),
-            'POST /v1/instances/{instance_id}/customers' => fn (BlindPay $b) => $b->customers->createIndividualWithStandardKYC(new CreateIndividualWithStandardKYCInput(
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/limit-increase' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->requestLimitIncrease(new RequestLimitIncreaseInput($c, 100.0, 1000.0, 50.0, 'https://example.com/doc.pdf', LimitIncreaseRequestSupportingDocumentType::cases()[0]), $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/limit-increase' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->getLimitIncreaseRequests($c, $o),
+            'POST /v1/instances/{instance_id}/customers' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->createIndividualWithStandardKYC(new CreateIndividualWithStandardKYCInput(
                 '1 Main St',
                 'Austin',
                 Country::US,
@@ -176,101 +179,101 @@ final class SpecFixtureDecodeTest extends TestCase
                 'TX',
                 '123456789',
                 'to_000000000000',
-            )),
-            'GET /v1/instances/{instance_id}/customers' => fn (BlindPay $b) => $b->customers->list(new ListCustomersInput(limit: 10)),
-            'GET /v1/instances/{instance_id}/customers/{id}' => fn (BlindPay $b) => $b->customers->get($c),
-            'PUT /v1/instances/{instance_id}/customers/{id}' => fn (BlindPay $b) => $b->customers->update(new UpdateCustomerInput($c)),
-            'DELETE /v1/instances/{instance_id}/customers/{id}' => fn (BlindPay $b) => $b->customers->delete($c),
-            'GET /v1/instances/{instance_id}/limits/customers/{id}' => fn (BlindPay $b) => $b->customers->getLimits($c),
+            ), $o),
+            'GET /v1/instances/{instance_id}/customers' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->list(new ListCustomersInput(limit: 10), $o),
+            'GET /v1/instances/{instance_id}/customers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->get($c, $o),
+            'PUT /v1/instances/{instance_id}/customers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->update(new UpdateCustomerInput($c), $o),
+            'DELETE /v1/instances/{instance_id}/customers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->delete($c, $o),
+            'GET /v1/instances/{instance_id}/limits/customers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->getLimits($c, $o),
 
             // Bank accounts
-            'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => fn (BlindPay $b) => $b->customers->bankAccounts->createPix(new CreatePixInput($c, 'PIX', 'key@example.com')),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => fn (BlindPay $b) => $b->customers->bankAccounts->list($c),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{id}' => fn (BlindPay $b) => $b->customers->bankAccounts->get(new GetBankAccountInput($c, $id)),
-            'DELETE /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{id}' => fn (BlindPay $b) => $b->customers->bankAccounts->delete(new DeleteBankAccountInput($c, $id)),
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->createPix(new CreatePixInput($c, 'PIX', 'key@example.com'), $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->list($c, $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->get(new GetBankAccountInput($c, $id), $o),
+            'DELETE /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->delete(new DeleteBankAccountInput($c, $id), $o),
 
             // Virtual accounts
-            'POST /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => fn (BlindPay $b) => $b->virtualAccounts->create(new CreateVirtualAccountInput($c, $id, StablecoinToken::USDC)),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => fn (BlindPay $b) => $b->virtualAccounts->list($c),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts/{id}' => fn (BlindPay $b) => $b->virtualAccounts->get($c, $id),
-            'PUT /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts/{id}' => fn (BlindPay $b) => $b->virtualAccounts->update(new UpdateVirtualAccountInput($c, $id, $id, StablecoinToken::USDC)),
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => fn (BlindPay $b, ?RequestOptions $o) => $b->virtualAccounts->create(new CreateVirtualAccountInput($c, $id, StablecoinToken::USDC), $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => fn (BlindPay $b, ?RequestOptions $o) => $b->virtualAccounts->list($c, $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->virtualAccounts->get($c, $id, $o),
+            'PUT /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->virtualAccounts->update(new UpdateVirtualAccountInput($c, $id, $id, StablecoinToken::USDC), $o),
 
             // Blockchain wallets
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets/sign-message' => fn (BlindPay $b) => $b->wallets->blockchain->getMessage($c),
-            'POST /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets' => fn (BlindPay $b) => $b->wallets->blockchain->createWithAddress(new CreateBlockchainWalletWithAddressInput($c, 'Main', Network::BASE, '0x0000000000000000000000000000000000000000')),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets' => fn (BlindPay $b) => $b->wallets->blockchain->list($c),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets/{id}' => fn (BlindPay $b) => $b->wallets->blockchain->get(new GetBlockchainWalletInput($c, $id)),
-            'DELETE /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets/{id}' => fn (BlindPay $b) => $b->wallets->blockchain->delete(new DeleteBlockchainWalletInput($c, $id)),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets/sign-message' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->getMessage($c, $o),
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->createWithAddress(new CreateBlockchainWalletWithAddressInput($c, 'Main', Network::BASE, '0x0000000000000000000000000000000000000000'), $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->list($c, $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->get(new GetBlockchainWalletInput($c, $id), $o),
+            'DELETE /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->delete(new DeleteBlockchainWalletInput($c, $id), $o),
 
             // Offramp wallets
-            'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets' => fn (BlindPay $b) => $b->wallets->offramp->create(new CreateOfframpWalletInput($c, $id, 'ext', 'tron')),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets' => fn (BlindPay $b) => $b->wallets->offramp->list(new ListOfframpWalletsInput($c, $id)),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets/{id}' => fn (BlindPay $b) => $b->wallets->offramp->get(new GetOfframpWalletInput($c, $id, $id)),
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->offramp->create(new CreateOfframpWalletInput($c, $id, 'ext', 'tron'), $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->offramp->list(new ListOfframpWalletsInput($c, $id), $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->offramp->get(new GetOfframpWalletInput($c, $id, $id), $o),
 
             // Quotes
-            'POST /v1/instances/{instance_id}/quotes' => fn (BlindPay $b) => $b->quotes->create(new CreateQuoteInput($id, CurrencyType::SENDER, 1000.0, null, null, null, null, TransactionDocumentType::cases()[0])),
-            'POST /v1/instances/{instance_id}/quotes/fx' => fn (BlindPay $b) => $b->quotes->getFxRate(new GetFxRateInput(CurrencyType::SENDER, Currency::USDC, Currency::BRL, 1000.0)),
+            'POST /v1/instances/{instance_id}/quotes' => fn (BlindPay $b, ?RequestOptions $o) => $b->quotes->create(new CreateQuoteInput($id, CurrencyType::SENDER, 1000.0, null, null, null, null, TransactionDocumentType::cases()[0]), $o),
+            'POST /v1/instances/{instance_id}/quotes/fx' => fn (BlindPay $b, ?RequestOptions $o) => $b->quotes->getFxRate(new GetFxRateInput(CurrencyType::SENDER, Currency::USDC, Currency::BRL, 1000.0), $o),
 
             // Payouts
-            'GET /v1/instances/{instance_id}/payouts/{id}' => fn (BlindPay $b) => $b->payouts->get($id),
-            'GET /v1/e/payouts/{id}' => fn (BlindPay $b) => $b->payouts->getTrack($id),
-            'GET /v1/instances/{instance_id}/payouts' => fn (BlindPay $b) => $b->payouts->list(new ListPayoutsInput(limit: 10)),
-            'POST /v1/instances/{instance_id}/payouts/stellar/authorize' => fn (BlindPay $b) => $b->payouts->authorizeStellarToken(new AuthorizeStellarTokenInput($id, 'G000')),
-            'POST /v1/instances/{instance_id}/payouts/stellar' => fn (BlindPay $b) => $b->payouts->createStellar(new CreateStellarPayoutInput($id, 'G000')),
-            'POST /v1/instances/{instance_id}/payouts/solana' => fn (BlindPay $b) => $b->payouts->createSolana(new CreateSolanaPayoutInput($id, 'So11')),
-            'POST /v1/instances/{instance_id}/payouts/evm' => fn (BlindPay $b) => $b->payouts->createEvm(new CreateEvmPayoutInput($id, '0x0')),
-            'POST /v1/instances/{instance_id}/payouts/{id}/documents' => fn (BlindPay $b) => $b->payouts->submitDocuments(new SubmitPayoutDocumentsInput($id, TransactionDocumentType::cases()[0], 'doc', 'https://example.com/doc.pdf')),
+            'GET /v1/instances/{instance_id}/payouts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payouts->get($id, $o),
+            'GET /v1/e/payouts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payouts->getTrack($id, $o),
+            'GET /v1/instances/{instance_id}/payouts' => fn (BlindPay $b, ?RequestOptions $o) => $b->payouts->list(new ListPayoutsInput(limit: 10), $o),
+            'POST /v1/instances/{instance_id}/payouts/stellar/authorize' => fn (BlindPay $b, ?RequestOptions $o) => $b->payouts->authorizeStellarToken(new AuthorizeStellarTokenInput($id, 'G000'), $o),
+            'POST /v1/instances/{instance_id}/payouts/stellar' => fn (BlindPay $b, ?RequestOptions $o) => $b->payouts->createStellar(new CreateStellarPayoutInput($id, 'G000'), $o),
+            'POST /v1/instances/{instance_id}/payouts/solana' => fn (BlindPay $b, ?RequestOptions $o) => $b->payouts->createSolana(new CreateSolanaPayoutInput($id, 'So11'), $o),
+            'POST /v1/instances/{instance_id}/payouts/evm' => fn (BlindPay $b, ?RequestOptions $o) => $b->payouts->createEvm(new CreateEvmPayoutInput($id, '0x0'), $o),
+            'POST /v1/instances/{instance_id}/payouts/{id}/documents' => fn (BlindPay $b, ?RequestOptions $o) => $b->payouts->submitDocuments(new SubmitPayoutDocumentsInput($id, TransactionDocumentType::cases()[0], 'doc', 'https://example.com/doc.pdf'), $o),
 
             // Payins
-            'POST /v1/instances/{instance_id}/payin-quotes' => fn (BlindPay $b) => $b->payins->quotes->create(new CreatePayinQuoteInput($id, CurrencyType::SENDER, PayinPaymentMethod::cases()[0], 1000.0, StablecoinToken::USDC, null, null)),
-            'POST /v1/instances/{instance_id}/payin-quotes/fx' => fn (BlindPay $b) => $b->payins->quotes->getFxRate(new GetPayinFxRateInput(CurrencyType::SENDER, Currency::BRL, Currency::USDC, 1000.0)),
-            'GET /v1/instances/{instance_id}/payins/{id}' => fn (BlindPay $b) => $b->payins->get($id),
-            'GET /v1/e/payins/{id}' => fn (BlindPay $b) => $b->payins->getTrack($id),
-            'GET /v1/instances/{instance_id}/payins' => fn (BlindPay $b) => $b->payins->list(new ListPayinsInput(limit: 10)),
-            'POST /v1/instances/{instance_id}/payins/evm' => fn (BlindPay $b) => $b->payins->createEvm($id),
+            'POST /v1/instances/{instance_id}/payin-quotes' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->quotes->create(new CreatePayinQuoteInput($id, CurrencyType::SENDER, PayinPaymentMethod::cases()[0], 1000.0, StablecoinToken::USDC, null, null), $o),
+            'POST /v1/instances/{instance_id}/payin-quotes/fx' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->quotes->getFxRate(new GetPayinFxRateInput(CurrencyType::SENDER, Currency::BRL, Currency::USDC, 1000.0), $o),
+            'GET /v1/instances/{instance_id}/payins/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->get($id, $o),
+            'GET /v1/e/payins/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->getTrack($id, $o),
+            'GET /v1/instances/{instance_id}/payins' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->list(new ListPayinsInput(limit: 10), $o),
+            'POST /v1/instances/{instance_id}/payins/evm' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->createEvm($id, $o),
 
             // Custodial wallets
-            'POST /v1/instances/{instance_id}/customers/{customer_id}/wallets' => fn (BlindPay $b) => $b->wallets->custodial->create(new CreateCustodialWalletInput($c, Network::BASE, 'Main')),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/wallets' => fn (BlindPay $b) => $b->wallets->custodial->list($c),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/wallets/{id}' => fn (BlindPay $b) => $b->wallets->custodial->get(new GetCustodialWalletInput($c, $id)),
-            'DELETE /v1/instances/{instance_id}/customers/{customer_id}/wallets/{id}' => fn (BlindPay $b) => $b->wallets->custodial->delete(new DeleteCustodialWalletInput($c, $id)),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/wallets/{id}/balance' => fn (BlindPay $b) => $b->wallets->custodial->getBalance(new GetCustodialWalletInput($c, $id)),
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/wallets' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->custodial->create(new CreateCustodialWalletInput($c, Network::BASE, 'Main'), $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/wallets' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->custodial->list($c, $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/wallets/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->custodial->get(new GetCustodialWalletInput($c, $id), $o),
+            'DELETE /v1/instances/{instance_id}/customers/{customer_id}/wallets/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->custodial->delete(new DeleteCustodialWalletInput($c, $id), $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/wallets/{id}/balance' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->custodial->getBalance(new GetCustodialWalletInput($c, $id), $o),
 
             // Transfers
-            'POST /v1/instances/{instance_id}/transfer-quotes' => fn (BlindPay $b) => $b->transfers->createQuote(new CreateTransferQuoteInput($id, StablecoinToken::USDC, '0x0', StablecoinToken::USDC, Network::BASE, 1000, CurrencyType::SENDER)),
-            'GET /v1/instances/{instance_id}/transfers/{id}' => fn (BlindPay $b) => $b->transfers->get($id),
-            'GET /v1/e/transfers/{id}' => fn (BlindPay $b) => $b->transfers->getTrack($id),
-            'GET /v1/instances/{instance_id}/transfers' => fn (BlindPay $b) => $b->transfers->list(new ListTransfersInput(limit: 10)),
-            'POST /v1/instances/{instance_id}/transfers' => fn (BlindPay $b) => $b->transfers->create(new CreateTransferInput($id)),
+            'POST /v1/instances/{instance_id}/transfer-quotes' => fn (BlindPay $b, ?RequestOptions $o) => $b->transfers->createQuote(new CreateTransferQuoteInput($id, StablecoinToken::USDC, '0x0', StablecoinToken::USDC, Network::BASE, 1000, CurrencyType::SENDER), $o),
+            'GET /v1/instances/{instance_id}/transfers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->transfers->get($id, $o),
+            'GET /v1/e/transfers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->transfers->getTrack($id, $o),
+            'GET /v1/instances/{instance_id}/transfers' => fn (BlindPay $b, ?RequestOptions $o) => $b->transfers->list(new ListTransfersInput(limit: 10), $o),
+            'POST /v1/instances/{instance_id}/transfers' => fn (BlindPay $b, ?RequestOptions $o) => $b->transfers->create(new CreateTransferInput($id), $o),
 
             // Webhook endpoints
-            'POST /v1/instances/{instance_id}/webhook-endpoints' => fn (BlindPay $b) => $b->instances->webhookEndpoints->create(new CreateWebhookEndpointInput('https://example.com/hook', [WebhookEvents::cases()[0]])),
-            'GET /v1/instances/{instance_id}/webhook-endpoints' => fn (BlindPay $b) => $b->instances->webhookEndpoints->list(),
-            'DELETE /v1/instances/{instance_id}/webhook-endpoints/{id}' => fn (BlindPay $b) => $b->instances->webhookEndpoints->delete($id),
-            'GET /v1/instances/{instance_id}/webhook-endpoints/{id}/secret' => fn (BlindPay $b) => $b->instances->webhookEndpoints->getSecret($id),
-            'GET /v1/instances/{instance_id}/webhook-endpoints/portal-access' => fn (BlindPay $b) => $b->instances->webhookEndpoints->getPortalAccessUrl(),
+            'POST /v1/instances/{instance_id}/webhook-endpoints' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->webhookEndpoints->create(new CreateWebhookEndpointInput('https://example.com/hook', [WebhookEvents::cases()[0]]), $o),
+            'GET /v1/instances/{instance_id}/webhook-endpoints' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->webhookEndpoints->list($o),
+            'DELETE /v1/instances/{instance_id}/webhook-endpoints/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->webhookEndpoints->delete($id, $o),
+            'GET /v1/instances/{instance_id}/webhook-endpoints/{id}/secret' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->webhookEndpoints->getSecret($id, $o),
+            'GET /v1/instances/{instance_id}/webhook-endpoints/portal-access' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->webhookEndpoints->getPortalAccessUrl($o),
 
             // Fees and partner fees
-            'GET /v1/instances/{instance_id}/billing/fees' => fn (BlindPay $b) => $b->fees->get(),
-            'POST /v1/instances/{instance_id}/partner-fees' => fn (BlindPay $b) => $b->partnerFees->create(new CreatePartnerFeeInput('0x0', 'Fee', 100.0, 1.0, 100.0, 1.0)),
-            'GET /v1/instances/{instance_id}/partner-fees' => fn (BlindPay $b) => $b->partnerFees->list(),
-            'GET /v1/instances/{instance_id}/partner-fees/{id}' => fn (BlindPay $b) => $b->partnerFees->get($id),
-            'DELETE /v1/instances/{instance_id}/partner-fees/{id}' => fn (BlindPay $b) => $b->partnerFees->delete($id),
+            'GET /v1/instances/{instance_id}/billing/fees' => fn (BlindPay $b, ?RequestOptions $o) => $b->fees->get($o),
+            'POST /v1/instances/{instance_id}/partner-fees' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->create(new CreatePartnerFeeInput('0x0', 'Fee', 100.0, 1.0, 100.0, 1.0), $o),
+            'GET /v1/instances/{instance_id}/partner-fees' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->list($o),
+            'GET /v1/instances/{instance_id}/partner-fees/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->get($id, $o),
+            'DELETE /v1/instances/{instance_id}/partner-fees/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->delete($id, $o),
 
             // Upload (JSON body today; multipart is a v4 change)
-            'POST /v1/upload' => fn (BlindPay $b) => $b->upload->create(new UploadInput(UploadBucket::cases()[0], 'data')),
+            'POST /v1/upload' => fn (BlindPay $b, ?RequestOptions $o) => $b->upload->create(new UploadInput(UploadBucket::cases()[0], 'data'), $o),
 
             // Available
-            'GET /v1/available/bank-details' => fn (BlindPay $b) => $b->available->getBankDetails(Rail::PIX),
-            'GET /v1/available/rails' => fn (BlindPay $b) => $b->available->getRails(),
-            'GET /v1/available/naics' => fn (BlindPay $b) => $b->available->getNaicsCodes(),
-            'GET /v1/available/swift/{swift}' => fn (BlindPay $b) => $b->available->getSwiftCodeBankDetails('BOFAUS3N'),
+            'GET /v1/available/bank-details' => fn (BlindPay $b, ?RequestOptions $o) => $b->available->getBankDetails(Rail::PIX, $o),
+            'GET /v1/available/rails' => fn (BlindPay $b, ?RequestOptions $o) => $b->available->getRails($o),
+            'GET /v1/available/naics' => fn (BlindPay $b, ?RequestOptions $o) => $b->available->getNaicsCodes($o),
+            'GET /v1/available/swift/{swift}' => fn (BlindPay $b, ?RequestOptions $o) => $b->available->getSwiftCodeBankDetails('BOFAUS3N', $o),
 
             // Solana / Stellar helpers
-            'POST /v1/instances/{instance_id}/mint-usdb-solana' => fn (BlindPay $b) => $b->wallets->blockchain->mintUsdbSolana(new MintUsdbSolanaInput('So11', '1000')),
-            'POST /v1/instances/{instance_id}/prepare-delegate-solana' => fn (BlindPay $b) => $b->wallets->blockchain->prepareSolanaDelegationTransaction(new PrepareSolanaDelegationTransactionInput('So11', '1000', 'So11')),
-            'POST /v1/instances/{instance_id}/create-asset-trustline' => fn (BlindPay $b) => $b->wallets->blockchain->createAssetTrustline('G000'),
-            'POST /v1/instances/{instance_id}/mint-usdb-stellar' => fn (BlindPay $b) => $b->wallets->blockchain->mintUsdbStellar(new MintUsdbStellarInput('G000', '1000', 'AAAA')),
+            'POST /v1/instances/{instance_id}/mint-usdb-solana' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->mintUsdbSolana(new MintUsdbSolanaInput('So11', '1000'), $o),
+            'POST /v1/instances/{instance_id}/prepare-delegate-solana' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->prepareSolanaDelegationTransaction(new PrepareSolanaDelegationTransactionInput('So11', '1000', 'So11'), $o),
+            'POST /v1/instances/{instance_id}/create-asset-trustline' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->createAssetTrustline('G000', $o),
+            'POST /v1/instances/{instance_id}/mint-usdb-stellar' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->mintUsdbStellar(new MintUsdbStellarInput('G000', '1000', 'AAAA'), $o),
         ];
     }
 
@@ -378,18 +381,50 @@ final class SpecFixtureDecodeTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    /** Decode $body through the operation's SDK method. Returns null on success, else the failure. */
-    private function decode(string $operation, mixed $body): ?string
+    /**
+     * The op table is also the request-assertion harness (A8): every method sends the documented
+     * verb and path, and forwards its RequestOptions (an extra header on every call; the
+     * Idempotency-Key on every JSON mutation).
+     */
+    #[Test]
+    public function it_sends_each_operation_to_its_route_and_forwards_request_options(): void
     {
-        $mock = new MockHandler([new Response(200, ['Content-Type' => 'application/json'], json_encode($body, JSON_THROW_ON_ERROR))]);
-        $blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000', handler: $mock);
+        foreach (self::calls() as $operation => $call) {
+            [$method, $template] = explode(' ', $operation, 2);
+            $history = [];
+            $options = new RequestOptions(idempotencyKey: 'guard-key', headers: ['X-Guard' => 'forwarded']);
+
+            $this->decode($operation, self::variants($operation)['full'] ?? [], $options, $history);
+
+            $this->assertCount(1, $history, $operation);
+            $request = $history[0]['request'];
+            $pattern = '#^'.preg_replace('#\\\{[^/]+?\\\}#', '[^/]+', preg_quote($template, '#')).'$#';
+            $this->assertSame($method, $request->getMethod(), $operation);
+            $this->assertMatchesRegularExpression($pattern, $request->getUri()->getPath(), $operation);
+            $this->assertSame('forwarded', $request->getHeaderLine('X-Guard'), "{$operation} drops its RequestOptions");
+            $multipart = str_starts_with($request->getHeaderLine('Content-Type'), 'multipart/');
+            $expectKey = $method !== 'GET' && ! $multipart ? 'guard-key' : '';
+            $this->assertSame($expectKey, $request->getHeaderLine('Idempotency-Key'), $operation);
+        }
+    }
+
+    /**
+     * Decode $body through the operation's SDK method. Returns null on success, else the failure.
+     *
+     * @param  list<array{request: \Psr\Http\Message\RequestInterface}>  $history
+     */
+    private function decode(string $operation, mixed $body, ?RequestOptions $options = null, array &$history = []): ?string
+    {
+        $stack = HandlerStack::create(new MockHandler([new Response(200, ['Content-Type' => 'application/json'], json_encode($body, JSON_THROW_ON_ERROR))]));
+        $stack->push(Middleware::history($history));
+        $blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000', maxRetries: 0, handler: $stack);
 
         set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
             throw new ErrorException($message, 0, $severity, $file, $line);
         });
 
         try {
-            $response = self::calls()[$operation]($blindpay);
+            $response = self::calls()[$operation]($blindpay, $options);
         } catch (Throwable $e) {
             return get_class($e).': '.$e->getMessage().' at '.basename($e->getFile()).':'.$e->getLine();
         } finally {

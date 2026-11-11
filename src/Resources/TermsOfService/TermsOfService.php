@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\TermsOfService;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\RequestOptions;
 
 readonly class InitiateInput
 {
@@ -60,25 +63,22 @@ class TermsOfService
      * @param InitiateInput $input
      * @return BlindPayApiResponse<InitiateResponse>
      */
-    public function initiate(InitiateInput $input): BlindPayApiResponse
-    {
+    public function initiate(
+        InitiateInput $input,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         if (empty($input->idempotencyKey)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Idempotency key cannot be empty')
+                ErrorResponse::validation('Idempotency key cannot be empty')
             );
         }
 
         $response = $this->client->post(
-            "e/instances/{$this->instanceId}/tos",
-            $input->toArray()
+            Path::of('e/instances/%s/tos', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                InitiateResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => InitiateResponse::fromArray($data));
     }
 }

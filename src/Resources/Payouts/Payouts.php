@@ -6,16 +6,19 @@ namespace BlindPay\SDK\Resources\Payouts;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Currency;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\ListResponse;
 use BlindPay\SDK\Types\Network;
-use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
 use BlindPay\SDK\Types\PayoutTrackingPayment;
 use BlindPay\SDK\Types\Rail;
+use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TrackingComplete;
 use BlindPay\SDK\Types\TrackingLiquidity;
@@ -220,29 +223,15 @@ readonly class ListPayoutsInput extends PaginationParams
     }
 }
 
-readonly class ListPayoutsResponse
+/**
+ * @extends ListResponse<Payout>
+ */
+readonly class ListPayoutsResponse extends ListResponse
 {
-    /**
-     * @param  Payout[]  $data
-     * @param  PaginationMetadata|null  $pagination  set when the request sent limit, starting_after or ending_before
-     */
-    public function __construct(
-        public array $data,
-        public ?PaginationMetadata $pagination = null,
-    ) {}
-
-    /**
-     * Accepts both shapes the API returns: a bare array, or {data, pagination} when the request
-     * sent limit, starting_after or ending_before.
-     */
+    /** Accepts both shapes the API returns (see ListResponse). */
     public static function fromArray(array $data): self
     {
-        [$items, $pagination] = Decode::listEnvelope($data);
-
-        return new self(
-            data: array_map(fn (array $item) => Payout::fromArray($item), $items),
-            pagination: $pagination,
-        );
+        return self::decode($data, Payout::fromArray(...));
     }
 }
 
@@ -507,18 +496,14 @@ class Payouts
      * @param ListPayoutsInput|null $params
      * @return BlindPayApiResponse<ListPayoutsResponse>
      */
-    public function list(?ListPayoutsInput $params = null): BlindPayApiResponse
-    {
+    public function list(
+        ?ListPayoutsInput $params = null,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get("instances/{$this->instanceId}/payouts{$queryParams}");
+        $response = $this->client->get(Path::of('instances/%s/payouts', $this->instanceId).$queryParams, $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                ListPayoutsResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => ListPayoutsResponse::fromArray($data));
     }
 
     /*
@@ -527,21 +512,19 @@ class Payouts
      * @param ExportPayoutsInput|null $params
      * @return BlindPayApiResponse<Payout[]>
      */
-    public function export(?ExportPayoutsInput $params = null): BlindPayApiResponse
+    public function export(?ExportPayoutsInput $params = null, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get("instances/{$this->instanceId}/export/payouts{$queryParams}");
+        $response = $this->client->get(Path::of('instances/%s/export/payouts', $this->instanceId).$queryParams, $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $payouts = array_map(
                 fn (array $item) => Payout::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($payouts);
-        }
-
-        return $response;
+            return $payouts;
+        });
     }
 
     /*
@@ -550,23 +533,17 @@ class Payouts
      * @param string $payoutId
      * @return BlindPayApiResponse<Payout>
      */
-    public function get(string $payoutId): BlindPayApiResponse
+    public function get(string $payoutId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($payoutId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Payout ID cannot be empty')
+                ErrorResponse::validation('Payout ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("instances/{$this->instanceId}/payouts/{$payoutId}");
+        $response = $this->client->get(Path::of('instances/%s/payouts/%s', $this->instanceId, $payoutId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                Payout::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => Payout::fromArray($data));
     }
 
     /*
@@ -575,23 +552,17 @@ class Payouts
      * @param string $payoutId
      * @return BlindPayApiResponse<Payout>
      */
-    public function getTrack(string $payoutId): BlindPayApiResponse
+    public function getTrack(string $payoutId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($payoutId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Payout ID cannot be empty')
+                ErrorResponse::validation('Payout ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("e/payouts/{$payoutId}");
+        $response = $this->client->get(Path::of('e/payouts/%s', $payoutId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                Payout::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => Payout::fromArray($data));
     }
 
     /*
@@ -600,20 +571,15 @@ class Payouts
      * @param AuthorizeStellarTokenInput $input
      * @return BlindPayApiResponse<AuthorizeStellarTokenResponse>
      */
-    public function authorizeStellarToken(AuthorizeStellarTokenInput $input): BlindPayApiResponse
+    public function authorizeStellarToken(AuthorizeStellarTokenInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/payouts/stellar/authorize",
-            $input->toArray()
+            Path::of('instances/%s/payouts/stellar/authorize', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                AuthorizeStellarTokenResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => AuthorizeStellarTokenResponse::fromArray($data));
     }
 
     /*
@@ -622,20 +588,15 @@ class Payouts
      * @param CreateStellarPayoutInput $input
      * @return BlindPayApiResponse<CreateStellarPayoutResponse>
      */
-    public function createStellar(CreateStellarPayoutInput $input): BlindPayApiResponse
+    public function createStellar(CreateStellarPayoutInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/payouts/stellar",
-            $input->toArray()
+            Path::of('instances/%s/payouts/stellar', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateStellarPayoutResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateStellarPayoutResponse::fromArray($data));
     }
 
     /*
@@ -644,20 +605,15 @@ class Payouts
      * @param CreateEvmPayoutInput $input
      * @return BlindPayApiResponse<CreateEvmPayoutResponse>
      */
-    public function createEvm(CreateEvmPayoutInput $input): BlindPayApiResponse
+    public function createEvm(CreateEvmPayoutInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/payouts/evm",
-            $input->toArray()
+            Path::of('instances/%s/payouts/evm', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateEvmPayoutResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateEvmPayoutResponse::fromArray($data));
     }
 
     /*
@@ -666,20 +622,15 @@ class Payouts
      * @param CreateSolanaPayoutInput $input
      * @return BlindPayApiResponse<CreateSolanaPayoutResponse>
      */
-    public function createSolana(CreateSolanaPayoutInput $input): BlindPayApiResponse
+    public function createSolana(CreateSolanaPayoutInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/payouts/solana",
-            $input->toArray()
+            Path::of('instances/%s/payouts/solana', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateSolanaPayoutResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateSolanaPayoutResponse::fromArray($data));
     }
 
     /*
@@ -688,25 +639,20 @@ class Payouts
      * @param SubmitPayoutDocumentsInput $input
      * @return BlindPayApiResponse<SubmitPayoutDocumentsResponse>
      */
-    public function submitDocuments(SubmitPayoutDocumentsInput $input): BlindPayApiResponse
+    public function submitDocuments(SubmitPayoutDocumentsInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($input->payoutId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Payout ID cannot be empty')
+                ErrorResponse::validation('Payout ID cannot be empty')
             );
         }
 
         $response = $this->client->post(
-            "instances/{$this->instanceId}/payouts/{$input->payoutId}/documents",
-            $input->toArray()
+            Path::of('instances/%s/payouts/%s/documents', $this->instanceId, $input->payoutId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                SubmitPayoutDocumentsResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => SubmitPayoutDocumentsResponse::fromArray($data));
     }
 }

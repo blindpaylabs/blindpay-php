@@ -6,6 +6,7 @@ namespace BlindPay\SDK\Resources\Upload;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\RequestOptions;
 
 enum UploadBucket: string
 {
@@ -56,19 +57,16 @@ class Upload
      * @param UploadInput $input
      * @return BlindPayApiResponse<UploadResponse>
      */
-    public function create(UploadInput $input): BlindPayApiResponse
-    {
+    public function create(
+        UploadInput $input,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         $response = $this->client->post(
             'upload',
-            $input->toArray()
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                UploadResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => UploadResponse::fromArray($data));
     }
 }

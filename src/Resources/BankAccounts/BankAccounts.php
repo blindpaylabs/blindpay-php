@@ -6,12 +6,15 @@ namespace BlindPay\SDK\Resources\BankAccounts;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Country;
+use BlindPay\SDK\Types\ErrorResponse;
 use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\RecipientRelationship;
+use BlindPay\SDK\Types\RequestOptions;
 use DateTimeImmutable;
 
 enum ArgentinaTransfers: string
@@ -1037,25 +1040,22 @@ class BankAccounts
      * @param string $customerId
      * @return BlindPayApiResponse<ListBankAccountsResponse>
      */
-    public function list(string $customerId): BlindPayApiResponse
-    {
+    public function list(
+        string $customerId,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$customerId}/bank-accounts"
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $customerId),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                ListBankAccountsResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => ListBankAccountsResponse::fromArray($data));
     }
 
     /*
@@ -1064,25 +1064,20 @@ class BankAccounts
      * @param GetBankAccountInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function get(GetBankAccountInput $input): BlindPayApiResponse
+    public function get(GetBankAccountInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($input->customerId) || empty($input->id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID and ID cannot be empty')
+                ErrorResponse::validation('Customer ID and ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->id}"
+            Path::of('instances/%s/customers/%s/bank-accounts/%s', $this->instanceId, $input->customerId, $input->id),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                BankAccountListItem::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
     /*
@@ -1091,16 +1086,18 @@ class BankAccounts
      * @param DeleteBankAccountInput $input
      * @return BlindPayApiResponse<null>
      */
-    public function delete(DeleteBankAccountInput $input): BlindPayApiResponse
+    public function delete(DeleteBankAccountInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($input->customerId) || empty($input->id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID and ID cannot be empty')
+                ErrorResponse::validation('Customer ID and ID cannot be empty')
             );
         }
 
         return $this->client->delete(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->id}"
+            Path::of('instances/%s/customers/%s/bank-accounts/%s', $this->instanceId, $input->customerId, $input->id),
+            null,
+            $options
         );
     }
 
@@ -1110,20 +1107,15 @@ class BankAccounts
      * @param CreatePixInput $input
      * @return BlindPayApiResponse<CreatePixResponse>
      */
-    public function createPix(CreatePixInput $input): BlindPayApiResponse
+    public function createPix(CreatePixInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreatePixResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreatePixResponse::fromArray($data));
     }
 
     /*
@@ -1132,20 +1124,15 @@ class BankAccounts
      * @param CreateArgentinaTransfersInput $input
      * @return BlindPayApiResponse<CreateArgentinaTransfersResponse>
      */
-    public function createArgentinaTransfers(CreateArgentinaTransfersInput $input): BlindPayApiResponse
+    public function createArgentinaTransfers(CreateArgentinaTransfersInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateArgentinaTransfersResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateArgentinaTransfersResponse::fromArray($data));
     }
 
     /*
@@ -1154,20 +1141,15 @@ class BankAccounts
      * @param CreateSpeiInput $input
      * @return BlindPayApiResponse<CreateSpeiResponse>
      */
-    public function createSpei(CreateSpeiInput $input): BlindPayApiResponse
+    public function createSpei(CreateSpeiInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateSpeiResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateSpeiResponse::fromArray($data));
     }
 
     /*
@@ -1176,20 +1158,15 @@ class BankAccounts
      * @param CreateColombiaAchInput $input
      * @return BlindPayApiResponse<CreateColombiaAchResponse>
      */
-    public function createColombiaAch(CreateColombiaAchInput $input): BlindPayApiResponse
+    public function createColombiaAch(CreateColombiaAchInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateColombiaAchResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateColombiaAchResponse::fromArray($data));
     }
 
     /*
@@ -1198,20 +1175,15 @@ class BankAccounts
      * @param CreateAchInput $input
      * @return BlindPayApiResponse<CreateAchResponse>
      */
-    public function createAch(CreateAchInput $input): BlindPayApiResponse
+    public function createAch(CreateAchInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateAchResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateAchResponse::fromArray($data));
     }
 
     /*
@@ -1220,20 +1192,15 @@ class BankAccounts
      * @param CreateWireInput $input
      * @return BlindPayApiResponse<CreateWireResponse>
      */
-    public function createWire(CreateWireInput $input): BlindPayApiResponse
+    public function createWire(CreateWireInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateWireResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateWireResponse::fromArray($data));
     }
 
     /*
@@ -1242,20 +1209,15 @@ class BankAccounts
      * @param CreateInternationalSwiftInput $input
      * @return BlindPayApiResponse<CreateInternationalSwiftResponse>
      */
-    public function createInternationalSwift(CreateInternationalSwiftInput $input): BlindPayApiResponse
+    public function createInternationalSwift(CreateInternationalSwiftInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateInternationalSwiftResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateInternationalSwiftResponse::fromArray($data));
     }
 
     /*
@@ -1264,20 +1226,15 @@ class BankAccounts
      * @param CreateRtpInput $input
      * @return BlindPayApiResponse<CreateRtpResponse>
      */
-    public function createRtp(CreateRtpInput $input): BlindPayApiResponse
+    public function createRtp(CreateRtpInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateRtpResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateRtpResponse::fromArray($data));
     }
 
     /*
@@ -1286,20 +1243,15 @@ class BankAccounts
      * @param CreatePixSafeInput $input
      * @return BlindPayApiResponse<CreatePixSafeResponse>
      */
-    public function createPixSafe(CreatePixSafeInput $input): BlindPayApiResponse
+    public function createPixSafe(CreatePixSafeInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreatePixSafeResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreatePixSafeResponse::fromArray($data));
     }
 
     /*
@@ -1308,20 +1260,15 @@ class BankAccounts
      * @param CreateSepaInput $input
      * @return BlindPayApiResponse<CreateSepaResponse>
      */
-    public function createSepa(CreateSepaInput $input): BlindPayApiResponse
+    public function createSepa(CreateSepaInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateSepaResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateSepaResponse::fromArray($data));
     }
 }
 

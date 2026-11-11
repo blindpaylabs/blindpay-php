@@ -6,6 +6,7 @@ namespace BlindPay\SDK\Resources\Customers;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\AccountPurpose;
 use BlindPay\SDK\Types\AmlStatus;
@@ -13,9 +14,11 @@ use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\BusinessIndustry;
 use BlindPay\SDK\Types\BusinessType;
 use BlindPay\SDK\Types\Country;
+use BlindPay\SDK\Types\ErrorResponse;
 use BlindPay\SDK\Types\EstimatedAnnualRevenue;
-use BlindPay\SDK\Types\PaginationMetadata;
+use BlindPay\SDK\Types\ListResponse;
 use BlindPay\SDK\Types\PaginationParams;
+use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Types\SourceOfWealth;
 use DateTimeImmutable;
 use ReflectionClass;
@@ -1347,21 +1350,10 @@ readonly class ListCustomersInput extends PaginationParams
     }
 }
 
-readonly class ListCustomersResponse
-{
-    public function __construct(
-        public array $data,
-        public PaginationMetadata $pagination
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            data: $data['data'],
-            pagination: PaginationMetadata::fromArray($data['pagination'])
-        );
-    }
-}
+/**
+ * @extends ListResponse<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>
+ */
+readonly class ListCustomersResponse extends ListResponse {}
 
 class Customers
 {
@@ -1394,41 +1386,14 @@ class Customers
      *
      * @return BlindPayApiResponse<ListCustomersResponse|array<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>>
      */
-    public function list(?ListCustomersInput $params = null): BlindPayApiResponse
-    {
+    public function list(
+        ?ListCustomersInput $params = null,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         $queryString = $params?->toQueryString() ?? '';
-        $response = $this->client->get("instances/{$this->instanceId}/customers{$queryString}");
+        $response = $this->client->get(Path::of('instances/%s/customers', $this->instanceId).$queryString, $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            try {
-                if (isset($response->data['data']) && isset($response->data['pagination'])) {
-                    $customers = array_map(
-                        fn (array $item) => $this->mapCustomer($item),
-                        $response->data['data']
-                    );
-
-                    return BlindPayApiResponse::success(
-                        new ListCustomersResponse(
-                            data: $customers,
-                            pagination: PaginationMetadata::fromArray($response->data['pagination'])
-                        )
-                    );
-                }
-
-                $customers = array_map(
-                    fn (array $item) => $this->mapCustomer($item),
-                    $response->data
-                );
-
-                return BlindPayApiResponse::success($customers);
-            } catch (\InvalidArgumentException $e) {
-                return BlindPayApiResponse::error(
-                    new \BlindPay\SDK\Types\ErrorResponse($e->getMessage())
-                );
-            }
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => ListCustomersResponse::decode($data, $this->mapCustomer(...)));
     }
 
     /*
@@ -1437,20 +1402,15 @@ class Customers
      * @param CreateIndividualWithStandardKYCInput $data
      * @return BlindPayApiResponse<CreateCustomerResponse>
      */
-    public function createIndividualWithStandardKYC(CreateIndividualWithStandardKYCInput $data): BlindPayApiResponse
+    public function createIndividualWithStandardKYC(CreateIndividualWithStandardKYCInput $data, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers",
-            $data->toArray()
+            Path::of('instances/%s/customers', $this->instanceId),
+            $data->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateCustomerResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateCustomerResponse::fromArray($data));
     }
 
     /*
@@ -1459,20 +1419,15 @@ class Customers
      * @param CreateIndividualWithEnhancedKYCInput $data
      * @return BlindPayApiResponse<CreateCustomerResponse>
      */
-    public function createIndividualWithEnhancedKYC(CreateIndividualWithEnhancedKYCInput $data): BlindPayApiResponse
+    public function createIndividualWithEnhancedKYC(CreateIndividualWithEnhancedKYCInput $data, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers",
-            $data->toArray()
+            Path::of('instances/%s/customers', $this->instanceId),
+            $data->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateCustomerResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateCustomerResponse::fromArray($data));
     }
 
     /*
@@ -1481,20 +1436,15 @@ class Customers
      * @param CreateBusinessWithStandardKYBInput $data
      * @return BlindPayApiResponse<CreateCustomerResponse>
      */
-    public function createBusinessWithStandardKYB(CreateBusinessWithStandardKYBInput $data): BlindPayApiResponse
+    public function createBusinessWithStandardKYB(CreateBusinessWithStandardKYBInput $data, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers",
-            $data->toArray()
+            Path::of('instances/%s/customers', $this->instanceId),
+            $data->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateCustomerResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateCustomerResponse::fromArray($data));
     }
 
     /*
@@ -1503,29 +1453,17 @@ class Customers
      * @param string $customerId
      * @return BlindPayApiResponse<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>
      */
-    public function get(string $customerId): BlindPayApiResponse
+    public function get(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("instances/{$this->instanceId}/customers/{$customerId}");
+        $response = $this->client->get(Path::of('instances/%s/customers/%s', $this->instanceId, $customerId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            try {
-                return BlindPayApiResponse::success(
-                    $this->mapCustomer($response->data)
-                );
-            } catch (\InvalidArgumentException $e) {
-                return BlindPayApiResponse::error(
-                    new \BlindPay\SDK\Types\ErrorResponse($e->getMessage())
-                );
-            }
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => $this->mapCustomer($data));
     }
 
     /*
@@ -1534,17 +1472,18 @@ class Customers
      * @param UpdateCustomerInput $input
      * @return BlindPayApiResponse<null>
      */
-    public function update(UpdateCustomerInput $input): BlindPayApiResponse
+    public function update(UpdateCustomerInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($input->customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
         return $this->client->put(
-            "instances/{$this->instanceId}/customers/{$input->customerId}",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
     }
 
@@ -1554,15 +1493,15 @@ class Customers
      * @param string $customerId
      * @return BlindPayApiResponse<null>
      */
-    public function delete(string $customerId): BlindPayApiResponse
+    public function delete(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
-        return $this->client->delete("instances/{$this->instanceId}/customers/{$customerId}");
+        return $this->client->delete(Path::of('instances/%s/customers/%s', $this->instanceId, $customerId), null, $options);
     }
 
     /*
@@ -1571,23 +1510,17 @@ class Customers
      * @param string $customerId
      * @return BlindPayApiResponse<GetCustomerLimitsResponse>
      */
-    public function getLimits(string $customerId): BlindPayApiResponse
+    public function getLimits(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("instances/{$this->instanceId}/limits/customers/{$customerId}");
+        $response = $this->client->get(Path::of('instances/%s/limits/customers/%s', $this->instanceId, $customerId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                GetCustomerLimitsResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => GetCustomerLimitsResponse::fromArray($data));
     }
 
     /*
@@ -1596,26 +1529,24 @@ class Customers
      * @param string $customerId
      * @return BlindPayApiResponse<LimitIncreaseRequest[]>
      */
-    public function getLimitIncreaseRequests(string $customerId): BlindPayApiResponse
+    public function getLimitIncreaseRequests(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("instances/{$this->instanceId}/customers/{$customerId}/limit-increase");
+        $response = $this->client->get(Path::of('instances/%s/customers/%s/limit-increase', $this->instanceId, $customerId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $requests = array_map(
                 fn (array $item) => LimitIncreaseRequest::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($requests);
-        }
-
-        return $response;
+            return $requests;
+        });
     }
 
     /*
@@ -1624,25 +1555,20 @@ class Customers
      * @param RequestLimitIncreaseInput $input
      * @return BlindPayApiResponse<RequestLimitIncreaseResponse>
      */
-    public function requestLimitIncrease(RequestLimitIncreaseInput $input): BlindPayApiResponse
+    public function requestLimitIncrease(RequestLimitIncreaseInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($input->customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/limit-increase",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/limit-increase', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                RequestLimitIncreaseResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => RequestLimitIncreaseResponse::fromArray($data));
     }
 }

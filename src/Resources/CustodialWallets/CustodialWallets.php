@@ -6,8 +6,11 @@ namespace BlindPay\SDK\Resources\CustodialWallets;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
 use BlindPay\SDK\Types\Network;
+use BlindPay\SDK\Types\RequestOptions;
 use DateTimeImmutable;
 
 readonly class CustodialWallet
@@ -123,28 +126,29 @@ class CustodialWallets
      * @param string $customerId
      * @return BlindPayApiResponse<CustodialWallet[]>
      */
-    public function list(string $customerId): BlindPayApiResponse
-    {
+    public function list(
+        string $customerId,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         if (empty($customerId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$customerId}/wallets"
+            Path::of('instances/%s/customers/%s/wallets', $this->instanceId, $customerId),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $wallets = array_map(
                 fn (array $item) => CustodialWallet::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($wallets);
-        }
-
-        return $response;
+            return $wallets;
+        });
     }
 
     /*
@@ -153,25 +157,20 @@ class CustodialWallets
      * @param GetCustodialWalletInput $input
      * @return BlindPayApiResponse<CustodialWallet>
      */
-    public function get(GetCustodialWalletInput $input): BlindPayApiResponse
+    public function get(GetCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($input->id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Wallet ID cannot be empty')
+                ErrorResponse::validation('Wallet ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/wallets/{$input->id}"
+            Path::of('instances/%s/customers/%s/wallets/%s', $this->instanceId, $input->customerId, $input->id),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CustodialWallet::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CustodialWallet::fromArray($data));
     }
 
     /*
@@ -180,20 +179,15 @@ class CustodialWallets
      * @param CreateCustodialWalletInput $input
      * @return BlindPayApiResponse<CustodialWallet>
      */
-    public function create(CreateCustodialWalletInput $input): BlindPayApiResponse
+    public function create(CreateCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/wallets",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/wallets', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CustodialWallet::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CustodialWallet::fromArray($data));
     }
 
     /*
@@ -202,25 +196,20 @@ class CustodialWallets
      * @param GetCustodialWalletInput $input
      * @return BlindPayApiResponse<CustodialWalletBalanceResponse>
      */
-    public function getBalance(GetCustodialWalletInput $input): BlindPayApiResponse
+    public function getBalance(GetCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($input->id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Wallet ID cannot be empty')
+                ErrorResponse::validation('Wallet ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/wallets/{$input->id}/balance"
+            Path::of('instances/%s/customers/%s/wallets/%s/balance', $this->instanceId, $input->customerId, $input->id),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CustodialWalletBalanceResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CustodialWalletBalanceResponse::fromArray($data));
     }
 
     /*
@@ -229,16 +218,18 @@ class CustodialWallets
      * @param DeleteCustodialWalletInput $input
      * @return BlindPayApiResponse<null>
      */
-    public function delete(DeleteCustodialWalletInput $input): BlindPayApiResponse
+    public function delete(DeleteCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($input->id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Wallet ID cannot be empty')
+                ErrorResponse::validation('Wallet ID cannot be empty')
             );
         }
 
         return $this->client->delete(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/wallets/{$input->id}"
+            Path::of('instances/%s/customers/%s/wallets/%s', $this->instanceId, $input->customerId, $input->id),
+            null,
+            $options
         );
     }
 }

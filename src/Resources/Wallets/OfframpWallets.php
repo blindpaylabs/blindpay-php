@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Wallets;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\RequestOptions;
 use DateTimeImmutable;
 
 readonly class OfframpWallet
@@ -116,22 +119,23 @@ class OfframpWallets
      *
      * @return BlindPayApiResponse<OfframpWallet[]>
      */
-    public function list(ListOfframpWalletsInput $input): BlindPayApiResponse
-    {
+    public function list(
+        ListOfframpWalletsInput $input,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->bankAccountId}/offramp-wallets"
+            Path::of('instances/%s/customers/%s/bank-accounts/%s/offramp-wallets', $this->instanceId, $input->customerId, $input->bankAccountId),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $wallets = array_map(
                 fn (array $item) => OfframpWallet::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($wallets);
-        }
-
-        return $response;
+            return $wallets;
+        });
     }
 
     /**
@@ -139,20 +143,15 @@ class OfframpWallets
      *
      * @return BlindPayApiResponse<CreateOfframpWalletResponse>
      */
-    public function create(CreateOfframpWalletInput $input): BlindPayApiResponse
+    public function create(CreateOfframpWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->bankAccountId}/offramp-wallets",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/bank-accounts/%s/offramp-wallets', $this->instanceId, $input->customerId, $input->bankAccountId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateOfframpWalletResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateOfframpWalletResponse::fromArray($data));
     }
 
     /**
@@ -160,24 +159,19 @@ class OfframpWallets
      *
      * @return BlindPayApiResponse<OfframpWallet>
      */
-    public function get(GetOfframpWalletInput $input): BlindPayApiResponse
+    public function get(GetOfframpWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($input->id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Offramp wallet ID cannot be empty')
+                ErrorResponse::validation('Offramp wallet ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->bankAccountId}/offramp-wallets/{$input->id}"
+            Path::of('instances/%s/customers/%s/bank-accounts/%s/offramp-wallets/%s', $this->instanceId, $input->customerId, $input->bankAccountId, $input->id),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                OfframpWallet::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => OfframpWallet::fromArray($data));
     }
 }

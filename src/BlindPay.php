@@ -10,14 +10,11 @@ use BlindPay\SDK\Internal\Transport;
 use BlindPay\SDK\Resources\Available\Available;
 use BlindPay\SDK\Resources\BankAccounts\BankAccounts;
 use BlindPay\SDK\Resources\CustodialWallets\CustodialWallets;
-use BlindPay\SDK\Resources\Customers\Customers;
 use BlindPay\SDK\Resources\Customers\CustomersWrapper;
 use BlindPay\SDK\Resources\Fees\Fees;
-use BlindPay\SDK\Resources\Instances\Instances;
 use BlindPay\SDK\Resources\Instances\InstancesWrapper;
 use BlindPay\SDK\Resources\Ownership\Ownership;
 use BlindPay\SDK\Resources\PartnerFees\PartnerFees;
-use BlindPay\SDK\Resources\Payins\Payins;
 use BlindPay\SDK\Resources\Payins\PayinsWrapper;
 use BlindPay\SDK\Resources\Payins\Quotes as PayinQuotes;
 use BlindPay\SDK\Resources\Payouts\Payouts;
@@ -148,32 +145,22 @@ class BlindPay implements ApiClientInterface
 
     private function initializeInstances(): void
     {
-        $instancesResource = new Instances($this->instanceId, $this);
-        $webhooksResource = new Webhooks($this->instanceId, $this);
-
-        $termsOfServiceResource = new TermsOfService($this->instanceId, $this);
-
         $this->instances = new InstancesWrapper(
-            $instancesResource,
-            $webhooksResource,
-            $termsOfServiceResource
+            $this->instanceId,
+            $this,
+            new Webhooks($this->instanceId, $this),
+            new TermsOfService($this->instanceId, $this),
         );
     }
 
     private function initializePayins(): void
     {
-        $payinsResource = new Payins($this->instanceId, $this);
-        $quotesResource = new PayinQuotes($this->instanceId, $this);
-
-        $this->payins = new PayinsWrapper($payinsResource, $quotesResource);
+        $this->payins = new PayinsWrapper($this->instanceId, $this, new PayinQuotes($this->instanceId, $this));
     }
 
     private function initializeCustomers(): void
     {
-        $customersResource = new Customers($this->instanceId, $this);
-        $bankAccountsResource = new BankAccounts($this->instanceId, $this);
-
-        $this->customers = new CustomersWrapper($customersResource, $bankAccountsResource);
+        $this->customers = new CustomersWrapper($this->instanceId, $this, new BankAccounts($this->instanceId, $this));
     }
 
     private function initializeWallets(): void

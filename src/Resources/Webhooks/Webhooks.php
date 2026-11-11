@@ -6,7 +6,10 @@ namespace BlindPay\SDK\Resources\Webhooks;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\RequestOptions;
 use DateTimeImmutable;
 
 enum WebhookEvents: string
@@ -166,20 +169,18 @@ class Webhooks
      *
      * @return BlindPayApiResponse<WebhookEndpoint[]>
      */
-    public function list(): BlindPayApiResponse
+    public function list(?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->get("instances/{$this->instanceId}/webhook-endpoints");
+        $response = $this->client->get(Path::of('instances/%s/webhook-endpoints', $this->instanceId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $webhooks = array_map(
                 fn (array $item) => WebhookEndpoint::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($webhooks);
-        }
-
-        return $response;
+            return $webhooks;
+        });
     }
 
     /**
@@ -187,20 +188,15 @@ class Webhooks
      *
      * @return BlindPayApiResponse<CreateWebhookEndpointResponse>
      */
-    public function create(CreateWebhookEndpointInput $input): BlindPayApiResponse
+    public function create(CreateWebhookEndpointInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/webhook-endpoints",
-            $input->toArray()
+            Path::of('instances/%s/webhook-endpoints', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateWebhookEndpointResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateWebhookEndpointResponse::fromArray($data));
     }
 
     /**
@@ -208,15 +204,15 @@ class Webhooks
      *
      * @return BlindPayApiResponse<null>
      */
-    public function delete(string $id): BlindPayApiResponse
+    public function delete(string $id, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('ID cannot be empty')
+                ErrorResponse::validation('ID cannot be empty')
             );
         }
 
-        return $this->client->delete("instances/{$this->instanceId}/webhook-endpoints/{$id}");
+        return $this->client->delete(Path::of('instances/%s/webhook-endpoints/%s', $this->instanceId, $id), null, $options);
     }
 
     /**
@@ -224,23 +220,17 @@ class Webhooks
      *
      * @return BlindPayApiResponse<GetWebhookEndpointSecretResponse>
      */
-    public function getSecret(string $id): BlindPayApiResponse
+    public function getSecret(string $id, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('ID cannot be empty')
+                ErrorResponse::validation('ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("instances/{$this->instanceId}/webhook-endpoints/{$id}/secret");
+        $response = $this->client->get(Path::of('instances/%s/webhook-endpoints/%s/secret', $this->instanceId, $id), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                GetWebhookEndpointSecretResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => GetWebhookEndpointSecretResponse::fromArray($data));
     }
 
     /**
@@ -248,16 +238,10 @@ class Webhooks
      *
      * @return BlindPayApiResponse<GetPortalAccessUrlResponse>
      */
-    public function getPortalAccessUrl(): BlindPayApiResponse
+    public function getPortalAccessUrl(?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->get("instances/{$this->instanceId}/webhook-endpoints/portal-access");
+        $response = $this->client->get(Path::of('instances/%s/webhook-endpoints/portal-access', $this->instanceId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                GetPortalAccessUrlResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => GetPortalAccessUrlResponse::fromArray($data));
     }
 }

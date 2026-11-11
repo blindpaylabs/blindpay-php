@@ -6,12 +6,15 @@ namespace BlindPay\SDK\Resources\Payins;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\ListResponse;
 use BlindPay\SDK\Types\ManualExecutionStatus;
 use BlindPay\SDK\Types\Network;
-use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
 use BlindPay\SDK\Types\PayinTrackingPayment;
+use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TrackingComplete;
 use BlindPay\SDK\Types\TrackingPartnerFee;
@@ -324,29 +327,15 @@ readonly class ListPayinsInput extends PaginationParams
     }
 }
 
-readonly class ListPayinsResponse
+/**
+ * @extends ListResponse<Payin>
+ */
+readonly class ListPayinsResponse extends ListResponse
 {
-    /**
-     * @param  Payin[]  $data
-     * @param  PaginationMetadata|null  $pagination  set when the request sent limit, starting_after or ending_before
-     */
-    public function __construct(
-        public array $data,
-        public ?PaginationMetadata $pagination = null,
-    ) {}
-
-    /**
-     * Accepts both shapes the API returns: a bare array, or {data, pagination} when the request
-     * sent limit, starting_after or ending_before.
-     */
+    /** Accepts both shapes the API returns (see ListResponse). */
     public static function fromArray(array $data): self
     {
-        [$items, $pagination] = Decode::listEnvelope($data);
-
-        return new self(
-            data: array_map(fn (array $item) => Payin::fromArray($item), $items),
-            pagination: $pagination,
-        );
+        return self::decode($data, Payin::fromArray(...));
     }
 }
 
@@ -432,18 +421,14 @@ class Payins
      * @param ListPayinsInput|null $params Optional filters for listing payins
      * @return BlindPayApiResponse<ListPayinsResponse>
      */
-    public function list(?ListPayinsInput $params = null): BlindPayApiResponse
-    {
+    public function list(
+        ?ListPayinsInput $params = null,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get("instances/{$this->instanceId}/payins{$queryParams}");
+        $response = $this->client->get(Path::of('instances/%s/payins', $this->instanceId).$queryParams, $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                ListPayinsResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => ListPayinsResponse::fromArray($data));
     }
 
     /*
@@ -452,23 +437,17 @@ class Payins
      * @param string $payinId The payin ID
      * @return BlindPayApiResponse<Payin>
      */
-    public function get(string $payinId): BlindPayApiResponse
+    public function get(string $payinId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($payinId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Payin ID cannot be empty')
+                ErrorResponse::validation('Payin ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("instances/{$this->instanceId}/payins/{$payinId}");
+        $response = $this->client->get(Path::of('instances/%s/payins/%s', $this->instanceId, $payinId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                Payin::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => Payin::fromArray($data));
     }
 
     /*
@@ -477,23 +456,17 @@ class Payins
      * @param string $payinId The payin ID to track
      * @return BlindPayApiResponse<Payin>
      */
-    public function getTrack(string $payinId): BlindPayApiResponse
+    public function getTrack(string $payinId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($payinId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Payin ID cannot be empty')
+                ErrorResponse::validation('Payin ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("e/payins/{$payinId}");
+        $response = $this->client->get(Path::of('e/payins/%s', $payinId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                Payin::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => Payin::fromArray($data));
     }
 
     /*
@@ -502,21 +475,19 @@ class Payins
      * @param ExportPayinsInput $params Export parameters
      * @return BlindPayApiResponse<Payin[]>
      */
-    public function export(ExportPayinsInput $params): BlindPayApiResponse
+    public function export(ExportPayinsInput $params, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $queryParams = $params->toQueryString();
-        $response = $this->client->get("instances/{$this->instanceId}/export/payins{$queryParams}");
+        $response = $this->client->get(Path::of('instances/%s/export/payins', $this->instanceId).$queryParams, $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $payins = array_map(
                 fn (array $item) => Payin::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($payins);
-        }
-
-        return $response;
+            return $payins;
+        });
     }
 
     /*
@@ -525,25 +496,20 @@ class Payins
      * @param string $payinQuoteId The payin quote ID
      * @return BlindPayApiResponse<CreateEvmPayinResponse>
      */
-    public function createEvm(string $payinQuoteId): BlindPayApiResponse
+    public function createEvm(string $payinQuoteId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($payinQuoteId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Payin quote ID cannot be empty')
+                ErrorResponse::validation('Payin quote ID cannot be empty')
             );
         }
 
         $response = $this->client->post(
-            "instances/{$this->instanceId}/payins/evm",
-            ['payin_quote_id' => $payinQuoteId]
+            Path::of('instances/%s/payins/evm', $this->instanceId),
+            ['payin_quote_id' => $payinQuoteId],
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateEvmPayinResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateEvmPayinResponse::fromArray($data));
     }
 }

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\PartnerFees;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\RequestOptions;
 
 readonly class PartnerFee
 {
@@ -162,20 +165,18 @@ class PartnerFees
      *
      * @return BlindPayApiResponse<PartnerFee[]>
      */
-    public function list(): BlindPayApiResponse
+    public function list(?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->get("instances/{$this->instanceId}/partner-fees");
+        $response = $this->client->get(Path::of('instances/%s/partner-fees', $this->instanceId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $fees = array_map(
                 fn (array $item) => PartnerFee::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($fees);
-        }
-
-        return $response;
+            return $fees;
+        });
     }
 
     /*
@@ -184,20 +185,15 @@ class PartnerFees
      * @param CreatePartnerFeeInput $input
      * @return BlindPayApiResponse<CreatePartnerFeeResponse>
      */
-    public function create(CreatePartnerFeeInput $input): BlindPayApiResponse
+    public function create(CreatePartnerFeeInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/partner-fees",
-            $input->toArray()
+            Path::of('instances/%s/partner-fees', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreatePartnerFeeResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreatePartnerFeeResponse::fromArray($data));
     }
 
     /*
@@ -206,23 +202,17 @@ class PartnerFees
      * @param string $id
      * @return BlindPayApiResponse<GetPartnerFeeResponse>
      */
-    public function get(string $id): BlindPayApiResponse
+    public function get(string $id, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('ID cannot be empty')
+                ErrorResponse::validation('ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("instances/{$this->instanceId}/partner-fees/{$id}");
+        $response = $this->client->get(Path::of('instances/%s/partner-fees/%s', $this->instanceId, $id), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                GetPartnerFeeResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => GetPartnerFeeResponse::fromArray($data));
     }
 
     /*
@@ -231,14 +221,14 @@ class PartnerFees
      * @param string $id
      * @return BlindPayApiResponse<null>
      */
-    public function delete(string $id): BlindPayApiResponse
+    public function delete(string $id, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($id)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('ID cannot be empty')
+                ErrorResponse::validation('ID cannot be empty')
             );
         }
 
-        return $this->client->delete("instances/{$this->instanceId}/partner-fees/{$id}");
+        return $this->client->delete(Path::of('instances/%s/partner-fees/%s', $this->instanceId, $id), null, $options);
     }
 }

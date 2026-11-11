@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Payins;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Currency;
 use BlindPay\SDK\Types\CurrencyType;
+use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Types\StablecoinToken;
 
 enum PaymentMethod: string
@@ -189,20 +191,17 @@ class Quotes
      * @param CreatePayinQuoteInput $input The quote input parameters
      * @return BlindPayApiResponse<CreatePayinQuoteResponse>
      */
-    public function create(CreatePayinQuoteInput $input): BlindPayApiResponse
-    {
+    public function create(
+        CreatePayinQuoteInput $input,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/payin-quotes",
-            $input->toArray()
+            Path::of('instances/%s/payin-quotes', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreatePayinQuoteResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreatePayinQuoteResponse::fromArray($data));
     }
 
     /*
@@ -211,19 +210,14 @@ class Quotes
      * @param GetPayinFxRateInput $input The FX rate request parameters
      * @return BlindPayApiResponse<GetPayinFxRateResponse>
      */
-    public function getFxRate(GetPayinFxRateInput $input): BlindPayApiResponse
+    public function getFxRate(GetPayinFxRateInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/payin-quotes/fx",
-            $input->toArray()
+            Path::of('instances/%s/payin-quotes/fx', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                GetPayinFxRateResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => GetPayinFxRateResponse::fromArray($data));
     }
 }

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Instances;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\RequestOptions;
 use DateTimeImmutable;
 
 enum InstanceMemberRole: string
@@ -112,20 +115,18 @@ class Instances
      *
      * @return BlindPayApiResponse<InstanceMember[]>
      */
-    public function getMembers(): BlindPayApiResponse
+    public function getMembers(?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->get("instances/{$this->instanceId}/members");
+        $response = $this->client->get(Path::of('instances/%s/members', $this->instanceId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $members = array_map(
                 fn (array $item) => InstanceMember::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($members);
-        }
-
-        return $response;
+            return $members;
+        });
     }
 
     /*
@@ -134,11 +135,12 @@ class Instances
      * @param UpdateInstanceInput $input
      * @return BlindPayApiResponse<null>
      */
-    public function update(UpdateInstanceInput $input): BlindPayApiResponse
+    public function update(UpdateInstanceInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->client->put(
-            "instances/{$this->instanceId}",
-            $input->toArray()
+            Path::of('instances/%s', $this->instanceId),
+            $input->toArray(),
+            $options
         );
     }
 
@@ -147,9 +149,9 @@ class Instances
      *
      * @return BlindPayApiResponse<null>
      */
-    public function delete(): BlindPayApiResponse
+    public function delete(?RequestOptions $options = null): BlindPayApiResponse
     {
-        return $this->client->delete("instances/{$this->instanceId}");
+        return $this->client->delete(Path::of('instances/%s', $this->instanceId), null, $options);
     }
 
     /*
@@ -158,15 +160,15 @@ class Instances
      * @param string $memberId
      * @return BlindPayApiResponse<null>
      */
-    public function deleteMember(string $memberId): BlindPayApiResponse
+    public function deleteMember(string $memberId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($memberId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Member ID cannot be empty')
+                ErrorResponse::validation('Member ID cannot be empty')
             );
         }
 
-        return $this->client->delete("instances/{$this->instanceId}/members/{$memberId}");
+        return $this->client->delete(Path::of('instances/%s/members/%s', $this->instanceId, $memberId), null, $options);
     }
 
     /*
@@ -175,17 +177,18 @@ class Instances
      * @param UpdateMemberRoleInput $input
      * @return BlindPayApiResponse<null>
      */
-    public function updateMemberRole(UpdateMemberRoleInput $input): BlindPayApiResponse
+    public function updateMemberRole(UpdateMemberRoleInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($input->memberId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Member ID cannot be empty')
+                ErrorResponse::validation('Member ID cannot be empty')
             );
         }
 
         return $this->client->put(
-            "instances/{$this->instanceId}/members/{$input->memberId}",
-            ['user_role' => $input->role->value]
+            Path::of('instances/%s/members/%s', $this->instanceId, $input->memberId),
+            ['user_role' => $input->role->value],
+            $options
         );
     }
 }

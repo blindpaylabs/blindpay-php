@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Available;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Rail;
+use BlindPay\SDK\Types\RequestOptions;
 
 readonly class BankDetailItem
 {
@@ -136,20 +138,20 @@ class Available
      * @param Rail $rail The rail type to get bank details for
      * @return BlindPayApiResponse<BankDetail[]>
      */
-    public function getBankDetails(Rail $rail): BlindPayApiResponse
-    {
-        $response = $this->client->get("available/bank-details?rail={$rail->value}");
+    public function getBankDetails(
+        Rail $rail,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
+        $response = $this->client->get("available/bank-details?rail={$rail->value}", $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $bankDetails = array_map(
                 fn (array $item) => BankDetail::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($bankDetails);
-        }
-
-        return $response;
+            return $bankDetails;
+        });
     }
 
     /*
@@ -157,20 +159,18 @@ class Available
      *
      * @return BlindPayApiResponse<RailInfo[]>
      */
-    public function getRails(): BlindPayApiResponse
+    public function getRails(?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->get('available/rails');
+        $response = $this->client->get('available/rails', $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $rails = array_map(
                 fn (array $item) => RailInfo::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($rails);
-        }
-
-        return $response;
+            return $rails;
+        });
     }
 
     /*
@@ -179,20 +179,18 @@ class Available
      * @param string $swift The swift code to get bank details for
      * @return BlindPayApiResponse<SwiftCodeBankDetails[]>
      */
-    public function getSwiftCodeBankDetails(string $swift): BlindPayApiResponse
+    public function getSwiftCodeBankDetails(string $swift, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->get("available/swift/{$swift}");
+        $response = $this->client->get(Path::of('available/swift/%s', $swift), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $swiftCodeBankDetails = array_map(
                 fn (array $item) => SwiftCodeBankDetails::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($swiftCodeBankDetails);
-        }
-
-        return $response;
+            return $swiftCodeBankDetails;
+        });
     }
 
     /*
@@ -200,19 +198,17 @@ class Available
      *
      * @return BlindPayApiResponse<NaicsCode[]>
      */
-    public function getNaicsCodes(): BlindPayApiResponse
+    public function getNaicsCodes(?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->get('available/naics');
+        $response = $this->client->get('available/naics', $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $naicsCodes = array_map(
                 fn (array $item) => NaicsCode::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($naicsCodes);
-        }
-
-        return $response;
+            return $naicsCodes;
+        });
     }
 }

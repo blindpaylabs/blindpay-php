@@ -6,12 +6,15 @@ namespace BlindPay\SDK\Resources\Transfers;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BaseTracking;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\CurrencyType;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\ListResponse;
 use BlindPay\SDK\Types\Network;
-use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
+use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TrackingComplete;
 use BlindPay\SDK\Types\TrackingPartnerFee;
@@ -318,22 +321,15 @@ readonly class ListTransfersInput extends PaginationParams
     }
 }
 
-readonly class ListTransfersResponse
+/**
+ * @extends ListResponse<Transfer>
+ */
+readonly class ListTransfersResponse extends ListResponse
 {
-    public function __construct(
-        public array $data,
-        public PaginationMetadata $pagination
-    ) {}
-
+    /** Accepts both shapes the API returns (see ListResponse). */
     public static function fromArray(array $data): self
     {
-        return new self(
-            data: array_map(
-                fn (array $item) => Transfer::fromArray($item),
-                $data['data']
-            ),
-            pagination: PaginationMetadata::fromArray($data['pagination'])
-        );
+        return self::decode($data, Transfer::fromArray(...));
     }
 }
 
@@ -350,20 +346,17 @@ class Transfers
      * @param CreateTransferQuoteInput $input
      * @return BlindPayApiResponse<CreateTransferQuoteResponse>
      */
-    public function createQuote(CreateTransferQuoteInput $input): BlindPayApiResponse
-    {
+    public function createQuote(
+        CreateTransferQuoteInput $input,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/transfer-quotes",
-            $input->toArray()
+            Path::of('instances/%s/transfer-quotes', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateTransferQuoteResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateTransferQuoteResponse::fromArray($data));
     }
 
     /*
@@ -372,20 +365,15 @@ class Transfers
      * @param CreateTransferInput $input
      * @return BlindPayApiResponse<CreateTransferResponse>
      */
-    public function create(CreateTransferInput $input): BlindPayApiResponse
+    public function create(CreateTransferInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/transfers",
-            $input->toArray()
+            Path::of('instances/%s/transfers', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateTransferResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateTransferResponse::fromArray($data));
     }
 
     /*
@@ -394,18 +382,12 @@ class Transfers
      * @param ListTransfersInput|null $params
      * @return BlindPayApiResponse<ListTransfersResponse>
      */
-    public function list(?ListTransfersInput $params = null): BlindPayApiResponse
+    public function list(?ListTransfersInput $params = null, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get("instances/{$this->instanceId}/transfers{$queryParams}");
+        $response = $this->client->get(Path::of('instances/%s/transfers', $this->instanceId).$queryParams, $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                ListTransfersResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => ListTransfersResponse::fromArray($data));
     }
 
     /*
@@ -414,23 +396,17 @@ class Transfers
      * @param string $transferId
      * @return BlindPayApiResponse<Transfer>
      */
-    public function get(string $transferId): BlindPayApiResponse
+    public function get(string $transferId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($transferId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Transfer ID cannot be empty')
+                ErrorResponse::validation('Transfer ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("instances/{$this->instanceId}/transfers/{$transferId}");
+        $response = $this->client->get(Path::of('instances/%s/transfers/%s', $this->instanceId, $transferId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                Transfer::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => Transfer::fromArray($data));
     }
 
     /*
@@ -439,22 +415,16 @@ class Transfers
      * @param string $transferId
      * @return BlindPayApiResponse<Transfer>
      */
-    public function getTrack(string $transferId): BlindPayApiResponse
+    public function getTrack(string $transferId, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($transferId)) {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Transfer ID cannot be empty')
+                ErrorResponse::validation('Transfer ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("e/transfers/{$transferId}");
+        $response = $this->client->get(Path::of('e/transfers/%s', $transferId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                Transfer::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => Transfer::fromArray($data));
     }
 }

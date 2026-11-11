@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Fees;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\RequestOptions;
 
 readonly class FeeOptions
 {
@@ -89,16 +91,10 @@ class Fees
      *
      * @return BlindPayApiResponse<FeesResponse>
      */
-    public function get(): BlindPayApiResponse
+    public function get(?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->get("instances/{$this->instanceId}/billing/fees");
+        $response = $this->client->get(Path::of('instances/%s/billing/fees', $this->instanceId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                FeesResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => FeesResponse::fromArray($data));
     }
 }

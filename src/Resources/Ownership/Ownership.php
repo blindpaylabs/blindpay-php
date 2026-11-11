@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Ownership;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\RequestOptions;
 
 readonly class MigrateInstanceOwnershipIn
 {
@@ -48,19 +50,16 @@ class Ownership
      * @param MigrateInstanceOwnershipIn $input
      * @return BlindPayApiResponse<MigrateInstanceOwnershipResponse>
      */
-    public function migrate(MigrateInstanceOwnershipIn $input): BlindPayApiResponse
-    {
+    public function migrate(
+        MigrateInstanceOwnershipIn $input,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/ownership",
-            $input->toArray()
+            Path::of('instances/%s/ownership', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                MigrateInstanceOwnershipResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => MigrateInstanceOwnershipResponse::fromArray($data));
     }
 }
