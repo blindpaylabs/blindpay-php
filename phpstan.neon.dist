@@ -1,8 +1,9 @@
 parameters:
-    level: 6
+    level: 7
     phpVersion: 80200
     paths:
         - src
+        - examples
     ignoreErrors:
         # Wire DTOs take and return decoded JSON arrays; their shapes are the spec's, documented
         # per class, so array value types are not spelled out on every fromArray()/toArray().

@@ -13,6 +13,8 @@ declare(strict_types=1);
 require __DIR__.'/../vendor/autoload.php';
 
 use BlindPay\SDK\BlindPay;
+use BlindPay\SDK\Resources\Payins\CreateEvmPayinResponse;
+use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutResponse;
 use BlindPay\SDK\Resources\Webhooks\CreateWebhookEndpointInput;
 use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
 use BlindPay\SDK\Types\TransactionStatus;
@@ -62,7 +64,8 @@ function handleWebhookRequest(string $rawBody, array $headers, string $secret, c
     }
 
     // BlindPay may deliver the same event more than once: dedupe on the svix-id header.
-    $deliveryId = (string) (array_change_key_case($headers, CASE_LOWER)['svix-id'] ?? '');
+    $svixId = array_change_key_case($headers, CASE_LOWER)['svix-id'] ?? '';
+    $deliveryId = is_array($svixId) ? (string) ($svixId[0] ?? '') : $svixId;
     if ($deliveryId === '' || ! $firstDelivery($deliveryId)) {
         return 200;
     }
@@ -76,7 +79,8 @@ function handleWebhookRequest(string $rawBody, array $headers, string $secret, c
         case WebhookEvents::PAYOUT_UPDATE:
         case WebhookEvents::PAYOUT_COMPLETE:
             // A failed payout arrives on payout.update or payout.complete: branch on the status.
-            $payout = $event->data; // CreateEvmPayoutResponse
+            $payout = $event->data;
+            assert($payout instanceof CreateEvmPayoutResponse);
             if ($payout->status === TransactionStatus::FAILED) {
                 error_log("payout {$payout->id} failed");
             } elseif ($payout->status === TransactionStatus::COMPLETED) {
@@ -85,7 +89,8 @@ function handleWebhookRequest(string $rawBody, array $headers, string $secret, c
 
             break;
         case WebhookEvents::PAYIN_COMPLETE:
-            $payin = $event->data; // CreateEvmPayinResponse
+            $payin = $event->data;
+            assert($payin instanceof CreateEvmPayinResponse);
             error_log("payin {$payin->id} completed");
 
             break;

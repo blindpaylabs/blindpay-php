@@ -11,7 +11,7 @@ blindpay-php/
   composer.json              # Package: blindpay/php, PHP ^8.2, Guzzle ^7.9. Autoloads src/ by PSR-4 and by classmap.
   pint.json                  # Laravel Pint config (linter)
   phpunit.xml.dist           # PHPUnit config
-  phpstan.neon.dist          # PHPStan level 6 over src/ (phpVersion 80200)
+  phpstan.neon.dist          # PHPStan level 7 over src/ and examples/ (phpVersion 80200)
   README.md                  # User docs: configuration, results, idempotency, retries, pagination, webhooks
   UPGRADING.md               # 3.x -> 4.0 migration guide (every breaking change, before/after)
   examples/                  # Runnable scripts (functions only, nothing runs on load); not in the Composer archive
@@ -519,7 +519,7 @@ composer run test             # Run all tests
 composer run test:coverage    # Run tests with coverage
 composer run lint:check       # Check code style (Laravel Pint)
 composer run lint:fix         # Auto-fix code style
-composer run analyse          # PHPStan level 6 over src/
+composer run analyse          # PHPStan level 7 over src/ and examples/
 composer run contract-check   # SDK wire keys vs the spec snapshot
 composer run api-sync:check   # SDK vs the spec snapshot (what the api-sync workflow checks)
 composer dump-autoload        # After adding or removing any src/ file

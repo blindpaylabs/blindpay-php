@@ -15,6 +15,7 @@ require __DIR__.'/../vendor/autoload.php';
 
 use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutInput;
+use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutResponse;
 use BlindPay\SDK\Resources\Quotes\CreateQuoteInput;
 use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
 use BlindPay\SDK\Types\CurrencyType;
@@ -72,7 +73,8 @@ function onPayoutEvent(WebhookEvent $event): void
         return;
     }
 
-    $payout = $event->data; // CreateEvmPayoutResponse
+    $payout = $event->data;
+    assert($payout instanceof CreateEvmPayoutResponse);
 
     // Do not infer the outcome from the event name: branch on the status.
     match ($payout->status) {

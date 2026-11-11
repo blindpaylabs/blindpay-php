@@ -41,7 +41,7 @@ jobs:
       - name: Run tests
         run: composer run test
 
-      - name: Static analysis (PHPStan level 6)
+      - name: Static analysis (PHPStan level 7)
         run: composer run analyse
 
 
