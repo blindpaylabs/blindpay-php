@@ -98,15 +98,12 @@ final class SpecFixtureDecodeTest extends TestCase
 {
     private const FIXTURE_DIR = __DIR__.'/../Fixtures/spec';
 
-    /**
-     * Variants this suite requires. `decimals` (1234.56 in decimal fields) is not required yet:
-     * several cent amounts are still typed float or int and are fixed in v4.
-     */
+    /** Every variant of the shared fixtures (see tests/Fixtures/spec/README.md). */
     private const VARIANTS = ['full', 'required_only', 'nullables_null', 'unknown_enum', 'decimals'];
 
     /**
-     * Operations whose SDK types do not decode every variant yet, with the reason. This list may
-     * only shrink: it_keeps_pending_operations_failing fails when an entry starts passing, so remove it.
+     * Operations whose SDK types do not decode every variant yet, with the reason. Empty since
+     * v4.0.0 and must stay that way: a new operation decodes every variant before it ships.
      */
     private const PENDING = [];
 

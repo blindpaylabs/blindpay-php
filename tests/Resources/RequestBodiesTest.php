@@ -22,7 +22,7 @@ use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/** Exact JSON bodies of the operations added in v4 (A8 item 4: absent optionals are absent). */
+/** Exact JSON bodies of the operations added in 4.0.0 (A8 item 4: absent optionals are absent). */
 final class RequestBodiesTest extends TestCase
 {
     private array $history = [];
