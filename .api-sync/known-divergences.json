@@ -154,6 +154,12 @@
       "field": "status",
       "reason": "Bank account status, decoded as a plain string (verifying, approved, rejected, ...); values the SDK does not know are kept.",
       "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "field": "payment_method",
+      "reason": "Decoded as a plain string (the payin payment method wire value); values the SDK does not know are kept.",
+      "owner": "support@blindpay.com"
     }
   ]
 }

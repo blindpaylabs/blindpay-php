@@ -119,7 +119,29 @@ readonly class Payout
         public ?string $tedCpfCnpj = null,
         public ?float $billingFeeAmount = null,
         public ?string $cpnPaymentId = null,
-        public ?string $senderLegalName = null
+        public ?string $senderLegalName = null,
+        public ?int $partnerFee = null,
+        public ?array $trackingDocuments = null,
+        public ?array $jpmTrackData = null,
+        public ?float $transactionFeeAmount = null,
+        public ?string $pixSafeBankCode = null,
+        public ?string $pixSafeBranchCode = null,
+        public ?string $pixSafeCpfCnpj = null,
+        public ?string $sepaIban = null,
+        public ?string $sepaBeneficiaryLegalName = null,
+        public ?string $sepaBeneficiaryAddressLine1 = null,
+        public ?string $sepaBeneficiaryCity = null,
+        public ?string $sepaBeneficiaryPostalCode = null,
+        public Country|string|null $sepaBeneficiaryCountry = null,
+        public ?string $fasterPaymentsSortCode = null,
+        public ?string $fasterPaymentsAccountNumber = null,
+        public ?string $fasterPaymentsBeneficiaryLegalName = null,
+        public ?string $fasterPaymentsBeneficiaryAddressLine1 = null,
+        public ?string $fasterPaymentsBeneficiaryCity = null,
+        public ?string $fasterPaymentsBeneficiaryPostalCode = null,
+        public Country|string|null $fasterPaymentsBeneficiaryCountry = null,
+        public ?string $bankAccountId = null,
+        public ?string $payableId = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -198,7 +220,29 @@ readonly class Payout
             tedCpfCnpj: $data['ted_cpf_cnpj'] ?? null,
             billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
             cpnPaymentId: $data['cpn_payment_id'] ?? null,
-            senderLegalName: $data['sender_legal_name'] ?? null
+            senderLegalName: $data['sender_legal_name'] ?? null,
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null,
+            trackingDocuments: $data['tracking_documents'] ?? null,
+            jpmTrackData: $data['jpm_track_data'] ?? null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            pixSafeBankCode: $data['pix_safe_bank_code'] ?? null,
+            pixSafeBranchCode: $data['pix_safe_branch_code'] ?? null,
+            pixSafeCpfCnpj: $data['pix_safe_cpf_cnpj'] ?? null,
+            sepaIban: $data['sepa_iban'] ?? null,
+            sepaBeneficiaryLegalName: $data['sepa_beneficiary_legal_name'] ?? null,
+            sepaBeneficiaryAddressLine1: $data['sepa_beneficiary_address_line_1'] ?? null,
+            sepaBeneficiaryCity: $data['sepa_beneficiary_city'] ?? null,
+            sepaBeneficiaryPostalCode: $data['sepa_beneficiary_postal_code'] ?? null,
+            sepaBeneficiaryCountry: Decode::enum(Country::class, $data['sepa_beneficiary_country'] ?? null),
+            fasterPaymentsSortCode: $data['faster_payments_sort_code'] ?? null,
+            fasterPaymentsAccountNumber: $data['faster_payments_account_number'] ?? null,
+            fasterPaymentsBeneficiaryLegalName: $data['faster_payments_beneficiary_legal_name'] ?? null,
+            fasterPaymentsBeneficiaryAddressLine1: $data['faster_payments_beneficiary_address_line_1'] ?? null,
+            fasterPaymentsBeneficiaryCity: $data['faster_payments_beneficiary_city'] ?? null,
+            fasterPaymentsBeneficiaryPostalCode: $data['faster_payments_beneficiary_postal_code'] ?? null,
+            fasterPaymentsBeneficiaryCountry: Decode::enum(Country::class, $data['faster_payments_beneficiary_country'] ?? null),
+            bankAccountId: $data['bank_account_id'] ?? null,
+            payableId: $data['payable_id'] ?? null,
         );
     }
 }
@@ -325,7 +369,14 @@ readonly class CreateStellarPayoutResponse
         public ?PayoutTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
-        public ?TrackingLiquidity $trackingLiquidity = null
+        public ?TrackingLiquidity $trackingLiquidity = null,
+        public ?float $billingFeeAmount = null,
+        public ?float $transactionFeeAmount = null,
+        public ?int $partnerFee = null,
+        public ?array $trackingDocuments = null,
+        public ?string $bankAccountId = null,
+        public ?string $offrampWalletId = null,
+        public ?string $payableId = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -339,7 +390,14 @@ readonly class CreateStellarPayoutResponse
             trackingPayment: isset($data['tracking_payment']) ? PayoutTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
             trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
-            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null
+            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null,
+            trackingDocuments: $data['tracking_documents'] ?? null,
+            bankAccountId: $data['bank_account_id'] ?? null,
+            offrampWalletId: $data['offramp_wallet_id'] ?? null,
+            payableId: $data['payable_id'] ?? null,
         );
     }
 }
@@ -377,7 +435,14 @@ readonly class CreateEvmPayoutResponse
         public ?PayoutTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
-        public ?TrackingLiquidity $trackingLiquidity = null
+        public ?TrackingLiquidity $trackingLiquidity = null,
+        public ?float $billingFeeAmount = null,
+        public ?float $transactionFeeAmount = null,
+        public ?int $partnerFee = null,
+        public ?array $trackingDocuments = null,
+        public ?string $bankAccountId = null,
+        public ?string $offrampWalletId = null,
+        public ?string $payableId = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -391,7 +456,14 @@ readonly class CreateEvmPayoutResponse
             trackingPayment: isset($data['tracking_payment']) ? PayoutTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
             trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
-            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null
+            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null,
+            trackingDocuments: $data['tracking_documents'] ?? null,
+            bankAccountId: $data['bank_account_id'] ?? null,
+            offrampWalletId: $data['offramp_wallet_id'] ?? null,
+            payableId: $data['payable_id'] ?? null,
         );
     }
 }
@@ -432,7 +504,14 @@ readonly class CreateSolanaPayoutResponse
         public ?PayoutTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
-        public ?TrackingLiquidity $trackingLiquidity = null
+        public ?TrackingLiquidity $trackingLiquidity = null,
+        public ?float $billingFeeAmount = null,
+        public ?float $transactionFeeAmount = null,
+        public ?int $partnerFee = null,
+        public ?array $trackingDocuments = null,
+        public ?string $bankAccountId = null,
+        public ?string $offrampWalletId = null,
+        public ?string $payableId = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -446,7 +525,14 @@ readonly class CreateSolanaPayoutResponse
             trackingPayment: isset($data['tracking_payment']) ? PayoutTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
             trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
-            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null
+            trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null,
+            trackingDocuments: $data['tracking_documents'] ?? null,
+            bankAccountId: $data['bank_account_id'] ?? null,
+            offrampWalletId: $data['offramp_wallet_id'] ?? null,
+            payableId: $data['payable_id'] ?? null,
         );
     }
 }

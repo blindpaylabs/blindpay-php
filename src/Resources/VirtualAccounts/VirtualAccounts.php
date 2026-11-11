@@ -235,7 +235,12 @@ readonly class VirtualAccount
         public StablecoinToken|string $token,
         public ?string $blockchainWalletId,
         public BankingPartner|string|null $bankingPartner = null,
-        public ?string $kycStatus = null
+        public ?string $kycStatus = null,
+        public ?array $co = null,
+        public ?array $mx = null,
+        public ?array $blockchainWallet = null,
+        public ?string $partnerFeeId = null,
+        public ?string $customerId = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -246,7 +251,12 @@ readonly class VirtualAccount
             token: Decode::enum(StablecoinToken::class, $data['token']),
             blockchainWalletId: $data['blockchain_wallet_id'] ?? null,
             bankingPartner: Decode::enum(BankingPartner::class, $data['banking_partner'] ?? null),
-            kycStatus: $data['kyc_status'] ?? null
+            kycStatus: $data['kyc_status'] ?? null,
+            co: $data['co'] ?? null,
+            mx: $data['mx'] ?? null,
+            blockchainWallet: $data['blockchain_wallet'] ?? null,
+            partnerFeeId: $data['partner_fee_id'] ?? null,
+            customerId: $data['customer_id'] ?? null,
         );
     }
 

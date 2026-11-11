@@ -252,7 +252,9 @@ readonly class Transfer
         public ?string $lastName = null,
         public ?string $legalName = null,
         public ?float $partnerFeeAmount = null,
-        public ?string $externalId = null
+        public ?string $externalId = null,
+        public ?int $partnerPercentageFee = null,
+        public ?int $partnerFlatFee = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -288,7 +290,9 @@ readonly class Transfer
             lastName: $data['last_name'] ?? null,
             legalName: $data['legal_name'] ?? null,
             partnerFeeAmount: isset($data['partner_fee_amount']) ? (float) $data['partner_fee_amount'] : null,
-            externalId: $data['external_id'] ?? null
+            externalId: $data['external_id'] ?? null,
+            partnerPercentageFee: isset($data['partner_percentage_fee']) ? (int) $data['partner_percentage_fee'] : null,
+            partnerFlatFee: isset($data['partner_flat_fee']) ? (int) $data['partner_flat_fee'] : null,
         );
     }
 }

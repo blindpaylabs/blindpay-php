@@ -247,7 +247,13 @@ readonly class Payin
         public ?string $psePaymentLink = null,
         public ?string $pseTaxId = null,
         public ?string $partnerFeeId = null,
-        public ManualExecutionStatus|string|null $manualExecutionStatus = null
+        public ManualExecutionStatus|string|null $manualExecutionStatus = null,
+        public ?int $partnerFee = null,
+        /** a date-time; its wire shape varies, so it is passed through as returned */
+        public mixed $manualConcludedAt = null,
+        public ?string $manualConcludedBy = null,
+        public ?float $transactionFeeAmount = null,
+        public ?array $payerRules = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -297,7 +303,12 @@ readonly class Payin
             psePaymentLink: $data['pse_payment_link'] ?? null,
             pseTaxId: $data['pse_tax_id'] ?? null,
             partnerFeeId: $data['partner_fee_id'] ?? null,
-            manualExecutionStatus: Decode::enum(ManualExecutionStatus::class, $data['manual_execution_status'] ?? null)
+            manualExecutionStatus: Decode::enum(ManualExecutionStatus::class, $data['manual_execution_status'] ?? null),
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null,
+            manualConcludedAt: $data['manual_concluded_at'] ?? null,
+            manualConcludedBy: $data['manual_concluded_by'] ?? null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            payerRules: $data['payer_rules'] ?? null,
         );
     }
 }
@@ -366,7 +377,12 @@ readonly class CreateEvmPayinResponse
         public ?TrackingComplete $trackingComplete = null,
         public ?PayinTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
-        public ?TrackingPartnerFee $trackingPartnerFee = null
+        public ?TrackingPartnerFee $trackingPartnerFee = null,
+        public ?int $partnerFee = null,
+        public ?float $billingFeeAmount = null,
+        public ?float $transactionFeeAmount = null,
+        public ?string $paymentMethod = null,
+        public ?float $senderAmount = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -383,7 +399,12 @@ readonly class CreateEvmPayinResponse
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
             trackingPayment: isset($data['tracking_payment']) ? PayinTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
-            trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null
+            trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            paymentMethod: $data['payment_method'] ?? null,
+            senderAmount: isset($data['sender_amount']) ? (float) $data['sender_amount'] : null,
         );
     }
 }

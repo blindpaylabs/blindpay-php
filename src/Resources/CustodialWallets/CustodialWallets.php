@@ -110,7 +110,10 @@ readonly class CustodialWallet
         public ?string $instanceId,
         public Network|string $network,
         public ?string $address,
-        public ?DateTimeImmutable $createdAt
+        public ?DateTimeImmutable $createdAt,
+        public ?string $name = null,
+        public ?string $externalId = null,
+        public ?string $yieldStatus = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -123,7 +126,10 @@ readonly class CustodialWallet
             address: $data['address'] ?? null,
             createdAt: isset($data['created_at'])
                 ? new DateTimeImmutable($data['created_at'])
-                : null
+                : null,
+            name: $data['name'] ?? null,
+            externalId: $data['external_id'] ?? null,
+            yieldStatus: $data['yield_status'] ?? null,
         );
     }
 }

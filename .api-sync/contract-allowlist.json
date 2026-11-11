@@ -576,6 +576,102 @@
       "field": "gender",
       "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
       "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CustodialWallet",
+      "field": "yield_status",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payout",
+      "field": "faster_payments_sort_code",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payout",
+      "field": "faster_payments_account_number",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payout",
+      "field": "faster_payments_beneficiary_legal_name",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payout",
+      "field": "faster_payments_beneficiary_address_line_1",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payout",
+      "field": "faster_payments_beneficiary_city",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payout",
+      "field": "faster_payments_beneficiary_postal_code",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payout",
+      "field": "faster_payments_beneficiary_country",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Payout",
+      "field": "payable_id",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreateStellarPayoutResponse",
+      "field": "payable_id",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreateEvmPayoutResponse",
+      "field": "payable_id",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreateSolanaPayoutResponse",
+      "field": "payable_id",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Transfer",
+      "field": "partner_percentage_fee",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Transfer",
+      "field": "partner_flat_fee",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccount",
+      "field": "co",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccount",
+      "field": "mx",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
     }
   ]
 }
