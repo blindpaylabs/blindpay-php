@@ -34,4 +34,19 @@ final class DecodeTest extends TestCase
         $this->assertSame('future_chain', Decode::wire('future_chain'));
         $this->assertNull(Decode::wire(null));
     }
+
+    #[Test]
+    public function it_splits_a_bare_list_or_a_data_pagination_envelope(): void
+    {
+        $item = ['id' => 'pa_000000000000'];
+
+        $this->assertSame([[$item], null], Decode::listEnvelope([$item]));
+
+        [$items, $pagination] = Decode::listEnvelope(['data' => [$item], 'pagination' => ['has_more' => true, 'next_page' => 'pa_1']]);
+        $this->assertSame([$item], $items);
+        $this->assertTrue($pagination->hasMore);
+        $this->assertSame('pa_1', $pagination->nextPage);
+
+        $this->assertSame([[], null], Decode::listEnvelope(['data' => []]));
+    }
 }

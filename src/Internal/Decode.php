@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Internal;
 
 use BackedEnum;
+use BlindPay\SDK\Types\PaginationMetadata;
 
 /**
  * Forward-compatible decoding helpers for response DTOs.
@@ -43,5 +44,21 @@ final class Decode
     public static function wire(BackedEnum|string|null $value): ?string
     {
         return $value instanceof BackedEnum ? (string) $value->value : $value;
+    }
+
+    /**
+     * Split a list response into its items and pagination. The API returns a bare array, or
+     * {data, pagination} when the request sent limit, starting_after or ending_before.
+     *
+     * @param  array<mixed>  $data
+     * @return array{0: array<mixed>, 1: PaginationMetadata|null}
+     */
+    public static function listEnvelope(array $data): array
+    {
+        if (! array_key_exists('data', $data) || ! is_array($data['data'])) {
+            return [$data, null];
+        }
+
+        return [$data['data'], isset($data['pagination']) ? PaginationMetadata::fromArray($data['pagination']) : null];
     }
 }

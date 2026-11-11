@@ -341,14 +341,11 @@ readonly class ListPayinsResponse
      */
     public static function fromArray(array $data): self
     {
-        $isEnvelope = array_key_exists('data', $data) && is_array($data['data']);
+        [$items, $pagination] = Decode::listEnvelope($data);
 
         return new self(
-            data: array_map(
-                fn (array $item) => Payin::fromArray($item),
-                $isEnvelope ? $data['data'] : $data
-            ),
-            pagination: $isEnvelope && isset($data['pagination']) ? PaginationMetadata::fromArray($data['pagination']) : null,
+            data: array_map(fn (array $item) => Payin::fromArray($item), $items),
+            pagination: $pagination,
         );
     }
 }
