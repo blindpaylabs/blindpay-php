@@ -1,47 +1,79 @@
 name: Release
 
+# Tags and publishes a GitHub release whenever main carries a VERSION const
+# (src/BlindPay.php) that has no tag yet. The const is the single source of the
+# version: humans bump it in their PR, and scripts/api-sync.php bumps it in sync
+# PRs. Packagist reads versions from git tags via its GitHub webhook, so the
+# tag is the release.
+#
+# Triggering on push to main (rather than on a merged, labelled PR) means every
+# merge path tags the same way, including human PRs and PRs from forks.
+
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
   release:
-    name: Create Release
+    name: Tag and release
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: Read VERSION from src/BlindPay.php
+        id: version
+        run: |
+          VERSION=$(sed -nE "s/^[[:space:]]*private const VERSION = '([0-9]+\.[0-9]+\.[0-9]+)';.*/\1/p" src/BlindPay.php)
+          if [ -z "$VERSION" ]; then
+            echo "::error::could not read the VERSION const from src/BlindPay.php"
+            exit 1
+          fi
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      # The checkout has no tags, so ask the remote.
+      - name: Check whether the tag exists
+        id: exists
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "$TAG already exists; nothing to release."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up PHP
+        if: steps.exists.outputs.exists == 'false'
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: openssl, json
           coverage: none
 
-      - name: Install dependencies
-        run: composer install --no-dev --optimize-autoloader
+      # Never tag (and so never publish to Packagist) a commit whose tests fail:
+      # that is how the broken v3.4.1 was released.
+      - name: Validate and test before tagging
+        if: steps.exists.outputs.exists == 'false'
+        run: |
+          composer validate --strict
+          composer install --prefer-dist --no-progress --no-interaction
+          composer run test
+          php scripts/contract-check.php
 
-      - name: Validate composer.json
-        run: composer validate --strict
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          generate_release_notes: true
-          body: |
-            ## Installation
-            ```bash
-            composer require blindpay/php
-            ```
-            
-            ## What's Changed
-            See full changelog below.
+      - name: Tag and create the GitHub release
+        if: steps.exists.outputs.exists == 'false'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+          gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
