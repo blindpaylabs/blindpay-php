@@ -216,8 +216,8 @@ readonly class Payin
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
         public string $currency,
-        /** @deprecated The API has no billing_fee field; always 0.0. Use $billingFeeAmount. */
-        public float $billingFee,
+        /** @deprecated The API no longer returns billing_fee, so this is null unless it does. Use $billingFeeAmount. */
+        public ?float $billingFee,
         public string $name,
         public ?string $address,
         public Network|string $network,
@@ -267,7 +267,7 @@ readonly class Payin
             commercialQuotation: isset($data['commercial_quotation']) ? (float) $data['commercial_quotation'] : null,
             blindpayQuotation: isset($data['blindpay_quotation']) ? (float) $data['blindpay_quotation'] : null,
             currency: $data['currency'],
-            billingFee: (float) ($data['billing_fee'] ?? 0),
+            billingFee: isset($data['billing_fee']) ? (float) $data['billing_fee'] : null,
             name: $data['name'],
             address: $data['address'] ?? null,
             network: Decode::enum(Network::class, $data['network']),
