@@ -65,6 +65,7 @@ use BlindPay\SDK\Types\Currency;
 use BlindPay\SDK\Types\CurrencyType;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\Rail;
+use BlindPay\SDK\Types\SourceOfWealth;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TransactionDocumentType;
 use Closure;
@@ -107,7 +108,7 @@ final class SpecFixtureDecodeTest extends TestCase
      */
     private const OPEN_ENUMS = [
         Network::class, StablecoinToken::class, Currency::class, Rail::class,
-        BankingPartner::class, WebhookEvents::class, KycType::class,
+        BankingPartner::class, WebhookEvents::class, KycType::class, SourceOfWealth::class,
     ];
 
     /**

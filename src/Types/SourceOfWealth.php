@@ -14,4 +14,6 @@ enum SourceOfWealth: string
     case CHARITABLE_CONTRIBUTIONS = 'charitable_contributions';
     case INHERITANCE = 'inheritance';
     case AFFILIATE_OR_ROYALTY_INCOME = 'affiliate_or_royalty_income';
+    case SALARY_OR_WAGES = 'salary_or_wages';
+    case SAVINGS = 'savings';
 }

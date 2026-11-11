@@ -651,7 +651,7 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
         public ?string $businessDescription = null,
         public BusinessIndustry|string|null $businessIndustry = null,
         public ?EstimatedAnnualRevenue $estimatedAnnualRevenue = null,
-        public ?SourceOfWealth $sourceOfWealth = null,
+        public SourceOfWealth|string|null $sourceOfWealth = null,
         public ?bool $publiclyTraded = null,
         AccountClass|string|null $type = null,
         KycType|string|null $kycType = null
@@ -740,7 +740,7 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
             businessDescription: $data['business_description'] ?? null,
             businessIndustry: Decode::enum(BusinessIndustry::class, $data['business_industry'] ?? null),
             estimatedAnnualRevenue: isset($data['estimated_annual_revenue']) ? EstimatedAnnualRevenue::from($data['estimated_annual_revenue']) : null,
-            sourceOfWealth: isset($data['source_of_wealth']) ? SourceOfWealth::from($data['source_of_wealth']) : null,
+            sourceOfWealth: Decode::enum(SourceOfWealth::class, $data['source_of_wealth'] ?? null),
             publiclyTraded: $data['publicly_traded'] ?? null,
             type: Decode::enum(AccountClass::class, $data['type'] ?? null),
             kycType: Decode::enum(KycType::class, $data['kyc_type'] ?? null)

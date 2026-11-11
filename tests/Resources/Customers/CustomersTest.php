@@ -11,10 +11,12 @@ use BlindPay\SDK\Resources\Customers\IndividualWithStandardKYC;
 use BlindPay\SDK\Resources\Customers\KycType;
 use BlindPay\SDK\Resources\Customers\ListCustomersResponse;
 use BlindPay\SDK\Types\AccountClass;
+use BlindPay\SDK\Types\SourceOfWealth;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -118,5 +120,46 @@ class CustomersTest extends TestCase
         $this->assertInstanceOf(ListCustomersResponse::class, $response->data);
         $this->assertCount(4, $response->data->data);
         $this->assertSame('future_kyc_level', $response->data->data[3]->kycType);
+    }
+
+    /**
+     * Every source_of_wealth value the API accepts and returns (CustomerOut.source_of_wealth;
+     * blindpay-v2 packages/api-contract/src/business-activity.schema.ts sourceOfWealthType).
+     * salary_or_wages and savings made every business customer read throw before.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function sourceOfWealthValues(): array
+    {
+        $values = [
+            'business_dividends_or_profits', 'investments', 'asset_sales', 'client_investor_contributions',
+            'gambling', 'charitable_contributions', 'inheritance', 'affiliate_or_royalty_income',
+            'salary_or_wages', 'savings',
+        ];
+
+        return array_combine($values, array_map(fn (string $v) => [$v], $values));
+    }
+
+    #[Test]
+    #[DataProvider('sourceOfWealthValues')]
+    public function it_decodes_every_source_of_wealth_the_api_returns(string $value): void
+    {
+        $this->mockResponse($this->customer(['type' => 'business', 'legal_name' => 'Acme LLC', 'source_of_wealth' => $value]));
+
+        $response = $this->blindpay->customers->get('cu_000000000000');
+
+        $this->assertTrue($response->isSuccess(), (string) $response->error?->message);
+        $this->assertSame(SourceOfWealth::from($value), $response->data->sourceOfWealth);
+    }
+
+    #[Test]
+    public function it_keeps_a_source_of_wealth_this_sdk_does_not_know_as_the_raw_string(): void
+    {
+        $this->mockResponse($this->customer(['type' => 'business', 'legal_name' => 'Acme LLC', 'source_of_wealth' => 'lottery_winnings']));
+
+        $response = $this->blindpay->customers->get('cu_000000000000');
+
+        $this->assertTrue($response->isSuccess(), (string) $response->error?->message);
+        $this->assertSame('lottery_winnings', $response->data->sourceOfWealth);
     }
 }
