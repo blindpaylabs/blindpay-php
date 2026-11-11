@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Types;
 
 use ArrayIterator;
+use BlindPay\SDK\Internal\Decode;
 use Countable;
 use IteratorAggregate;
 use Traversable;
@@ -36,12 +37,9 @@ readonly class ListResponse implements Countable, IteratorAggregate
      */
     public static function decode(array $body, callable $item): static
     {
-        $isEnvelope = ! array_is_list($body) && array_key_exists('data', $body) && is_array($body['data']);
+        [$items, $pagination] = Decode::listEnvelope($body);
 
-        return new static(
-            data: array_map($item, $isEnvelope ? array_values($body['data']) : $body),
-            pagination: $isEnvelope && is_array($body['pagination'] ?? null) ? PaginationMetadata::fromArray($body['pagination']) : null,
-        );
+        return new static(data: array_map($item, array_values($items)), pagination: $pagination);
     }
 
     /** Whether another page follows this one (false for the bare-array form). */
