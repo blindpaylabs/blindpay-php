@@ -15,6 +15,9 @@ blindpay-php/
     Internal/
       ApiClientInterface.php # Interface: get, post, put, patch, delete methods
       BlindPayException.php  # SDK exception class
+      Decode.php             # Response decoding helpers: open enums (enum/wire), list envelopes
+    Webhooks/
+      WebhookVerifier.php    # Standalone Svix signature verifier (no API client needed)
     Resources/               # Each subdirectory = one API resource domain
       Available/             # Simple resource (no instanceId, no wrapper)
         Available.php        # Resource class + inline types
@@ -74,6 +77,11 @@ blindpay-php/
       Wallets/BlockchainWalletsTest.php
       Wallets/OfframpWalletsTest.php
       ... (one test file per resource)
+    Internal/DecodeTest.php  # src/Internal helpers
+    Webhooks/WebhookVerifierTest.php  # runs the shared Svix vectors (Fixtures/webhook-vectors.json)
+    SpecFixtures/SpecFixtureDecodeTest.php  # decodes every shared spec fixture through the resource methods
+    ApiSync/ApiSyncTest.php  # scripts/api-sync.php
+    Fixtures/                # shared spec fixtures (spec/) and webhook vectors; never edit by hand
 ```
 
 ## 2. Conventions
@@ -104,7 +112,8 @@ readonly class ExampleResponse
 {
     public function __construct(
         public string $id,
-        public TransactionStatus|string $status,
+        public TransactionStatus $status,
+        public Network|string $network,
         public ?string $optionalField = null
     ) {}
 
@@ -112,7 +121,8 @@ readonly class ExampleResponse
     {
         return new self(
             id: $data['id'],
-            status: Decode::enum(TransactionStatus::class, $data['status']),
+            status: TransactionStatus::from($data['status']),
+            network: Decode::enum(Network::class, $data['network']),
             optionalField: $data['optional_field'] ?? null
         );
     }
@@ -122,7 +132,11 @@ readonly class ExampleResponse
 Key rules:
 - Required fields: access directly as `$data['key']`. "Required" means listed in the spec schema's `required` AND not nullable; anything else is optional.
 - Optional/nullable fields: use `$data['key'] ?? null`
-- Enum fields in **response** types: never `EnumName::from()` (it throws on any value the API adds later). Use the open-enum pattern: `Decode::enum(EnumName::class, $data['key'])`, typed `EnumName|string` (unknown values are kept as the raw string). Optional: `Decode::enum(EnumName::class, $data['key'] ?? null)`, typed `EnumName|string|null`. In a `toArray()` of such a type, serialise with `Decode::wire($this->field)`. Request (input) enums stay closed.
+- Enum fields in **response** types: in 3.x an enum is decoded **open** only where the API already returns values the SDK lacked. The open ones are Network, StablecoinToken, Currency, Rail, BankingPartner, WebhookEvents, SourceOfWealth, BusinessIndustry (NAICS codes) and the customer `type` / `kyc_type` discriminators (AccountClass, KycType). Every other response enum stays **closed**: `EnumName::from($data['key'])`, or `isset($data['key']) ? EnumName::from($data['key']) : null` when optional, so `->value` keeps type-checking for callers. v4 opens them all.
+  - Open pattern: `Decode::enum(EnumName::class, $data['key'])`, typed `EnumName|string`; an unknown value is kept as the raw string. Optional: `Decode::enum(EnumName::class, $data['key'] ?? null)`, typed `EnumName|string|null`. In a `toArray()` of such a type, serialise with `Decode::wire($this->field)`, never a hand-written `instanceof` check.
+  - When the API starts returning a value a closed enum lacks: add the case, switch that field to the open pattern, add the enum to `OPEN_ENUMS` in `tests/SpecFixtures/SpecFixtureDecodeTest.php` (the `unknown_enum` fixture variant keeps the unknown value only on fields whose enum is listed there), and add a test that decodes the new value.
+  - Request (input) enums stay closed.
+- A type shared by input and output (e.g. `Customers\Owner`) keeps its constructor as strict as the request spec. If a response may omit a field the request requires, keep the constructor parameter non-nullable, declare the property nullable, and let `fromArray()` set the properties directly (see `Owner::fromArray`).
 - Every response type must decode all variants of its shared spec fixture (`tests/Fixtures/spec`, exercised by `tests/SpecFixtures/SpecFixtureDecodeTest.php`); its `PENDING` list may only shrink.
 - Nested objects: `NestedType::fromArray($data['key'])`
 - Optional nested objects: `isset($data['key']) ? NestedType::fromArray($data['key']) : null`
@@ -598,7 +612,7 @@ Key points:
 - Test method names start with `it_` and describe the behavior.
 - Assert `isSuccess()`, `error` is null, then check `data` properties.
 - Mock data should match the API's snake_case JSON structure.
-- Test namespace is `BlindPay\SDK\Tests\Resources` (all test classes share this namespace).
+- Test namespace: resource tests under `tests/Resources/` all use `BlindPay\SDK\Tests\Resources`. Tests in the other folders (`Internal/`, `Webhooks/`, `SpecFixtures/`, `ApiSync/`) use the PSR-4 namespace of their folder, e.g. `BlindPay\SDK\Tests\Webhooks`.
 
 ## 9. Versioning
 
