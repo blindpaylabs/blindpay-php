@@ -100,15 +100,13 @@ final class SpecFixtureDecodeTest extends TestCase
      * Variants this suite requires. `decimals` (1234.56 in decimal fields) is not required yet:
      * several cent amounts are still typed float or int and are fixed in v4.
      */
-    private const VARIANTS = ['full', 'required_only', 'nullables_null', 'unknown_enum'];
+    private const VARIANTS = ['full', 'required_only', 'nullables_null', 'unknown_enum', 'decimals'];
 
     /**
      * Operations whose SDK types do not decode every variant yet, with the reason. This list may
      * only shrink: it_keeps_pending_operations_failing fails when an entry starts passing, so remove it.
      */
-    private const PENDING = [
-        'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => 'the ten per-rail Create*Response types read their own rail fields as required. The API echoes those from the request, so live creates decode; only the spec\'s all-rail shape (every rail field nullable) fails. Not a crash fix, left for v4 (audit 4.7)',
-    ];
+    private const PENDING = [];
 
     /** @return array<string, Closure(BlindPay, ?RequestOptions): BlindPayApiResponse> */
     private static function calls(): array
@@ -180,8 +178,8 @@ final class SpecFixtureDecodeTest extends TestCase
             'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->offramp->get(new GetOfframpWalletInput($c, $id, $id), $o),
 
             // Quotes
-            'POST /v1/instances/{instance_id}/quotes' => fn (BlindPay $b, ?RequestOptions $o) => $b->quotes->create(new CreateQuoteInput($id, CurrencyType::SENDER, 1000.0, null, null, null, null, TransactionDocumentType::cases()[0]), $o),
-            'POST /v1/instances/{instance_id}/quotes/fx' => fn (BlindPay $b, ?RequestOptions $o) => $b->quotes->getFxRate(new GetFxRateInput(CurrencyType::SENDER, Currency::USDC, Currency::BRL, 1000.0), $o),
+            'POST /v1/instances/{instance_id}/quotes' => fn (BlindPay $b, ?RequestOptions $o) => $b->quotes->create(new CreateQuoteInput(Network::BASE, StablecoinToken::USDC, bankAccountId: $id, currencyType: CurrencyType::SENDER, requestAmount: 1000), $o),
+            'POST /v1/instances/{instance_id}/quotes/fx' => fn (BlindPay $b, ?RequestOptions $o) => $b->quotes->getFxRate(new GetFxRateInput(CurrencyType::SENDER, Currency::USDC, Currency::BRL, 1000), $o),
 
             // Payouts
             'GET /v1/instances/{instance_id}/payouts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payouts->get($id, $o),
@@ -194,8 +192,8 @@ final class SpecFixtureDecodeTest extends TestCase
             'POST /v1/instances/{instance_id}/payouts/{id}/documents' => fn (BlindPay $b, ?RequestOptions $o) => $b->payouts->submitDocuments(new SubmitPayoutDocumentsInput($id, TransactionDocumentType::cases()[0], 'doc', 'https://example.com/doc.pdf'), $o),
 
             // Payins
-            'POST /v1/instances/{instance_id}/payin-quotes' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->quotes->create(new CreatePayinQuoteInput($id, CurrencyType::SENDER, PayinPaymentMethod::cases()[0], 1000.0, StablecoinToken::USDC, null, null), $o),
-            'POST /v1/instances/{instance_id}/payin-quotes/fx' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->quotes->getFxRate(new GetPayinFxRateInput(CurrencyType::SENDER, Currency::BRL, Currency::USDC, 1000.0), $o),
+            'POST /v1/instances/{instance_id}/payin-quotes' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->quotes->create(new CreatePayinQuoteInput($id, CurrencyType::SENDER, PayinPaymentMethod::cases()[0], 1000, StablecoinToken::USDC), $o),
+            'POST /v1/instances/{instance_id}/payin-quotes/fx' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->quotes->getFxRate(new GetPayinFxRateInput(CurrencyType::SENDER, Currency::BRL, Currency::USDC, 1000), $o),
             'GET /v1/instances/{instance_id}/payins/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->get($id, $o),
             'GET /v1/e/payins/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->getTrack($id, $o),
             'GET /v1/instances/{instance_id}/payins' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->list(new ListPayinsInput(limit: 10), $o),

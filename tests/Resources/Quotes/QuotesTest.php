@@ -11,7 +11,6 @@ use BlindPay\SDK\Types\Currency;
 use BlindPay\SDK\Types\CurrencyType;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\StablecoinToken;
-use BlindPay\SDK\Types\TransactionDocumentType;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\Test;
@@ -80,9 +79,6 @@ class QuotesTest extends TestCase
             requestAmount: 1000,
             coverFees: true,
             partnerFeeId: 'pf_000000000000',
-            transactionDocumentFile: null,
-            transactionDocumentId: null,
-            transactionDocumentType: TransactionDocumentType::INVOICE,
             network: Network::SEPOLIA,
             token: StablecoinToken::USDC,
             description: 'Memo code or description, only works with USD and BRL'

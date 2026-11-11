@@ -206,21 +206,27 @@ readonly class MintUsdbSolanaResponse
     }
 }
 
+/**
+ * Pass `quoteId` (recommended: the API takes the amount and token from the quote), or
+ * `tokenAddress` and `amount` (whole tokens, e.g. "10.5").
+ */
 readonly class PrepareSolanaDelegationTransactionInput
 {
     public function __construct(
-        public string $tokenAddress,
-        public string $amount,
-        public string $ownerAddress
+        public ?string $tokenAddress,
+        public ?string $amount,
+        public string $ownerAddress,
+        public ?string $quoteId = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        return array_filter([
+            'owner_address' => $this->ownerAddress,
+            'quote_id' => $this->quoteId,
             'token_address' => $this->tokenAddress,
             'amount' => $this->amount,
-            'owner_address' => $this->ownerAddress,
-        ];
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -228,14 +234,17 @@ readonly class PrepareSolanaDelegationTransactionResponse
 {
     public function __construct(
         public bool $success,
-        public ?string $transaction
+        /** the base64 transaction to sign, when success is true */
+        public ?string $transaction = null,
+        public mixed $debug = null,
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
             success: $data['success'],
-            transaction: $data['transaction'] ?? null
+            transaction: $data['transaction'] ?? null,
+            debug: $data['debug'] ?? null,
         );
     }
 }

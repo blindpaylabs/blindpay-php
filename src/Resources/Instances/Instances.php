@@ -74,7 +74,8 @@ readonly class InstanceMember
         public string $lastName,
         public ?string $imageUrl,
         public ?DateTimeImmutable $createdAt,
-        public InstanceMemberRole|string $role
+        public InstanceMemberRole|string $role,
+        public ?bool $hasPasskey = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -87,7 +88,8 @@ readonly class InstanceMember
             lastName: $data['last_name'],
             imageUrl: $data['image_url'] ?? null,
             createdAt: isset($data['created_at']) ? new DateTimeImmutable($data['created_at']) : null,
-            role: Decode::enum(InstanceMemberRole::class, $data['role'])
+            role: Decode::enum(InstanceMemberRole::class, $data['role']),
+            hasPasskey: $data['has_passkey'] ?? null,
         );
     }
 

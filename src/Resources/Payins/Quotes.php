@@ -15,9 +15,16 @@ use BlindPay\SDK\Types\StablecoinToken;
 enum PaymentMethod: string
 {
     case ACH = 'ach';
+    case ACH_PULL = 'ach_pull';
     case WIRE = 'wire';
     case PIX = 'pix';
+    case CARD = 'card';
+    case TED = 'ted';
     case SPEI = 'spei';
+    case TRANSFERS = 'transfers';
+    case PSE = 'pse';
+    case INTERNATIONAL_SWIFT = 'international_swift';
+    case RTP = 'rtp';
 }
 
 readonly class PayerRules
@@ -65,46 +72,42 @@ readonly class PayerRules
     }
 }
 
+/**
+ * A payin quote. `requestAmount` is integer cents of the side `currencyType` names (1000 = 10.00);
+ * for whole-unit sender currencies, a `sender` amount must be a multiple of 100. Deliver to a
+ * blockchain wallet (`blockchainWalletId`) or a managed wallet (`walletId`).
+ */
 readonly class CreatePayinQuoteInput
 {
     public function __construct(
         public ?string $blockchainWalletId,
         public CurrencyType $currencyType,
         public PaymentMethod $paymentMethod,
-        public float $requestAmount,
+        public int $requestAmount,
         public StablecoinToken $token,
-        public ?bool $coverFees,
-        public ?PayerRules $payerRules,
+        public ?bool $coverFees = null,
+        public ?PayerRules $payerRules = null,
         public ?string $partnerFeeId = null,
         public ?bool $isOtc = null,
-        public ?string $walletId = null
+        public ?string $walletId = null,
+        public ?string $fundingBankAccountId = null,
     ) {}
 
     public function toArray(): array
     {
-        $data = [
+        return array_filter([
             'blockchain_wallet_id' => $this->blockchainWalletId,
+            'wallet_id' => $this->walletId,
             'currency_type' => $this->currencyType->value,
             'payment_method' => $this->paymentMethod->value,
             'request_amount' => $this->requestAmount,
             'token' => $this->token->value,
             'cover_fees' => $this->coverFees,
             'payer_rules' => $this->payerRules?->toArray(),
-        ];
-
-        if ($this->partnerFeeId !== null) {
-            $data['partner_fee_id'] = $this->partnerFeeId;
-        }
-
-        if ($this->isOtc !== null) {
-            $data['is_otc'] = $this->isOtc;
-        }
-
-        if ($this->walletId !== null) {
-            $data['wallet_id'] = $this->walletId;
-        }
-
-        return $data;
+            'partner_fee_id' => $this->partnerFeeId,
+            'is_otc' => $this->isOtc,
+            'funding_bank_account_id' => $this->fundingBankAccountId,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -112,26 +115,34 @@ readonly class CreatePayinQuoteResponse
 {
     public function __construct(
         public string $id,
-        public int $expiresAt,
+        /** Unix time in milliseconds */
+        public ?int $expiresAt,
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
         public ?float $receiverAmount,
         public ?float $senderAmount,
         public ?float $partnerFeeAmount = null,
-        public ?float $flatFee = null
+        public ?float $flatFee = null,
+        public ?float $billingFeeAmount = null,
+        public ?bool $isOtc = null,
+        /** card payment instructions, for `card` quotes */
+        public ?array $cardInstruction = null,
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
             id: $data['id'],
-            expiresAt: (int) $data['expires_at'],
+            expiresAt: isset($data['expires_at']) ? (int) $data['expires_at'] : null,
             commercialQuotation: isset($data['commercial_quotation']) ? (float) $data['commercial_quotation'] : null,
             blindpayQuotation: isset($data['blindpay_quotation']) ? (float) $data['blindpay_quotation'] : null,
             receiverAmount: isset($data['receiver_amount']) ? (float) $data['receiver_amount'] : null,
             senderAmount: isset($data['sender_amount']) ? (float) $data['sender_amount'] : null,
             partnerFeeAmount: isset($data['partner_fee_amount']) ? (float) $data['partner_fee_amount'] : null,
-            flatFee: isset($data['flat_fee']) ? (float) $data['flat_fee'] : null
+            flatFee: isset($data['flat_fee']) ? (float) $data['flat_fee'] : null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
+            isOtc: $data['is_otc'] ?? null,
+            cardInstruction: $data['card_instruction'] ?? null,
         );
     }
 }
@@ -142,7 +153,8 @@ readonly class GetPayinFxRateInput
         public CurrencyType $currencyType,
         public Currency $from,
         public Currency $to,
-        public float $requestAmount
+        /** integer cents of the side currencyType names (1000 = 10.00) */
+        public int $requestAmount
     ) {}
 
     public function toArray(): array
