@@ -635,10 +635,9 @@ Keep the exact form `private const VERSION = 'X.Y.Z';`: `scripts/api-sync.php` r
 
 ### Release process
 
-1. Merge changes to `main`.
-2. Update `private const VERSION` in `src/BlindPay.php` to the new version (api-sync PRs do this for you).
-3. A tag `vX.Y.Z` on `main` triggers `release.yaml` (GitHub release) and lets Packagist pick up the version. `api-sync-merged.yml` creates the tag itself when an api-sync PR merges and changed `VERSION`; for a manual release, create the tag yourself.
-4. Composer resolves the version from git tags, not from `composer.json`.
+1. Bump `VERSION` in `src/BlindPay.php` in the PR itself, following the SemVer table below. api-sync PRs bump it automatically.
+2. Merge to `main`. `.github/workflows/release.yaml` then reads `VERSION`. If tag `vX.Y.Z` doesn't exist yet, it validates, runs the tests and contract check, pushes the tag and creates the GitHub release. Never tag by hand.
+3. Packagist picks up the tag through its GitHub webhook. Composer resolves the version from git tags, not from `composer.json`.
 
 ### SemVer rules for this SDK
 
