@@ -120,4 +120,21 @@ final class WebhookVerifierTest extends TestCase
         $this->assertFalse($blindpay->verifyWebhookSignature($secret, $id, (string) $now, $payload.' ', 'v1,'.$sign($now)));
         $this->assertFalse($blindpay->verifyWebhookSignature('nounderscore', $id, (string) $now, $payload, 'v1,'.$sign($now)));
     }
+
+    #[Test]
+    public function it_honours_a_custom_tolerance_in_the_deprecated_client_method(): void
+    {
+        $blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000');
+        $secret = self::valid()['secret'];
+        $payload = '{"webhook_event":"payout.complete","id":"pa_000000000000"}';
+        $id = 'msg_000000000000';
+        $tenMinutesAgo = time() - 600;
+        $signature = 'v1,'.base64_encode(hash_hmac('sha256', "{$id}.{$tenMinutesAgo}.{$payload}", base64_decode(substr($secret, 6)), true));
+
+        // outside the default 300 s window
+        $this->assertFalse($blindpay->verifyWebhookSignature($secret, $id, (string) $tenMinutesAgo, $payload, $signature));
+        // inside a wider window the caller chose; a narrower one still rejects it
+        $this->assertTrue($blindpay->verifyWebhookSignature($secret, $id, (string) $tenMinutesAgo, $payload, $signature, tolerance: 900));
+        $this->assertFalse($blindpay->verifyWebhookSignature($secret, $id, (string) $tenMinutesAgo, $payload, $signature, tolerance: 60));
+    }
 }
