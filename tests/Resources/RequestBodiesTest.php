@@ -60,6 +60,18 @@ final class RequestBodiesTest extends TestCase
     }
 
     #[Test]
+    public function rfi_get_returns_null_data_when_no_rfi_is_open(): void
+    {
+        foreach ([fn (BlindPay $b) => $b->customers->rfi->get('cu_1'), fn (BlindPay $b) => $b->instances->rfi->get()] as $call) {
+            $stack = HandlerStack::create(new MockHandler([new Response(200, ['Content-Type' => 'application/json'], 'null')]));
+            $response = $call(new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000', handler: $stack));
+
+            $this->assertTrue($response->isSuccess());
+            $this->assertNull($response->data);
+        }
+    }
+
+    #[Test]
     public function plaid_link_sends_the_redirect_url_only_when_given(): void
     {
         $this->assertSame(['redirect_url' => 'https://x'], $this->send(fn (BlindPay $b) => $b->customers->bankAccounts->createPlaidLink('cu_1', 'https://x'), ['url' => 'https://plaid']));
