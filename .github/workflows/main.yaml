@@ -78,7 +78,7 @@ jobs:
           php -r '
             $r = json_decode(file_get_contents("/tmp/api-sync-report.json"), true);
             $gaps = $r["coverageGaps"] ?? [];
-            echo "Reachable spec schemas with no spec-map.json mapping (non-blocking; expected: the Rfi family and upload/analyze):\n";
+            echo "Reachable spec schemas with no spec-map.json mapping (non-blocking; expected: the older *WebhookOut payloads, which tests/Webhooks/WebhookEventTest.php decodes, and a few wrapper schemas):\n";
             foreach ($gaps as $g) {
                 echo " - {$g}\n";
             }

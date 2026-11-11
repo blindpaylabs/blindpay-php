@@ -6,12 +6,16 @@ namespace BlindPay\SDK\Resources\BankAccounts;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
+use BlindPay\SDK\Internal\Query;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Country;
+use BlindPay\SDK\Types\ErrorResponse;
 use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\RecipientRelationship;
+use BlindPay\SDK\Types\RequestOptions;
 use DateTimeImmutable;
 
 enum ArgentinaTransfers: string
@@ -21,7 +25,7 @@ enum ArgentinaTransfers: string
     case ALIAS = 'ALIAS';
 }
 
-/*
+/**
  * Colombia ACH document types
  */
 enum AchCopDocument: string
@@ -38,16 +42,12 @@ enum SpeiProtocol: string
     case CLABE = 'clabe';
     case DEBITCARD = 'debitcard';
     case PHONENUM = 'phonenum';
-    /** @deprecated Not a valid spei_protocol value; the API rejects it. Use CLABE, DEBITCARD or PHONENUM. */
-    case SPEI = 'SPEI';
-    /** @deprecated Not a valid spei_protocol value; the API rejects it. Use CLABE, DEBITCARD or PHONENUM. */
-    case STP = 'STP';
 }
 
 readonly class BankAccountListItem
 {
-    /*
-     * @param array<array{address: string, id: string, network: string, external_id: string}>|null $offrampWallets
+    /**
+     * @param  array<array{address: string, id: string, network: string, external_id: string}>|null  $offrampWallets
      */
     public function __construct(
         public string $id,
@@ -57,23 +57,23 @@ readonly class BankAccountListItem
         public ?string $beneficiaryName,
         public ?string $routingNumber,
         public ?string $accountNumber,
-        public ?BankAccountType $accountType,
-        public ?AccountClass $accountClass,
+        public BankAccountType|string|null $accountType,
+        public AccountClass|string|null $accountClass,
         public ?string $addressLine1,
         public ?string $addressLine2,
         public ?string $city,
         public ?string $stateProvinceRegion,
-        public ?Country $country,
+        public Country|string|null $country,
         public ?string $postalCode,
         public ?string $speiProtocol,
         public ?string $speiInstitutionCode,
         public ?string $speiClabe,
-        public ?ArgentinaTransfers $transfersType,
+        public ArgentinaTransfers|string|null $transfersType,
         public ?string $transfersAccount,
         public ?string $achCopBeneficiaryFirstName,
         public ?string $achCopBeneficiaryLastName,
         public ?string $achCopDocumentId,
-        public ?AchCopDocument $achCopDocumentType,
+        public AchCopDocument|string|null $achCopDocumentType,
         public ?string $achCopEmail,
         public ?string $achCopBankCode,
         public ?string $achCopBankAccount,
@@ -82,28 +82,58 @@ readonly class BankAccountListItem
         public ?string $swiftAccountNumberIban,
         public ?string $swiftBeneficiaryAddressLine1,
         public ?string $swiftBeneficiaryAddressLine2,
-        public ?Country $swiftBeneficiaryCountry,
+        public Country|string|null $swiftBeneficiaryCountry,
         public ?string $swiftBeneficiaryCity,
         public ?string $swiftBeneficiaryStateProvinceRegion,
         public ?string $swiftBeneficiaryPostalCode,
         public ?string $swiftBankName,
         public ?string $swiftBankAddressLine1,
         public ?string $swiftBankAddressLine2,
-        public ?Country $swiftBankCountry,
+        public Country|string|null $swiftBankCountry,
         public ?string $swiftBankCity,
         public ?string $swiftBankStateProvinceRegion,
         public ?string $swiftBankPostalCode,
         public ?string $swiftIntermediaryBankSwiftCodeBic,
         public ?string $swiftIntermediaryBankAccountNumberIban,
         public ?string $swiftIntermediaryBankName,
-        public ?Country $swiftIntermediaryBankCountry,
+        public Country|string|null $swiftIntermediaryBankCountry,
         public ?string $tronWalletHash,
         public ?array $offrampWallets,
         public ?DateTimeImmutable $createdAt,
         public ?string $tedBankCode = null,
         public ?string $tedBranchCode = null,
         public ?string $tedCpfCnpj = null,
-        public ?string $sepaBeneficiaryBic = null
+        public ?string $sepaBeneficiaryBic = null,
+        public ?string $swiftIfscBranchCode = null,
+        public ?string $swiftIntermediaryBankRoutingNumber = null,
+        public ?string $sepaIban = null,
+        public ?string $sepaBeneficiaryLegalName = null,
+        public ?string $sepaBeneficiaryAddressLine1 = null,
+        public ?string $sepaBeneficiaryAddressLine2 = null,
+        public ?string $sepaBeneficiaryCity = null,
+        public ?string $sepaBeneficiaryStateProvinceRegion = null,
+        public ?string $sepaBeneficiaryPostalCode = null,
+        public Country|string|null $sepaBeneficiaryCountry = null,
+        public ?string $fasterPaymentsSortCode = null,
+        public ?string $fasterPaymentsAccountNumber = null,
+        public ?string $fasterPaymentsBeneficiaryLegalName = null,
+        public ?string $fasterPaymentsBeneficiaryAddressLine1 = null,
+        public ?string $fasterPaymentsBeneficiaryAddressLine2 = null,
+        public ?string $fasterPaymentsBeneficiaryCity = null,
+        public ?string $fasterPaymentsBeneficiaryStateProvinceRegion = null,
+        public ?string $fasterPaymentsBeneficiaryPostalCode = null,
+        public Country|string|null $fasterPaymentsBeneficiaryCountry = null,
+        public ?string $businessIndustry = null,
+        public ?string $phoneNumber = null,
+        public ?string $taxId = null,
+        public ?string $dateOfBirth = null,
+        public ?string $pixSafeBankCode = null,
+        public ?string $pixSafeBranchCode = null,
+        public ?string $pixSafeCpfCnpj = null,
+        public ?string $status = null,
+        public RecipientRelationship|string|null $recipientRelationship = null,
+        public ?string $swiftPaymentCode = null,
+        public ?string $plaidConnectedAt = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -116,23 +146,23 @@ readonly class BankAccountListItem
             beneficiaryName: $data['beneficiary_name'] ?? null,
             routingNumber: $data['routing_number'] ?? null,
             accountNumber: $data['account_number'] ?? null,
-            accountType: isset($data['account_type']) ? BankAccountType::from($data['account_type']) : null,
-            accountClass: isset($data['account_class']) ? AccountClass::from($data['account_class']) : null,
+            accountType: Decode::enum(BankAccountType::class, $data['account_type'] ?? null),
+            accountClass: Decode::enum(AccountClass::class, $data['account_class'] ?? null),
             addressLine1: $data['address_line_1'] ?? null,
             addressLine2: $data['address_line_2'] ?? null,
             city: $data['city'] ?? null,
             stateProvinceRegion: $data['state_province_region'] ?? null,
-            country: isset($data['country']) ? Country::from($data['country']) : null,
+            country: Decode::enum(Country::class, $data['country'] ?? null),
             postalCode: $data['postal_code'] ?? null,
             speiProtocol: $data['spei_protocol'] ?? null,
             speiInstitutionCode: $data['spei_institution_code'] ?? null,
             speiClabe: $data['spei_clabe'] ?? null,
-            transfersType: isset($data['transfers_type']) ? ArgentinaTransfers::from($data['transfers_type']) : null,
+            transfersType: Decode::enum(ArgentinaTransfers::class, $data['transfers_type'] ?? null),
             transfersAccount: $data['transfers_account'] ?? null,
             achCopBeneficiaryFirstName: $data['ach_cop_beneficiary_first_name'] ?? null,
             achCopBeneficiaryLastName: $data['ach_cop_beneficiary_last_name'] ?? null,
             achCopDocumentId: $data['ach_cop_document_id'] ?? null,
-            achCopDocumentType: isset($data['ach_cop_document_type']) ? AchCopDocument::from($data['ach_cop_document_type']) : null,
+            achCopDocumentType: Decode::enum(AchCopDocument::class, $data['ach_cop_document_type'] ?? null),
             achCopEmail: $data['ach_cop_email'] ?? null,
             achCopBankCode: $data['ach_cop_bank_code'] ?? null,
             achCopBankAccount: $data['ach_cop_bank_account'] ?? null,
@@ -141,21 +171,21 @@ readonly class BankAccountListItem
             swiftAccountNumberIban: $data['swift_account_number_iban'] ?? null,
             swiftBeneficiaryAddressLine1: $data['swift_beneficiary_address_line_1'] ?? null,
             swiftBeneficiaryAddressLine2: $data['swift_beneficiary_address_line_2'] ?? null,
-            swiftBeneficiaryCountry: isset($data['swift_beneficiary_country']) ? Country::from($data['swift_beneficiary_country']) : null,
+            swiftBeneficiaryCountry: Decode::enum(Country::class, $data['swift_beneficiary_country'] ?? null),
             swiftBeneficiaryCity: $data['swift_beneficiary_city'] ?? null,
             swiftBeneficiaryStateProvinceRegion: $data['swift_beneficiary_state_province_region'] ?? null,
             swiftBeneficiaryPostalCode: $data['swift_beneficiary_postal_code'] ?? null,
             swiftBankName: $data['swift_bank_name'] ?? null,
             swiftBankAddressLine1: $data['swift_bank_address_line_1'] ?? null,
             swiftBankAddressLine2: $data['swift_bank_address_line_2'] ?? null,
-            swiftBankCountry: isset($data['swift_bank_country']) ? Country::from($data['swift_bank_country']) : null,
+            swiftBankCountry: Decode::enum(Country::class, $data['swift_bank_country'] ?? null),
             swiftBankCity: $data['swift_bank_city'] ?? null,
             swiftBankStateProvinceRegion: $data['swift_bank_state_province_region'] ?? null,
             swiftBankPostalCode: $data['swift_bank_postal_code'] ?? null,
             swiftIntermediaryBankSwiftCodeBic: $data['swift_intermediary_bank_swift_code_bic'] ?? null,
             swiftIntermediaryBankAccountNumberIban: $data['swift_intermediary_bank_account_number_iban'] ?? null,
             swiftIntermediaryBankName: $data['swift_intermediary_bank_name'] ?? null,
-            swiftIntermediaryBankCountry: isset($data['swift_intermediary_bank_country']) ? Country::from($data['swift_intermediary_bank_country']) : null,
+            swiftIntermediaryBankCountry: Decode::enum(Country::class, $data['swift_intermediary_bank_country'] ?? null),
             tronWalletHash: $data['tron_wallet_hash'] ?? null,
             offrampWallets: $data['offramp_wallets'] ?? null,
             createdAt: isset($data['created_at'])
@@ -164,15 +194,72 @@ readonly class BankAccountListItem
             tedBankCode: $data['ted_bank_code'] ?? null,
             tedBranchCode: $data['ted_branch_code'] ?? null,
             tedCpfCnpj: $data['ted_cpf_cnpj'] ?? null,
-            sepaBeneficiaryBic: $data['sepa_beneficiary_bic'] ?? null
+            sepaBeneficiaryBic: $data['sepa_beneficiary_bic'] ?? null,
+            swiftIfscBranchCode: $data['swift_ifsc_branch_code'] ?? null,
+            swiftIntermediaryBankRoutingNumber: $data['swift_intermediary_bank_routing_number'] ?? null,
+            sepaIban: $data['sepa_iban'] ?? null,
+            sepaBeneficiaryLegalName: $data['sepa_beneficiary_legal_name'] ?? null,
+            sepaBeneficiaryAddressLine1: $data['sepa_beneficiary_address_line_1'] ?? null,
+            sepaBeneficiaryAddressLine2: $data['sepa_beneficiary_address_line_2'] ?? null,
+            sepaBeneficiaryCity: $data['sepa_beneficiary_city'] ?? null,
+            sepaBeneficiaryStateProvinceRegion: $data['sepa_beneficiary_state_province_region'] ?? null,
+            sepaBeneficiaryPostalCode: $data['sepa_beneficiary_postal_code'] ?? null,
+            sepaBeneficiaryCountry: Decode::enum(Country::class, $data['sepa_beneficiary_country'] ?? null),
+            fasterPaymentsSortCode: $data['faster_payments_sort_code'] ?? null,
+            fasterPaymentsAccountNumber: $data['faster_payments_account_number'] ?? null,
+            fasterPaymentsBeneficiaryLegalName: $data['faster_payments_beneficiary_legal_name'] ?? null,
+            fasterPaymentsBeneficiaryAddressLine1: $data['faster_payments_beneficiary_address_line_1'] ?? null,
+            fasterPaymentsBeneficiaryAddressLine2: $data['faster_payments_beneficiary_address_line_2'] ?? null,
+            fasterPaymentsBeneficiaryCity: $data['faster_payments_beneficiary_city'] ?? null,
+            fasterPaymentsBeneficiaryStateProvinceRegion: $data['faster_payments_beneficiary_state_province_region'] ?? null,
+            fasterPaymentsBeneficiaryPostalCode: $data['faster_payments_beneficiary_postal_code'] ?? null,
+            fasterPaymentsBeneficiaryCountry: Decode::enum(Country::class, $data['faster_payments_beneficiary_country'] ?? null),
+            businessIndustry: $data['business_industry'] ?? null,
+            phoneNumber: $data['phone_number'] ?? null,
+            taxId: $data['tax_id'] ?? null,
+            dateOfBirth: $data['date_of_birth'] ?? null,
+            pixSafeBankCode: $data['pix_safe_bank_code'] ?? null,
+            pixSafeBranchCode: $data['pix_safe_branch_code'] ?? null,
+            pixSafeCpfCnpj: $data['pix_safe_cpf_cnpj'] ?? null,
+            status: $data['status'] ?? null,
+            recipientRelationship: Decode::enum(RecipientRelationship::class, $data['recipient_relationship'] ?? null),
+            swiftPaymentCode: $data['swift_payment_code'] ?? null,
+            plaidConnectedAt: $data['plaid_connected_at'] ?? null,
         );
+    }
+}
+
+/** Filters for a customer's bank accounts (the API returns every match; no pagination). */
+readonly class ListBankAccountsInput
+{
+    /**
+     * @param  string|null  $status  verifying, approved, rejected or deprecated
+     */
+    public function __construct(
+        public ?string $status = null,
+        public ?Rail $type = null,
+        public ?string $name = null,
+        public ?string $bankAccountId = null,
+        public ?string $country = null,
+    ) {}
+
+    /** @return array<string, string> */
+    public function toArray(): array
+    {
+        return array_filter([
+            'status' => $this->status,
+            'type' => $this->type?->value,
+            'name' => $this->name,
+            'bank_account_id' => $this->bankAccountId,
+            'country' => $this->country,
+        ], static fn ($value) => $value !== null);
     }
 }
 
 readonly class ListBankAccountsResponse
 {
-    /*
-     * @param BankAccountListItem[] $data
+    /**
+     * @param  BankAccountListItem[]  $data
      */
     public function __construct(
         public array $data
@@ -186,6 +273,35 @@ readonly class ListBankAccountsResponse
                 $data
             )
         );
+    }
+}
+
+readonly class CreatePlaidLinkInput
+{
+    /**
+     * @param  string|null  $redirectUrl  where Plaid sends the customer back once the account is linked
+     */
+    public function __construct(
+        public string $customerId,
+        public ?string $redirectUrl = null,
+    ) {}
+
+    public function toArray(): array
+    {
+        return array_filter(['redirect_url' => $this->redirectUrl], static fn ($value) => $value !== null);
+    }
+}
+
+readonly class PlaidLinkResponse
+{
+    public function __construct(
+        /** open it in the customer's browser to link a US bank account through Plaid */
+        public string $url,
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(url: $data['url']);
     }
 }
 
@@ -210,7 +326,7 @@ readonly class BankAccountResponse
         public string $accountHolderName,
         public string $accountNumber,
         public string $routingNumber,
-        public BankAccountType $accountType,
+        public BankAccountType|string $accountType,
         public string $bankName,
         public ?string $swiftCode,
         public ?string $iban,
@@ -228,7 +344,7 @@ readonly class BankAccountResponse
             accountHolderName: $data['account_holder_name'],
             accountNumber: $data['account_number'],
             routingNumber: $data['routing_number'],
-            accountType: BankAccountType::from($data['account_type']),
+            accountType: Decode::enum(BankAccountType::class, $data['account_type']),
             bankName: $data['bank_name'],
             swiftCode: $data['swift_code'] ?? null,
             iban: $data['iban'] ?? null,
@@ -266,28 +382,6 @@ readonly class CreatePixInput
     }
 }
 
-readonly class CreatePixResponse
-{
-    public function __construct(
-        public string $id,
-        public string $type,
-        public string $name,
-        public string $pixKey,
-        public DateTimeImmutable $createdAt
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            type: $data['type'],
-            name: $data['name'],
-            pixKey: $data['pix_key'],
-            createdAt: new DateTimeImmutable($data['created_at'])
-        );
-    }
-}
-
 readonly class CreateArgentinaTransfersInput
 {
     public function __construct(
@@ -307,32 +401,6 @@ readonly class CreateArgentinaTransfersInput
             'transfers_account' => $this->transfersAccount,
             'transfers_type' => $this->transfersType->value,
         ];
-    }
-}
-
-readonly class CreateArgentinaTransfersResponse
-{
-    public function __construct(
-        public string $id,
-        public string $type,
-        public string $name,
-        public string $beneficiaryName,
-        public ArgentinaTransfers $transfersType,
-        public string $transfersAccount,
-        public DateTimeImmutable $createdAt
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            type: $data['type'],
-            name: $data['name'],
-            beneficiaryName: $data['beneficiary_name'],
-            transfersType: ArgentinaTransfers::from($data['transfers_type']),
-            transfersAccount: $data['transfers_account'],
-            createdAt: new DateTimeImmutable($data['created_at'])
-        );
     }
 }
 
@@ -357,34 +425,6 @@ readonly class CreateSpeiInput
             'spei_institution_code' => $this->speiInstitutionCode,
             'spei_protocol' => $this->speiProtocol->value,
         ];
-    }
-}
-
-readonly class CreateSpeiResponse
-{
-    public function __construct(
-        public string $id,
-        public string $type,
-        public string $name,
-        public string $beneficiaryName,
-        public SpeiProtocol $speiProtocol,
-        public string $speiInstitutionCode,
-        public string $speiClabe,
-        public DateTimeImmutable $createdAt
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            type: $data['type'],
-            name: $data['name'],
-            beneficiaryName: $data['beneficiary_name'],
-            speiProtocol: SpeiProtocol::from($data['spei_protocol']),
-            speiInstitutionCode: $data['spei_institution_code'],
-            speiClabe: $data['spei_clabe'],
-            createdAt: new DateTimeImmutable($data['created_at'])
-        );
     }
 }
 
@@ -417,42 +457,6 @@ readonly class CreateColombiaAchInput
             'ach_cop_bank_code' => $this->achCopBankCode,
             'ach_cop_bank_account' => $this->achCopBankAccount,
         ];
-    }
-}
-
-readonly class CreateColombiaAchResponse
-{
-    public function __construct(
-        public string $id,
-        public string $type,
-        public string $name,
-        public BankAccountType $accountType,
-        public string $achCopBeneficiaryFirstName,
-        public string $achCopBeneficiaryLastName,
-        public string $achCopDocumentId,
-        public AchCopDocument $achCopDocumentType,
-        public string $achCopEmail,
-        public string $achCopBankCode,
-        public string $achCopBankAccount,
-        public DateTimeImmutable $createdAt
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            type: $data['type'],
-            name: $data['name'],
-            accountType: BankAccountType::from($data['account_type']),
-            achCopBeneficiaryFirstName: $data['ach_cop_beneficiary_first_name'],
-            achCopBeneficiaryLastName: $data['ach_cop_beneficiary_last_name'],
-            achCopDocumentId: $data['ach_cop_document_id'],
-            achCopDocumentType: AchCopDocument::from($data['ach_cop_document_type']),
-            achCopEmail: $data['ach_cop_email'],
-            achCopBankCode: $data['ach_cop_bank_code'],
-            achCopBankAccount: $data['ach_cop_bank_account'],
-            createdAt: new DateTimeImmutable($data['created_at'])
-        );
     }
 }
 
@@ -521,62 +525,6 @@ readonly class CreateAchInput
     }
 }
 
-readonly class CreateAchResponse
-{
-    public function __construct(
-        public string $id,
-        public string $type,
-        public string $name,
-        public string $beneficiaryName,
-        public string $routingNumber,
-        public string $accountNumber,
-        public BankAccountType $accountType,
-        public AccountClass $accountClass,
-        public ?string $addressLine1,
-        public ?string $addressLine2,
-        public ?string $city,
-        public ?string $stateProvinceRegion,
-        public ?Country $country,
-        public ?string $postalCode,
-        public ?string $achCopBeneficiaryFirstName,
-        public ?string $achCopBeneficiaryLastName,
-        public ?string $achCopDocumentId,
-        public ?AchCopDocument $achCopDocumentType,
-        public ?string $achCopEmail,
-        public ?string $achCopBankCode,
-        public ?string $achCopBankAccount,
-        public DateTimeImmutable $createdAt
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            type: $data['type'],
-            name: $data['name'],
-            beneficiaryName: $data['beneficiary_name'],
-            routingNumber: $data['routing_number'],
-            accountNumber: $data['account_number'],
-            accountType: BankAccountType::from($data['account_type']),
-            accountClass: AccountClass::from($data['account_class']),
-            addressLine1: $data['address_line_1'] ?? null,
-            addressLine2: $data['address_line_2'] ?? null,
-            city: $data['city'] ?? null,
-            stateProvinceRegion: $data['state_province_region'] ?? null,
-            country: isset($data['country']) ? Country::from($data['country']) : null,
-            postalCode: $data['postal_code'] ?? null,
-            achCopBeneficiaryFirstName: $data['ach_cop_beneficiary_first_name'] ?? null,
-            achCopBeneficiaryLastName: $data['ach_cop_beneficiary_last_name'] ?? null,
-            achCopDocumentId: $data['ach_cop_document_id'] ?? null,
-            achCopDocumentType: isset($data['ach_cop_document_type']) ? AchCopDocument::from($data['ach_cop_document_type']) : null,
-            achCopEmail: $data['ach_cop_email'] ?? null,
-            achCopBankCode: $data['ach_cop_bank_code'] ?? null,
-            achCopBankAccount: $data['ach_cop_bank_account'] ?? null,
-            createdAt: new DateTimeImmutable($data['created_at'])
-        );
-    }
-}
-
 readonly class CreateWireInput
 {
     public function __construct(
@@ -637,44 +585,6 @@ readonly class CreateWireInput
         }
 
         return $data;
-    }
-}
-
-readonly class CreateWireResponse
-{
-    public function __construct(
-        public string $id,
-        public string $type,
-        public string $name,
-        public string $beneficiaryName,
-        public string $routingNumber,
-        public string $accountNumber,
-        public string $addressLine1,
-        public ?string $addressLine2,
-        public string $city,
-        public string $stateProvinceRegion,
-        public Country $country,
-        public string $postalCode,
-        public DateTimeImmutable $createdAt
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            type: $data['type'],
-            name: $data['name'],
-            beneficiaryName: $data['beneficiary_name'],
-            routingNumber: $data['routing_number'],
-            accountNumber: $data['account_number'],
-            addressLine1: $data['address_line_1'],
-            addressLine2: $data['address_line_2'] ?? null,
-            city: $data['city'],
-            stateProvinceRegion: $data['state_province_region'],
-            country: Country::from($data['country']),
-            postalCode: $data['postal_code'],
-            createdAt: new DateTimeImmutable($data['created_at'])
-        );
     }
 }
 
@@ -791,82 +701,6 @@ readonly class CreateInternationalSwiftInput
     }
 }
 
-readonly class CreateInternationalSwiftResponse
-{
-    public function __construct(
-        public string $id,
-        public string $type,
-        public string $name,
-        public ?string $beneficiaryName,
-        public ?string $addressLine1,
-        public ?string $addressLine2,
-        public ?string $city,
-        public ?string $stateProvinceRegion,
-        public ?Country $country,
-        public ?string $postalCode,
-        public string $swiftCodeBic,
-        public string $swiftAccountHolderName,
-        public string $swiftAccountNumberIban,
-        public string $swiftBeneficiaryAddressLine1,
-        public ?string $swiftBeneficiaryAddressLine2,
-        public Country $swiftBeneficiaryCountry,
-        public string $swiftBeneficiaryCity,
-        public string $swiftBeneficiaryStateProvinceRegion,
-        public string $swiftBeneficiaryPostalCode,
-        public string $swiftBankName,
-        public string $swiftBankAddressLine1,
-        public ?string $swiftBankAddressLine2,
-        public Country $swiftBankCountry,
-        public string $swiftBankCity,
-        public string $swiftBankStateProvinceRegion,
-        public string $swiftBankPostalCode,
-        public ?string $swiftIntermediaryBankSwiftCodeBic,
-        public ?string $swiftIntermediaryBankAccountNumberIban,
-        public ?string $swiftIntermediaryBankName,
-        public ?Country $swiftIntermediaryBankCountry,
-        public DateTimeImmutable $createdAt,
-        public ?string $sepaBeneficiaryBic = null
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            type: $data['type'],
-            name: $data['name'],
-            beneficiaryName: $data['beneficiary_name'] ?? null,
-            addressLine1: $data['address_line_1'] ?? null,
-            addressLine2: $data['address_line_2'] ?? null,
-            city: $data['city'] ?? null,
-            stateProvinceRegion: $data['state_province_region'] ?? null,
-            country: isset($data['country']) ? Country::from($data['country']) : null,
-            postalCode: $data['postal_code'] ?? null,
-            swiftCodeBic: $data['swift_code_bic'],
-            swiftAccountHolderName: $data['swift_account_holder_name'],
-            swiftAccountNumberIban: $data['swift_account_number_iban'],
-            swiftBeneficiaryAddressLine1: $data['swift_beneficiary_address_line_1'],
-            swiftBeneficiaryAddressLine2: $data['swift_beneficiary_address_line_2'] ?? null,
-            swiftBeneficiaryCountry: Country::from($data['swift_beneficiary_country']),
-            swiftBeneficiaryCity: $data['swift_beneficiary_city'],
-            swiftBeneficiaryStateProvinceRegion: $data['swift_beneficiary_state_province_region'],
-            swiftBeneficiaryPostalCode: $data['swift_beneficiary_postal_code'],
-            swiftBankName: $data['swift_bank_name'],
-            swiftBankAddressLine1: $data['swift_bank_address_line_1'],
-            swiftBankAddressLine2: $data['swift_bank_address_line_2'] ?? null,
-            swiftBankCountry: Country::from($data['swift_bank_country']),
-            swiftBankCity: $data['swift_bank_city'],
-            swiftBankStateProvinceRegion: $data['swift_bank_state_province_region'],
-            swiftBankPostalCode: $data['swift_bank_postal_code'],
-            swiftIntermediaryBankSwiftCodeBic: $data['swift_intermediary_bank_swift_code_bic'] ?? null,
-            swiftIntermediaryBankAccountNumberIban: $data['swift_intermediary_bank_account_number_iban'] ?? null,
-            swiftIntermediaryBankName: $data['swift_intermediary_bank_name'] ?? null,
-            swiftIntermediaryBankCountry: isset($data['swift_intermediary_bank_country']) ? Country::from($data['swift_intermediary_bank_country']) : null,
-            createdAt: new DateTimeImmutable($data['created_at']),
-            sepaBeneficiaryBic: $data['sepa_beneficiary_bic'] ?? null
-        );
-    }
-}
-
 readonly class CreateRtpInput
 {
     public function __construct(
@@ -956,74 +790,6 @@ readonly class CreatePixSafeInput
     }
 }
 
-readonly class CreatePixSafeResponse
-{
-    public function __construct(
-        public string $id,
-        public string $type,
-        public string $name,
-        public string $accountNumber,
-        public BankAccountType $accountType,
-        public string $pixSafeBankCode,
-        public string $pixSafeBranchCode,
-        public string $pixSafeCpfCnpj,
-        public DateTimeImmutable $createdAt
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            type: $data['type'],
-            name: $data['name'],
-            accountNumber: $data['account_number'],
-            accountType: BankAccountType::from($data['account_type']),
-            pixSafeBankCode: $data['pix_safe_bank_code'],
-            pixSafeBranchCode: $data['pix_safe_branch_code'],
-            pixSafeCpfCnpj: $data['pix_safe_cpf_cnpj'],
-            createdAt: new DateTimeImmutable($data['created_at'])
-        );
-    }
-}
-
-readonly class CreateRtpResponse
-{
-    public function __construct(
-        public string $id,
-        public string $type,
-        public string $name,
-        public string $beneficiaryName,
-        public string $routingNumber,
-        public string $accountNumber,
-        public string $addressLine1,
-        public ?string $addressLine2,
-        public string $city,
-        public string $stateProvinceRegion,
-        public Country $country,
-        public string $postalCode,
-        public DateTimeImmutable $createdAt
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            type: $data['type'],
-            name: $data['name'],
-            beneficiaryName: $data['beneficiary_name'],
-            routingNumber: $data['routing_number'],
-            accountNumber: $data['account_number'],
-            addressLine1: $data['address_line_1'],
-            addressLine2: $data['address_line_2'] ?? null,
-            city: $data['city'],
-            stateProvinceRegion: $data['state_province_region'],
-            country: Country::from($data['country']),
-            postalCode: $data['postal_code'],
-            createdAt: new DateTimeImmutable($data['created_at'])
-        );
-    }
-}
-
 class BankAccounts
 {
     public function __construct(
@@ -1031,297 +797,291 @@ class BankAccounts
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * List bank accounts for a customer
      *
-     * @param string $customerId
      * @return BlindPayApiResponse<ListBankAccountsResponse>
      */
-    public function list(string $customerId): BlindPayApiResponse
-    {
-        if (empty($customerId)) {
+    public function list(
+        string $customerId,
+        ?ListBankAccountsInput $params = null,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$customerId}/bank-accounts"
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $customerId).Query::build($params?->toArray() ?? []),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                ListBankAccountsResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => ListBankAccountsResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get a specific bank account
      *
-     * @param GetBankAccountInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function get(GetBankAccountInput $input): BlindPayApiResponse
+    public function get(GetBankAccountInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->customerId) || empty($input->id)) {
+        if ($input->customerId === '' || $input->id === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID and ID cannot be empty')
+                ErrorResponse::validation('Customer ID and ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->id}"
+            Path::of('instances/%s/customers/%s/bank-accounts/%s', $this->instanceId, $input->customerId, $input->id),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                BankAccountListItem::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Delete a bank account
      *
-     * @param DeleteBankAccountInput $input
      * @return BlindPayApiResponse<null>
      */
-    public function delete(DeleteBankAccountInput $input): BlindPayApiResponse
+    public function delete(DeleteBankAccountInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->customerId) || empty($input->id)) {
+        if ($input->customerId === '' || $input->id === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID and ID cannot be empty')
+                ErrorResponse::validation('Customer ID and ID cannot be empty')
             );
         }
 
         return $this->client->delete(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts/{$input->id}"
+            Path::of('instances/%s/customers/%s/bank-accounts/%s', $this->instanceId, $input->customerId, $input->id),
+            null,
+            $options
         );
     }
 
-    /*
+    /**
      * Create a PIX bank account
      *
-     * @param CreatePixInput $input
-     * @return BlindPayApiResponse<CreatePixResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function createPix(CreatePixInput $input): BlindPayApiResponse
+    public function createPix(CreatePixInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
-        );
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreatePixResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
-    /*
+    /**
      * Create Argentina transfers bank account
      *
-     * @param CreateArgentinaTransfersInput $input
-     * @return BlindPayApiResponse<CreateArgentinaTransfersResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function createArgentinaTransfers(CreateArgentinaTransfersInput $input): BlindPayApiResponse
+    public function createArgentinaTransfers(CreateArgentinaTransfersInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
-        );
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateArgentinaTransfersResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
-    /*
+    /**
      * Create SPEI bank account
      *
-     * @param CreateSpeiInput $input
-     * @return BlindPayApiResponse<CreateSpeiResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function createSpei(CreateSpeiInput $input): BlindPayApiResponse
+    public function createSpei(CreateSpeiInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
-        );
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateSpeiResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
-    /*
+    /**
      * Create Colombia ACH bank account
      *
-     * @param CreateColombiaAchInput $input
-     * @return BlindPayApiResponse<CreateColombiaAchResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function createColombiaAch(CreateColombiaAchInput $input): BlindPayApiResponse
+    public function createColombiaAch(CreateColombiaAchInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
-        );
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateColombiaAchResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
-    /*
+    /**
      * Create ACH bank account
      *
-     * @param CreateAchInput $input
-     * @return BlindPayApiResponse<CreateAchResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function createAch(CreateAchInput $input): BlindPayApiResponse
+    public function createAch(CreateAchInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
-        );
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateAchResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
-    /*
+    /**
      * Create Wire bank account
      *
-     * @param CreateWireInput $input
-     * @return BlindPayApiResponse<CreateWireResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function createWire(CreateWireInput $input): BlindPayApiResponse
+    public function createWire(CreateWireInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
-        );
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateWireResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
-    /*
+    /**
      * Create International SWIFT bank account
      *
-     * @param CreateInternationalSwiftInput $input
-     * @return BlindPayApiResponse<CreateInternationalSwiftResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function createInternationalSwift(CreateInternationalSwiftInput $input): BlindPayApiResponse
+    public function createInternationalSwift(CreateInternationalSwiftInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
-        );
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateInternationalSwiftResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
-    /*
+    /**
      * Create RTP bank account
      *
-     * @param CreateRtpInput $input
-     * @return BlindPayApiResponse<CreateRtpResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function createRtp(CreateRtpInput $input): BlindPayApiResponse
+    public function createRtp(CreateRtpInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
-        );
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateRtpResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
-    /*
+    /**
      * Create PIX Safe bank account
      *
-     * @param CreatePixSafeInput $input
-     * @return BlindPayApiResponse<CreatePixSafeResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function createPixSafe(CreatePixSafeInput $input): BlindPayApiResponse
+    public function createPixSafe(CreatePixSafeInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
-        );
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreatePixSafeResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
-    /*
+    /**
      * Create SEPA bank account
      *
-     * @param CreateSepaInput $input
-     * @return BlindPayApiResponse<CreateSepaResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
-    public function createSepa(CreateSepaInput $input): BlindPayApiResponse
+    public function createSepa(CreateSepaInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/bank-accounts",
-            $input->toArray()
-        );
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
+    }
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateSepaResponse::fromArray($response->data)
-            );
+    /**
+     * @return BlindPayApiResponse<BankAccountListItem>
+     */
+    public function createTed(CreateTedInput $input, ?RequestOptions $options = null): BlindPayApiResponse
+    {
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
+    }
+
+    /**
+     * @return BlindPayApiResponse<BankAccountListItem>
+     */
+    public function createFasterPayments(CreateFasterPaymentsInput $input, ?RequestOptions $options = null): BlindPayApiResponse
+    {
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
+    }
+
+    /**
+     * Start a Plaid Link session to add a customer's US bank account; send the customer to the
+     * returned URL.
+     *
+     * @return BlindPayApiResponse<PlaidLinkResponse>
+     */
+    public function createPlaidLink(CreatePlaidLinkInput $input, ?RequestOptions $options = null): BlindPayApiResponse
+    {
+        if ($input->customerId === '') {
+            return BlindPayApiResponse::error(ErrorResponse::validation('Customer ID cannot be empty'));
         }
 
-        return $response;
+        return $this->client->post(
+            Path::of('instances/%s/customers/%s/bank-accounts/plaid', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
+        )->map(fn (array $data) => PlaidLinkResponse::fromArray($data));
+    }
+
+    /**
+     * POST one bank account (every rail shares the route and the response type).
+     *
+     * @param  array<string, mixed>  $body
+     * @return BlindPayApiResponse<BankAccountListItem>
+     */
+    private function createAccount(string $customerId, array $body, ?RequestOptions $options): BlindPayApiResponse
+    {
+        if ($customerId === '') {
+            return BlindPayApiResponse::error(ErrorResponse::validation('Customer ID cannot be empty'));
+        }
+
+        return $this->client->post(Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $customerId), $body, $options)
+            ->map(fn (array $data) => BankAccountListItem::fromArray($data));
+    }
+}
+
+/** A Brazilian bank account paid by TED. */
+readonly class CreateTedInput
+{
+    /**
+     * @param  string  $accountNumber  1-12 digits, a hyphen and the verifier digit (e.g. 12345-2)
+     * @param  string  $tedBankCode  the bank's COMPE code (3-5 digits)
+     * @param  string  $tedBranchCode  4 digits, optionally with a verifier digit (e.g. 0001-9)
+     */
+    public function __construct(
+        public string $customerId,
+        public string $name,
+        public string $beneficiaryName,
+        public string $accountNumber,
+        public BankAccountType $accountType,
+        public string $tedBankCode,
+        public string $tedBranchCode,
+        public string $tedCpfCnpj,
+    ) {}
+
+    public function toArray(): array
+    {
+        return [
+            'type' => 'ted',
+            'name' => $this->name,
+            'beneficiary_name' => $this->beneficiaryName,
+            'account_number' => $this->accountNumber,
+            'account_type' => $this->accountType->value,
+            'ted_bank_code' => $this->tedBankCode,
+            'ted_branch_code' => $this->tedBranchCode,
+            'ted_cpf_cnpj' => $this->tedCpfCnpj,
+        ];
+    }
+}
+
+/** A UK bank account paid by Faster Payments (GBP). */
+readonly class CreateFasterPaymentsInput
+{
+    public function __construct(
+        public string $customerId,
+        public string $name,
+        public AccountClass $accountClass,
+        public string $fasterPaymentsSortCode,
+        public string $fasterPaymentsAccountNumber,
+        public string $fasterPaymentsBeneficiaryLegalName,
+        public string $fasterPaymentsBeneficiaryAddressLine1,
+        public string $fasterPaymentsBeneficiaryCity,
+        public Country $fasterPaymentsBeneficiaryCountry,
+        public ?string $fasterPaymentsBeneficiaryAddressLine2 = null,
+        public ?string $fasterPaymentsBeneficiaryStateProvinceRegion = null,
+        public ?string $fasterPaymentsBeneficiaryPostalCode = null,
+    ) {}
+
+    public function toArray(): array
+    {
+        return array_filter([
+            'type' => 'faster_payments',
+            'name' => $this->name,
+            'account_class' => $this->accountClass->value,
+            'faster_payments_sort_code' => $this->fasterPaymentsSortCode,
+            'faster_payments_account_number' => $this->fasterPaymentsAccountNumber,
+            'faster_payments_beneficiary_legal_name' => $this->fasterPaymentsBeneficiaryLegalName,
+            'faster_payments_beneficiary_address_line_1' => $this->fasterPaymentsBeneficiaryAddressLine1,
+            'faster_payments_beneficiary_address_line_2' => $this->fasterPaymentsBeneficiaryAddressLine2,
+            'faster_payments_beneficiary_city' => $this->fasterPaymentsBeneficiaryCity,
+            'faster_payments_beneficiary_state_province_region' => $this->fasterPaymentsBeneficiaryStateProvinceRegion,
+            'faster_payments_beneficiary_postal_code' => $this->fasterPaymentsBeneficiaryPostalCode,
+            'faster_payments_beneficiary_country' => $this->fasterPaymentsBeneficiaryCountry->value,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -1365,47 +1125,5 @@ readonly class CreateSepaInput
         }
 
         return $data;
-    }
-}
-
-readonly class CreateSepaResponse
-{
-    public function __construct(
-        public string $id,
-        public string $type,
-        public string $name,
-        public AccountClass $accountClass,
-        public ?RecipientRelationship $recipientRelationship,
-        public string $sepaIban,
-        public string $sepaBeneficiaryBic,
-        public string $sepaBeneficiaryLegalName,
-        public string $sepaBeneficiaryAddressLine1,
-        public ?string $sepaBeneficiaryAddressLine2,
-        public string $sepaBeneficiaryCity,
-        public ?string $sepaBeneficiaryStateProvinceRegion,
-        public string $sepaBeneficiaryPostalCode,
-        public Country $sepaBeneficiaryCountry,
-        public DateTimeImmutable $createdAt
-    ) {}
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            id: $data['id'],
-            type: $data['type'],
-            name: $data['name'],
-            accountClass: AccountClass::from($data['account_class']),
-            recipientRelationship: isset($data['recipient_relationship']) ? RecipientRelationship::from($data['recipient_relationship']) : null,
-            sepaIban: $data['sepa_iban'],
-            sepaBeneficiaryBic: $data['sepa_beneficiary_bic'],
-            sepaBeneficiaryLegalName: $data['sepa_beneficiary_legal_name'],
-            sepaBeneficiaryAddressLine1: $data['sepa_beneficiary_address_line_1'],
-            sepaBeneficiaryAddressLine2: $data['sepa_beneficiary_address_line_2'] ?? null,
-            sepaBeneficiaryCity: $data['sepa_beneficiary_city'],
-            sepaBeneficiaryStateProvinceRegion: $data['sepa_beneficiary_state_province_region'] ?? null,
-            sepaBeneficiaryPostalCode: $data['sepa_beneficiary_postal_code'],
-            sepaBeneficiaryCountry: Country::from($data['sepa_beneficiary_country']),
-            createdAt: new DateTimeImmutable($data['created_at'])
-        );
     }
 }

@@ -136,6 +136,90 @@
       "field": "pse_document_type",
       "reason": "Spec constrains payer_rules.pse_document_type to a 2-value enum (CC/NIT). PayerRules models it as a plain `?string`; every spec value still parses without error.",
       "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "business_industry",
+      "reason": "NAICS code: typed as a plain string by design (open-ended; ~390 values, the API adds more).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "swift_payment_code",
+      "reason": "SWIFT payment code: typed as a plain string by design (open-ended; ~1,000 values).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "status",
+      "reason": "Bank account status, decoded as a plain string (verifying, approved, rejected, ...); values the SDK does not know are kept.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "field": "payment_method",
+      "reason": "Decoded as a plain string (the payin payment method wire value); values the SDK does not know are kept.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "swift_intermediary_bank_routing_number",
+      "reason": "Free-form routing number; the spec attaches a stray enum to it. Kept as a string.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "UpdateInstanceIn",
+      "field": "partner_tos_terms_accepted",
+      "reason": "A literal `true` (the spec enum has one member); modeled as ?bool.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "field": "kyc_status",
+      "reason": "Customer KYC status echoed on virtual-account webhooks, kept as the wire string.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "field": "kyc_status",
+      "reason": "Customer KYC status echoed on virtual-account webhooks, kept as the wire string.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "UploadIn",
+      "field": "file",
+      "reason": "Multipart file part; modeled as UploadFile (bytes, stream or path + filename + content type).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "UploadAnalyzeIn",
+      "field": "file",
+      "reason": "Multipart file part; modeled as UploadFile.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "UploadAnalyzeIn",
+      "field": "metadata",
+      "reason": "A JSON object string on the wire; AnalyzeUploadInput takes the array and JSON-encodes it.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "UpdateInstanceIn",
+      "field": "partner_tos_terms_accepted",
+      "reason": "A literal `true` (single-member enum); modeled as ?bool.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayoutOut",
+      "field": "refund_review_reason",
+      "reason": "tracking_payment.refund_review_reason, decoded as the wire string.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayoutOnEvmOut",
+      "field": "refund_review_reason",
+      "reason": "tracking_payment.refund_review_reason, decoded as the wire string.",
+      "owner": "support@blindpay.com"
     }
   ]
 }

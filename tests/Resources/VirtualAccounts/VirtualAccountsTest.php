@@ -9,13 +9,10 @@ use BlindPay\SDK\Resources\VirtualAccounts\CreateVirtualAccountInput;
 use BlindPay\SDK\Resources\VirtualAccounts\UpdateVirtualAccountInput;
 use BlindPay\SDK\Types\BankingPartner;
 use BlindPay\SDK\Types\StablecoinToken;
-use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 class VirtualAccountsTest extends TestCase
 {
@@ -26,23 +23,12 @@ class VirtualAccountsTest extends TestCase
     protected function setUp(): void
     {
         $this->mockHandler = new MockHandler;
-        $handlerStack = HandlerStack::create($this->mockHandler);
-        $httpClient = new Client(['handler' => $handlerStack]);
 
         $this->blindpay = new BlindPay(
             apiKey: 'test-key',
-            instanceId: 'in_000000000000'
+            instanceId: 'in_000000000000',
+            handler: $this->mockHandler,
         );
-
-        $this->injectHttpClient($httpClient);
-    }
-
-    private function injectHttpClient(Client $client): void
-    {
-        $reflection = new ReflectionClass($this->blindpay);
-        $property = $reflection->getProperty('httpClient');
-        $property->setAccessible(true);
-        $property->setValue($this->blindpay, $client);
     }
 
     private function mockResponse(array $body, int $status = 200): void
@@ -116,7 +102,8 @@ class VirtualAccountsTest extends TestCase
         $input = new CreateVirtualAccountInput(
             customerId: 're_000000000000',
             blockchainWalletId: 'bw_000000000000',
-            token: StablecoinToken::USDC
+            token: StablecoinToken::USDC,
+            bankingPartner: BankingPartner::JPMORGAN,
         );
 
         $response = $this->blindpay->virtualAccounts->create($input);

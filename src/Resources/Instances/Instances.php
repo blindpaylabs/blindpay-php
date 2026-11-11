@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Instances;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\RequestOptions;
 use DateTimeImmutable;
 
 enum InstanceMemberRole: string
@@ -19,6 +23,47 @@ enum InstanceMemberRole: string
     case VIEWER = 'viewer';
 }
 
+enum InstanceType: string
+{
+    case PRODUCTION = 'production';
+    case DEVELOPMENT = 'development';
+}
+
+enum OnboardingStep: string
+{
+    case INITIAL = 'initial';
+    case BUSINESS_DETAILS = 'business_details';
+    case BUSINESS_PROFILE = 'business_profile';
+    case DOCUMENTS = 'documents';
+    case APPLICANT = 'applicant';
+    case COMPLETED = 'completed';
+    case BLOCKED = 'blocked';
+}
+
+/**
+ * Your instance. On a `development` instance settlement is simulated with the test token USDB and
+ * no real money moves.
+ */
+readonly class Instance
+{
+    public function __construct(
+        public string $id,
+        public string $name,
+        public InstanceType|string $type,
+        public OnboardingStep|string $onboardingStep,
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'],
+            name: $data['name'],
+            type: Decode::enum(InstanceType::class, $data['type']),
+            onboardingStep: Decode::enum(OnboardingStep::class, $data['onboarding_step']),
+        );
+    }
+}
+
 readonly class InstanceMember
 {
     public function __construct(
@@ -29,7 +74,8 @@ readonly class InstanceMember
         public string $lastName,
         public ?string $imageUrl,
         public ?DateTimeImmutable $createdAt,
-        public InstanceMemberRole $role
+        public InstanceMemberRole|string $role,
+        public ?bool $hasPasskey = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -42,7 +88,8 @@ readonly class InstanceMember
             lastName: $data['last_name'],
             imageUrl: $data['image_url'] ?? null,
             createdAt: isset($data['created_at']) ? new DateTimeImmutable($data['created_at']) : null,
-            role: InstanceMemberRole::from($data['role'])
+            role: Decode::enum(InstanceMemberRole::class, $data['role']),
+            hasPasskey: $data['has_passkey'] ?? null,
         );
     }
 
@@ -56,39 +103,46 @@ readonly class InstanceMember
             'last_name' => $this->lastName,
             'image_url' => $this->imageUrl,
             'created_at' => $this->createdAt?->format(\DateTimeInterface::ATOM),
-            'role' => $this->role->value,
+            'role' => Decode::wire($this->role),
         ];
     }
 }
 
 readonly class UpdateInstanceInput
 {
+    /**
+     * @param  string[]|null  $complianceEmails
+     * @param  bool|null  $partnerTosTermsAccepted  only `true` is accepted
+     */
     public function __construct(
         public string $name,
         public ?string $customerInviteRedirectUrl = null,
         public ?bool $emailNotifications = null,
-        public ?bool $requirePasskey = null
+        public ?bool $requirePasskey = null,
+        public ?string $logoUrl = null,
+        public ?string $accentColor = null,
+        public ?array $complianceEmails = null,
+        public ?string $partnerTosLink = null,
+        public ?string $partnerTosScreenshot = null,
+        public ?bool $customerRfiEmailsEnabled = null,
+        public ?bool $partnerTosTermsAccepted = null,
     ) {}
 
     public function toArray(): array
     {
-        $data = [
+        return array_filter([
             'name' => $this->name,
-        ];
-
-        if ($this->customerInviteRedirectUrl !== null) {
-            $data['customer_invite_redirect_url'] = $this->customerInviteRedirectUrl;
-        }
-
-        if ($this->emailNotifications !== null) {
-            $data['email_notifications'] = $this->emailNotifications;
-        }
-
-        if ($this->requirePasskey !== null) {
-            $data['require_passkey'] = $this->requirePasskey;
-        }
-
-        return $data;
+            'customer_invite_redirect_url' => $this->customerInviteRedirectUrl,
+            'logo_url' => $this->logoUrl,
+            'accent_color' => $this->accentColor,
+            'email_notifications' => $this->emailNotifications,
+            'require_passkey' => $this->requirePasskey,
+            'compliance_emails' => $this->complianceEmails,
+            'partner_tos_link' => $this->partnerTosLink,
+            'partner_tos_screenshot' => $this->partnerTosScreenshot,
+            'customer_rfi_emails_enabled' => $this->customerRfiEmailsEnabled,
+            'partner_tos_terms_accepted' => $this->partnerTosTermsAccepted,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -107,85 +161,93 @@ class Instances
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
+     * Your instance (always the client's).
+     *
+     * @return BlindPayApiResponse<Instance>
+     */
+    public function get(?RequestOptions $options = null): BlindPayApiResponse
+    {
+        return $this->client->get(Path::of('instances/%s', $this->instanceId), $options)
+            ->map(fn (array $data) => Instance::fromArray($data));
+    }
+
+    /**
      * Get all members of the instance
      *
      * @return BlindPayApiResponse<InstanceMember[]>
      */
-    public function getMembers(): BlindPayApiResponse
+    public function getMembers(?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->get("instances/{$this->instanceId}/members");
+        $response = $this->client->get(Path::of('instances/%s/members', $this->instanceId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $members = array_map(
                 fn (array $item) => InstanceMember::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($members);
-        }
-
-        return $response;
+            return $members;
+        });
     }
 
-    /*
+    /**
      * Update instance details
      *
-     * @param UpdateInstanceInput $input
      * @return BlindPayApiResponse<null>
      */
-    public function update(UpdateInstanceInput $input): BlindPayApiResponse
+    public function update(UpdateInstanceInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->client->put(
-            "instances/{$this->instanceId}",
-            $input->toArray()
+            Path::of('instances/%s', $this->instanceId),
+            $input->toArray(),
+            $options
         );
     }
 
-    /*
+    /**
      * Delete the instance
      *
      * @return BlindPayApiResponse<null>
      */
-    public function delete(): BlindPayApiResponse
+    public function delete(?RequestOptions $options = null): BlindPayApiResponse
     {
-        return $this->client->delete("instances/{$this->instanceId}");
+        return $this->client->delete(Path::of('instances/%s', $this->instanceId), null, $options);
     }
 
-    /*
+    /**
      * Delete a member from the instance
      *
-     * @param string $memberId
      * @return BlindPayApiResponse<null>
      */
-    public function deleteMember(string $memberId): BlindPayApiResponse
+    public function deleteMember(string $memberId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($memberId)) {
+        if ($memberId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Member ID cannot be empty')
+                ErrorResponse::validation('Member ID cannot be empty')
             );
         }
 
-        return $this->client->delete("instances/{$this->instanceId}/members/{$memberId}");
+        return $this->client->delete(Path::of('instances/%s/members/%s', $this->instanceId, $memberId), null, $options);
     }
 
-    /*
+    /**
      * Update a member's role
      *
-     * @param UpdateMemberRoleInput $input
      * @return BlindPayApiResponse<null>
      */
-    public function updateMemberRole(UpdateMemberRoleInput $input): BlindPayApiResponse
+    public function updateMemberRole(UpdateMemberRoleInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->memberId)) {
+        if ($input->memberId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Member ID cannot be empty')
+                ErrorResponse::validation('Member ID cannot be empty')
             );
         }
 
         return $this->client->put(
-            "instances/{$this->instanceId}/members/{$input->memberId}",
-            ['user_role' => $input->role->value]
+            Path::of('instances/%s/members/%s', $this->instanceId, $input->memberId),
+            ['user_role' => $input->role->value],
+            $options
         );
     }
 }

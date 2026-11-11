@@ -142,6 +142,7 @@ class ApiSyncTest extends TestCase
             'paths' => [
                 '/v1/widgets' => [
                     'post' => [
+                        'x-sdk' => true,
                         'requestBody' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/WidgetOut']]]],
                         'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/WidgetOut']]]]],
                     ],
@@ -375,7 +376,7 @@ class ApiSyncTest extends TestCase
     // ---- idempotency ----
 
     #[Test]
-    public function applying_a_field_twice_only_inserts_it_once(): void
+    public function it_applying_a_field_twice_only_inserts_it_once(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $newSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['description' => ['type' => ['string', 'null']]]]]]]);
@@ -397,7 +398,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_multi_schema_entry_missing_the_same_field_on_both_schemas_is_only_scheduled_once(): void
+    public function it_multi_schema_entry_missing_the_same_field_on_both_schemas_is_only_scheduled_once(): void
     {
         // Reproduces the exact double-apply bug: a single spec-map.json entry with TWO schemas
         // (e.g. spec: ["PayinOut", "CreatePayinOut"]) sharing one SDK class. If both schemas are
@@ -449,7 +450,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function two_separate_entries_mapping_the_same_class_missing_the_same_field_are_only_scheduled_once(): void
+    public function it_two_separate_entries_mapping_the_same_class_missing_the_same_field_are_only_scheduled_once(): void
     {
         // Same bug, different trigger shape: TWO separate spec-map.json `types` entries (not one
         // multi-schema entry) independently point at the same SDK class -- this is exactly how
@@ -492,7 +493,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function two_enum_entries_mapping_the_same_class_missing_the_same_value_are_only_scheduled_once(): void
+    public function it_two_enum_entries_mapping_the_same_class_missing_the_same_value_are_only_scheduled_once(): void
     {
         // Mirrors the field-insertion bug on the enum side: two spec-map.json `enums` entries
         // (e.g. the same LimitIncreaseRequestSupportingDocumentType class mapped from both
@@ -579,14 +580,14 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function computestructuraldiff_no_longer_reports_new_operations_itself(): void
+    public function it_computestructuraldiff_no_longer_reports_new_operations_itself(): void
     {
         // New-operation classification moved to reconcileOperations() (STANDARD vs NON-STANDARD),
         // so computeStructuralDiff() must stay silent about additions -- only removals are still
         // its concern.
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
-        $newSpec['paths']['/v1/gadgets'] = ['post' => ['tags' => ['Gadgets'], 'requestBody' => [], 'responses' => []]];
+        $newSpec['paths']['/v1/gadgets'] = ['post' => ['x-sdk' => true, 'tags' => ['Gadgets'], 'requestBody' => [], 'responses' => []]];
         $reachableOld = computeReachable($oldSpec);
         $reachableNew = computeReachable($newSpec);
 
@@ -603,6 +604,7 @@ class ApiSyncTest extends TestCase
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
         $newSpec['paths']['/v1/gadgets'] = ['post' => [
+            'x-sdk' => true,
             'tags' => ['Gadgets'],
             'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
         ]];
@@ -619,6 +621,7 @@ class ApiSyncTest extends TestCase
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
         $newSpec['paths']['/v1/instances/{instance_id}/widgets/upload'] = ['post' => [
+            'x-sdk' => true,
             'tags' => ['Available'],
             'requestBody' => ['content' => ['multipart/form-data' => ['schema' => ['type' => 'object']]]],
             'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => []]]]]],
@@ -636,6 +639,7 @@ class ApiSyncTest extends TestCase
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
         $newSpec['paths']['/v1/instances/{instance_id}/widgets/poly'] = ['get' => [
+            'x-sdk' => true,
             'tags' => ['Available'],
             'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['oneOf' => [['type' => 'object'], ['type' => 'string']]]]]]],
         ]];
@@ -652,6 +656,7 @@ class ApiSyncTest extends TestCase
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
         $newSpec['paths']['/v1/instances/{instance_id}/widgets/standard'] = ['get' => [
+            'x-sdk' => true,
             'tags' => ['Available'],
             'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
         ]];
@@ -679,6 +684,7 @@ class ApiSyncTest extends TestCase
             'paths' => [
                 '/v1/instances/{instance_id}/widgets/{id}' => [
                     'get' => [
+                        'x-sdk' => true,
                         'tags' => ['Widgets'],
                         'responses' => ['200' => ['content' => ['application/json' => ['schema' => [
                             'type' => 'object',
@@ -689,6 +695,7 @@ class ApiSyncTest extends TestCase
                 ],
                 '/v1/instances/{instance_id}/widgets' => [
                     'post' => [
+                        'x-sdk' => true,
                         'tags' => ['Widgets'],
                         'requestBody' => ['content' => ['application/json' => ['schema' => [
                             'type' => 'object',
@@ -775,39 +782,34 @@ class ApiSyncTest extends TestCase
                     private readonly ApiClientInterface $client
                 ) {}
 
-                public function get(string $id): BlindPayApiResponse
+                /**
+                 * @return BlindPayApiResponse<GetWidgetResponse>
+                 */
+                public function get(string $id, ?RequestOptions $options = null): BlindPayApiResponse
                 {
-                    if (empty($id)) {
+                    if ($id === '') {
                         return BlindPayApiResponse::error(
-                            new \BlindPay\SDK\Types\ErrorResponse('Id cannot be empty')
+                            ErrorResponse::validation('ID cannot be empty')
                         );
                     }
 
-                    $response = $this->client->get("instances/{$this->instanceId}/widgets/{$id}");
+                    $response = $this->client->get(Path::of('instances/%s/widgets/%s', $this->instanceId, $id), $options);
 
-                    if ($response->isSuccess() && is_array($response->data)) {
-                        return BlindPayApiResponse::success(
-                            GetWidgetResponse::fromArray($response->data)
-                        );
-                    }
-
-                    return $response;
+                    return $response->map(fn (array $data) => GetWidgetResponse::fromArray($data));
                 }
 
-                public function create(CreateWidgetInput $input): BlindPayApiResponse
+                /**
+                 * @return BlindPayApiResponse<CreateWidgetResponse>
+                 */
+                public function create(CreateWidgetInput $input, ?RequestOptions $options = null): BlindPayApiResponse
                 {
                     $response = $this->client->post(
-                        "instances/{$this->instanceId}/widgets",
-                        $input->toArray()
+                        Path::of('instances/%s/widgets', $this->instanceId),
+                        $input->toArray(),
+                        $options
                     );
 
-                    if ($response->isSuccess() && is_array($response->data)) {
-                        return BlindPayApiResponse::success(
-                            CreateWidgetResponse::fromArray($response->data)
-                        );
-                    }
-
-                    return $response;
+                    return $response->map(fn (array $data) => CreateWidgetResponse::fromArray($data));
                 }
             }
 
@@ -831,7 +833,7 @@ class ApiSyncTest extends TestCase
         $baseWidgetsSource = file_get_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php");
         $baseWidgetsSource = str_replace(
             "use BlindPay\SDK\Types\WidgetColor;\n",
-            "use BlindPay\SDK\Internal\ApiClientInterface;\nuse BlindPay\SDK\Types\BlindPayApiResponse;\nuse BlindPay\SDK\Types\WidgetColor;\n",
+            "use BlindPay\SDK\Internal\ApiClientInterface;\nuse BlindPay\SDK\Internal\Path;\nuse BlindPay\SDK\Types\BlindPayApiResponse;\nuse BlindPay\SDK\Types\ErrorResponse;\nuse BlindPay\SDK\Types\RequestOptions;\nuse BlindPay\SDK\Types\WidgetColor;\n",
             $baseWidgetsSource
         );
         file_put_contents("{$root}/src/Resources/Widgets/Widgets.php", rtrim($baseWidgetsSource)."\n".$this->goldenWidgetsResourceSource());
@@ -849,7 +851,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function golden_self_test_regenerates_two_deleted_methods_idempotently_and_needs_humans_a_multipart_op(): void
+    public function it_golden_self_test_regenerates_two_deleted_methods_idempotently_and_needs_humans_a_multipart_op(): void
     {
         $root = $this->buildGoldenRepo();
 
@@ -864,9 +866,13 @@ class ApiSyncTest extends TestCase
             // request/response bodies are inline schemas, never eligible for a coverage-ledger
             // entry in the first place -- see nonStandardBodyReason()'s scope note.)
             $mutated = preg_replace('/\n\nreadonly class GetWidgetResponse.*\nclass Widgets\n\{\n/s', "\n\nclass Widgets\n{\n", $originalSource);
-            $mutated = preg_replace('/\n\n    public function get\(string \$id\).*\n\}\n$/s', "\n}\n", $mutated);
+            $mutated = preg_replace('/\n\n    \/\*\*\n     \* @return BlindPayApiResponse<GetWidgetResponse>.*\n\}\n$/s', "\n}\n", $mutated);
             $this->assertStringNotContainsString('GetWidgetResponse', $mutated, 'setup sanity check: the deletion regex must actually strip the target classes');
             $this->assertStringNotContainsString('function create(', $mutated);
+            // The regenerated code must bring its own imports back: drop the ones only the
+            // deleted methods use, so the file starts without them.
+            $mutated = str_replace(["use BlindPay\\SDK\\Internal\\Path;\n", "use BlindPay\\SDK\\Types\\ErrorResponse;\n", "use BlindPay\\SDK\\Types\\RequestOptions;\n"], '', $mutated);
+            $this->assertStringNotContainsString('Internal\\Path;', $mutated);
             file_put_contents($widgetsPath, $mutated);
             $this->assertPhpFileParses($widgetsPath);
 
@@ -885,11 +891,17 @@ class ApiSyncTest extends TestCase
             // and parameter/return types (class *names* are allowed to differ -- the generator
             // derives them from the method name, not from the hand-written original's naming
             // choice -- but the wire route, verb, and field-level shape must match exactly).
-            $this->assertMatchesRegularExpression('/public function get\(string \$id\): BlindPayApiResponse/', $regenerated);
-            $this->assertStringContainsString('$this->client->get("instances/{$this->instanceId}/widgets/{$id}")', $regenerated);
-            $this->assertMatchesRegularExpression('/public function create\((\w+) \$input\): BlindPayApiResponse/', $regenerated, '');
-            $this->assertStringContainsString('$this->client->post(', $regenerated);
-            $this->assertStringContainsString('"instances/{$this->instanceId}/widgets"', $regenerated);
+            $this->assertMatchesRegularExpression('/public function get\(string \$id, \?RequestOptions \$options = null\): BlindPayApiResponse/', $regenerated);
+            $this->assertStringContainsString("if (\$id === '') {", $regenerated);
+            $this->assertStringContainsString("ErrorResponse::validation('ID cannot be empty')", $regenerated);
+            $this->assertStringContainsString("\$this->client->get(Path::of('instances/%s/widgets/%s', \$this->instanceId, \$id), \$options);", $regenerated);
+            $this->assertStringContainsString('return $response->map(fn (array $data) => GetResponse::fromArray($data));', $regenerated);
+            $this->assertMatchesRegularExpression('/public function create\((\w+) \$input, \?RequestOptions \$options = null\): BlindPayApiResponse/', $regenerated);
+            $this->assertStringContainsString("\$this->client->post(\n            Path::of('instances/%s/widgets', \$this->instanceId),\n            \$input->toArray(),\n            \$options\n        );", $regenerated);
+            $this->assertStringContainsString('return $response->map(fn (array $data) => CreateResponse::fromArray($data));', $regenerated);
+            $this->assertStringNotContainsString('{$this->instanceId}', $regenerated, 'paths go through Path::of(), never string interpolation');
+            // The imports the new code needs are back, in the file's alphabetical order.
+            $this->assertStringContainsString("use BlindPay\\SDK\\Internal\\ApiClientInterface;\nuse BlindPay\\SDK\\Internal\\Path;\nuse BlindPay\\SDK\\Types\\BlindPayApiResponse;\nuse BlindPay\\SDK\\Types\\ErrorResponse;\nuse BlindPay\\SDK\\Types\\RequestOptions;\nuse BlindPay\\SDK\\Types\\WidgetColor;\n", $regenerated);
 
             $classes = scanClassesDetailed($widgetsPath);
             $getResponseClass = null;
@@ -929,6 +941,7 @@ class ApiSyncTest extends TestCase
             // auto-generated.
             $specWithMultipart = $this->goldenNewSpec();
             $specWithMultipart['paths']['/v1/instances/{instance_id}/widgets/upload'] = ['post' => [
+                'x-sdk' => true,
                 'tags' => ['Widgets'],
                 'requestBody' => ['content' => ['multipart/form-data' => ['schema' => ['type' => 'object']]]],
                 'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
@@ -945,7 +958,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function check_mode_fails_on_a_pending_unapplied_operation_insert(): void
+    public function it_check_mode_fails_on_a_pending_unapplied_operation_insert(): void
     {
         $root = $this->buildGoldenRepo();
 
@@ -953,7 +966,7 @@ class ApiSyncTest extends TestCase
             $widgetsPath = "{$root}/src/Resources/Widgets/Widgets.php";
             $original = file_get_contents($widgetsPath);
             $mutated = preg_replace('/\n\nreadonly class GetWidgetResponse.*\nclass Widgets\n\{\n/s', "\n\nclass Widgets\n{\n", $original);
-            $mutated = preg_replace('/\n\n    public function get\(string \$id\).*\n\}\n$/s', "\n}\n", $mutated);
+            $mutated = preg_replace('/\n\n    \/\*\*\n     \* @return BlindPayApiResponse<GetWidgetResponse>.*\n\}\n$/s', "\n}\n", $mutated);
             file_put_contents($widgetsPath, $mutated);
 
             $specPath = "{$root}/.api-sync/spec-current.json";
@@ -994,7 +1007,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_new_unreferenced_schema_is_not_flagged_at_all(): void
+    public function it_new_unreferenced_schema_is_not_flagged_at_all(): void
     {
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
@@ -1010,7 +1023,7 @@ class ApiSyncTest extends TestCase
     // ---- NEEDS_HUMAN: type mismatches on already-modeled properties ----
 
     #[Test]
-    public function a_string_property_changing_to_integer_in_the_spec_is_needs_human(): void
+    public function it_string_property_changing_to_integer_in_the_spec_is_needs_human(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $newSpec = $this->baseSpec();
@@ -1024,7 +1037,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_property_newly_allowing_null_while_the_sdk_stays_non_nullable_is_needs_human(): void
+    public function it_property_newly_allowing_null_while_the_sdk_stays_non_nullable_is_needs_human(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $oldSpec = $this->baseSpec(); // WidgetOut.name: {"type": "string"} -- non-nullable
@@ -1060,7 +1073,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_enum_backed_sdk_property_whose_spec_constraint_degrades_to_a_bare_string_is_needs_human(): void
+    public function it_enum_backed_sdk_property_whose_spec_constraint_degrades_to_a_bare_string_is_needs_human(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $newSpec = $this->baseSpec();
@@ -1077,7 +1090,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_integer_spec_property_modeled_as_a_php_float_is_deliberately_treated_as_compatible(): void
+    public function it_integer_spec_property_modeled_as_a_php_float_is_deliberately_treated_as_compatible(): void
     {
         // PHP widens int to float safely, even under strict_types -- a spec `integer` read into a
         // `float`-typed property parses every value without error, so this is not a mismatch.
@@ -1090,7 +1103,7 @@ class ApiSyncTest extends TestCase
     // ---- constructor insertion never reorders existing parameters ----
 
     #[Test]
-    public function the_new_promoted_property_always_lands_last_and_no_existing_parameter_moves(): void
+    public function it_new_promoted_property_always_lands_last_and_no_existing_parameter_moves(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $before = array_column($classIndex['WidgetResponse']['ctor']['params'], 'name');
@@ -1343,7 +1356,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_valid_map_produces_no_errors(): void
+    public function it_valid_map_produces_no_errors(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $errors = validateMap($this->widgetMap(), $classIndex, $this->fixtureRoot);
@@ -1353,31 +1366,31 @@ class ApiSyncTest extends TestCase
     // ---- version bump classification ----
 
     #[Test]
-    public function an_enum_member_addition_bumps_minor(): void
+    public function it_enum_member_addition_bumps_minor(): void
     {
         $this->assertSame('minor', computeBump([['kind' => 'enum-member-added']]));
     }
 
     #[Test]
-    public function a_field_only_addition_bumps_patch(): void
+    public function it_field_only_addition_bumps_patch(): void
     {
         $this->assertSame('patch', computeBump([['kind' => 'field-added']]));
     }
 
     #[Test]
-    public function a_mix_of_enum_and_field_changes_bumps_minor(): void
+    public function it_mix_of_enum_and_field_changes_bumps_minor(): void
     {
         $this->assertSame('minor', computeBump([['kind' => 'field-added'], ['kind' => 'enum-member-added']]));
     }
 
     #[Test]
-    public function no_changes_means_no_bump(): void
+    public function it_no_changes_means_no_bump(): void
     {
         $this->assertNull(computeBump([]));
     }
 
     #[Test]
-    public function version_string_bumps_correctly(): void
+    public function it_version_string_bumps_correctly(): void
     {
         $this->assertSame('3.1.0', bumpVersionString('3.0.0', 'minor'));
         $this->assertSame('3.0.6', bumpVersionString('3.0.5', 'patch'));
@@ -1387,7 +1400,7 @@ class ApiSyncTest extends TestCase
     // ---- --audit-types: non-blocking, full state comparison (not just forward drift) ----
 
     #[Test]
-    public function audit_types_reports_a_pre_existing_nullability_mismatch_that_check_mode_would_not_flag(): void
+    public function it_audit_types_reports_a_pre_existing_nullability_mismatch_that_check_mode_would_not_flag(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         // WidgetResponse declares `public string $name` (non-nullable); the spec allows null.
@@ -1407,7 +1420,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function audit_types_marks_a_recorded_known_divergence_instead_of_hiding_it(): void
+    public function it_audit_types_marks_a_recorded_known_divergence_instead_of_hiding_it(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $spec = $this->baseSpec();
@@ -1422,7 +1435,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function audit_types_skips_discriminator_fan_outs_instead_of_guessing(): void
+    public function it_audit_types_skips_discriminator_fan_outs_instead_of_guessing(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $map = $this->widgetMap();
@@ -1438,7 +1451,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function audit_types_cli_mode_always_exits_zero_even_with_findings(): void
+    public function it_audit_types_cli_mode_always_exits_zero_even_with_findings(): void
     {
         // Reuse the byte-copy fixture wiring (real script copy + full .api-sync/*.json set), but
         // seed a spec with a deliberate nullability mismatch so --audit-types has something to say.
@@ -1472,7 +1485,7 @@ class ApiSyncTest extends TestCase
     // ---- the repository root.
 
     #[Test]
-    public function resolve_readable_path_accepts_an_existing_file_and_returns_its_canonical_form(): void
+    public function it_resolve_readable_path_accepts_an_existing_file_and_returns_its_canonical_form(): void
     {
         $file = "{$this->fixtureRoot}/src/BlindPay.php";
         file_put_contents($file, "<?php\n");
@@ -1483,7 +1496,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_readable_path_rejects_a_nul_byte(): void
+    public function it_resolve_readable_path_rejects_a_nul_byte(): void
     {
         // A NUL byte cannot survive in a real argv element (execve() argv strings are
         // NUL-terminated), so this is tested as a direct unit call, isolated in a subprocess since
@@ -1499,7 +1512,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_readable_path_rejects_a_file_that_does_not_exist(): void
+    public function it_resolve_readable_path_rejects_a_file_that_does_not_exist(): void
     {
         [$output, $exitCode] = $this->runCliSubprocess(['--check', '--spec='."{$this->fixtureRoot}/does-not-exist.json"]);
 
@@ -1508,7 +1521,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_writable_path_rejects_a_parent_directory_that_does_not_exist(): void
+    public function it_resolve_writable_path_rejects_a_parent_directory_that_does_not_exist(): void
     {
         [$output, $exitCode] = $this->runCliSubprocess([
             '--check',
@@ -1521,7 +1534,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_writable_path_accepts_a_destination_outside_the_repository_root(): void
+    public function it_resolve_writable_path_accepts_a_destination_outside_the_repository_root(): void
     {
         // Required, legitimate functionality: CI writes --report to /tmp; the determinism proof
         // writes into scratch copies elsewhere on disk. Writable paths are deliberately NOT
@@ -1534,7 +1547,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_within_root_accepts_a_legitimate_spec_map_file(): void
+    public function it_resolve_within_root_accepts_a_legitimate_spec_map_file(): void
     {
         $resolved = resolveWithinRoot($this->fixtureRoot, 'src/Resources/Widgets/Widgets.php', 'class file');
 
@@ -1542,7 +1555,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_within_root_refuses_a_path_that_escapes_the_repository_root(): void
+    public function it_resolve_within_root_refuses_a_path_that_escapes_the_repository_root(): void
     {
         // Simulates a corrupted or malicious spec-map.json entry trying to write outside the repo.
         // Unit-tested directly against resolveWithinRoot(): going through the full CLI, validateMap()
@@ -1610,7 +1623,7 @@ class ApiSyncTest extends TestCase
     // ---- snapshot refresh must copy bytes verbatim, never re-serialize ----
 
     #[Test]
-    public function apply_refreshes_the_snapshot_as_a_byte_identical_copy_of_the_source_spec(): void
+    public function it_apply_refreshes_the_snapshot_as_a_byte_identical_copy_of_the_source_spec(): void
     {
         // A full, real invocation via a copy of the real script, run as a subprocess against a
         // throwaway repo root -- exercises the exact code path apply uses, including the file
@@ -1659,6 +1672,565 @@ class ApiSyncTest extends TestCase
             file_get_contents("{$this->fixtureRoot}/.api-sync/spec-snapshot.json"),
             'refreshed snapshot must be a byte-identical copy of the source spec file, not a re-serialization'
         );
+    }
+
+    // ---- x-sdk filter: public-but-not-SDK operations are not this tool's business ----
+
+    /** A spec whose only SDK operation is POST /v1/widgets plus one public-but-non-SDK operation
+     * (no `x-sdk`) on a known tag, with a schema that only that operation references. */
+    private function specWithNonSdkOperation(): array
+    {
+        $spec = $this->baseSpec();
+        $spec['paths']['/v1/instances/{instance_id}/widgets/{id}/yield'] = ['get' => [
+            'tags' => ['Widgets'],
+            'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/YieldOut']]]]],
+        ]];
+        $spec['components']['schemas']['YieldOut'] = [
+            'type' => 'object',
+            'properties' => ['id' => ['type' => 'string'], 'state' => ['$ref' => '#/components/schemas/YieldState']],
+        ];
+        $spec['components']['schemas']['YieldState'] = ['type' => 'string', 'enum' => ['on', 'off']];
+
+        return $spec;
+    }
+
+    #[Test]
+    public function it_operation_without_x_sdk_true_is_not_an_sdk_operation(): void
+    {
+        $spec = $this->specWithNonSdkOperation();
+        $spec['paths']['/v1/instances/{instance_id}/widgets/{id}/string-flag'] = ['get' => ['x-sdk' => 'true', 'tags' => ['Widgets']]];
+        $spec['paths']['/v1/instances/{instance_id}/widgets/{id}/false-flag'] = ['get' => ['x-sdk' => false, 'tags' => ['Widgets']]];
+
+        $this->assertSame(['post /v1/widgets'], array_keys(pathMethodSet($spec)));
+        $this->assertTrue(isSdkOperation(['x-sdk' => true]));
+        $this->assertFalse(isSdkOperation(['tags' => ['Widgets']]));
+    }
+
+    #[Test]
+    public function it_reconcile_operations_ignores_a_new_non_sdk_operation_even_on_a_mapped_tag(): void
+    {
+        [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $this->specWithNonSdkOperation());
+
+        $this->assertSame([], $applicable);
+        $this->assertSame([], $needsHuman);
+    }
+
+    #[Test]
+    public function it_schemas_only_non_sdk_operations_reference_are_unreachable_and_never_need_a_mapping_decision(): void
+    {
+        $oldSpec = $this->baseSpec();
+        $newSpec = $this->specWithNonSdkOperation();
+
+        $reachable = computeReachable($newSpec);
+        $issues = computeStructuralDiff($oldSpec, $newSpec, computeReachable($oldSpec), $reachable, $this->widgetMap());
+
+        $this->assertArrayNotHasKey('YieldOut', $reachable);
+        $this->assertArrayNotHasKey('YieldState', $reachable, 'a schema reachable only through a non-SDK schema is unreachable too');
+        $this->assertSame([], array_filter($issues, fn ($i) => str_contains($i, 'Yield')));
+        $this->assertSame([], computeCoverageReport($this->widgetMap(), $newSpec, $reachable));
+    }
+
+    #[Test]
+    public function it_schema_shared_with_an_sdk_operation_stays_reachable(): void
+    {
+        $spec = $this->specWithNonSdkOperation();
+        $spec['paths']['/v1/widgets']['post']['responses']['200']['content']['application/json']['schema'] = ['$ref' => '#/components/schemas/YieldOut'];
+
+        $this->assertArrayHasKey('YieldOut', computeReachable($spec));
+        $this->assertArrayHasKey('YieldState', computeReachable($spec));
+    }
+
+    #[Test]
+    public function it_check_mode_exits_zero_for_a_spec_whose_only_new_surface_is_non_sdk(): void
+    {
+        $root = $this->buildGoldenRepo();
+
+        try {
+            $specPath = "{$root}/.api-sync/spec-current.json";
+            file_put_contents($specPath, json_encode($this->specWithNonSdkOperation()));
+
+            exec(sprintf('php %s --check --spec=%s 2>&1', escapeshellarg("{$root}/scripts/api-sync.php"), escapeshellarg($specPath)), $output, $exitCode);
+
+            $this->assertSame(0, $exitCode, implode("\n", $output));
+            $this->assertSame([], array_filter($output, fn ($l) => str_contains($l, 'Yield')));
+        } finally {
+            $this->removeDirectory($root);
+        }
+    }
+
+    #[Test]
+    public function it_operation_that_loses_x_sdk_is_reported_as_removed(): void
+    {
+        $oldSpec = $this->baseSpec();
+        $newSpec = $this->baseSpec();
+        unset($newSpec['paths']['/v1/widgets']['post']['x-sdk']);
+
+        $issues = computeStructuralDiff($oldSpec, $newSpec, computeReachable($oldSpec), computeReachable($newSpec), $this->widgetMap());
+
+        $this->assertNotEmpty(array_filter($issues, fn ($i) => str_contains($i, 'operation removed: post /v1/widgets')));
+    }
+
+    // ---- coverage and reconciliation key on METHOD + path, never the path alone ----
+
+    #[Test]
+    public function it_new_method_on_an_already_known_path_is_a_new_operation(): void
+    {
+        $oldSpec = $this->baseSpec(); // POST /v1/widgets only
+        $newSpec = $this->baseSpec();
+        $newSpec['paths']['/v1/widgets']['get'] = [
+            'x-sdk' => true,
+            'tags' => ['Gadgets'],
+            'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
+        ];
+
+        [$applicable, $needsHuman] = reconcileOperations($oldSpec, $newSpec);
+
+        $this->assertSame([], $applicable);
+        $this->assertCount(1, $needsHuman);
+        $this->assertStringContainsString('get /v1/widgets', $needsHuman[0]);
+        $this->assertStringNotContainsString('post /v1/widgets', $needsHuman[0]);
+    }
+
+    #[Test]
+    public function it_removing_one_method_of_a_path_reports_only_that_method(): void
+    {
+        $oldSpec = $this->baseSpec();
+        $oldSpec['paths']['/v1/widgets']['get'] = ['x-sdk' => true, 'tags' => ['Widgets']];
+        $newSpec = $this->baseSpec();
+
+        $issues = computeStructuralDiff($oldSpec, $newSpec, computeReachable($oldSpec), computeReachable($newSpec), $this->widgetMap());
+
+        $this->assertNotEmpty(array_filter($issues, fn ($i) => str_contains($i, 'operation removed: get /v1/widgets')));
+        $this->assertSame([], array_filter($issues, fn ($i) => str_contains($i, 'post /v1/widgets')));
+    }
+
+    #[Test]
+    public function it_non_sdk_method_does_not_hide_or_hold_up_an_sdk_method_on_the_same_path(): void
+    {
+        $spec = $this->baseSpec();
+        $spec['paths']['/v1/widgets']['get'] = ['tags' => ['Widgets']]; // public, not SDK
+        $sdkPaths = sdkPaths($spec);
+
+        $this->assertSame(['post'], array_keys($sdkPaths['/v1/widgets']));
+        $this->assertSame(['post /v1/widgets'], array_keys(pathMethodSet($spec)));
+    }
+
+    // ---- nullable enums: `"enum": ["a", "b", null]` ----
+
+    /** Runs $body with every PHP deprecation/warning turned into an exception, so a "Using null as
+     * an array offset" style regression fails the test instead of printing to stderr. */
+    private function withStrictErrors(callable $body): mixed
+    {
+        set_error_handler(static function (int $severity, string $message): never {
+            throw new \ErrorException($message, 0, $severity);
+        });
+
+        try {
+            return $body();
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    #[Test]
+    public function it_null_member_of_a_spec_enum_is_not_an_enum_value(): void
+    {
+        $spec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', null, 'blue']]]]]]]);
+
+        $this->assertSame(['red', 'blue'], specEnumValues($spec, 'WidgetOut', 'color'));
+        $this->assertSame(['red', 'blue'], enumSpecValues($spec, ['spec' => ['schema' => 'WidgetOut', 'property' => 'color']]));
+    }
+
+    #[Test]
+    public function it_reconcile_enums_survives_a_nullable_enum_without_a_false_positive_or_a_deprecation(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $newSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', null]]]]]]]);
+
+        [$applicable, $needsHuman] = $this->withStrictErrors(fn () => reconcileEnums($this->widgetMap(), $newSpec, computeReachable($newSpec), $classIndex, []));
+
+        $this->assertSame([], $applicable);
+        $this->assertSame([], $needsHuman);
+    }
+
+    #[Test]
+    public function it_nullable_enum_with_a_genuinely_new_value_schedules_only_that_value(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $newSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', 'green', null]]]]]]]);
+
+        [$applicable] = $this->withStrictErrors(fn () => reconcileEnums($this->widgetMap(), $newSpec, computeReachable($newSpec), $classIndex, []));
+
+        $this->assertSame(['green'], array_column($applicable, 'value'));
+    }
+
+    #[Test]
+    public function it_adding_or_dropping_a_null_enum_member_is_not_a_removed_value(): void
+    {
+        $withNull = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', null]]]]]]]);
+        $withoutNull = $this->baseSpec();
+
+        foreach ([[$withNull, $withoutNull], [$withoutNull, $withNull]] as [$old, $new]) {
+            $issues = $this->withStrictErrors(fn () => computeStructuralDiff($old, $new, computeReachable($old), computeReachable($new), $this->widgetMap()));
+            $this->assertSame([], array_filter($issues, fn ($i) => str_contains($i, 'enum value(s) removed')));
+        }
+    }
+
+    #[Test]
+    public function it_null_enum_member_makes_the_spec_type_nullable(): void
+    {
+        $this->assertTrue(specTypeCategory(['type' => 'string', 'enum' => ['a', null]])['nullable']);
+        $this->assertSame('enum', specTypeCategory(['type' => 'string', 'enum' => ['a', null]])['category']);
+        $this->assertFalse(specTypeCategory(['type' => 'string', 'enum' => ['a']])['nullable']);
+    }
+
+    #[Test]
+    public function it_check_mode_runs_clean_against_a_nullable_enum_spec(): void
+    {
+        $root = $this->buildGoldenRepo();
+
+        try {
+            // The baseline already carries the nullable enum, so nullability is not newly added.
+            $nullableSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', null]]]]]]]);
+            file_put_contents("{$root}/.api-sync/spec-snapshot.json", json_encode($nullableSpec));
+            $specPath = "{$root}/.api-sync/spec-current.json";
+            file_put_contents($specPath, json_encode($nullableSpec));
+
+            exec(sprintf('php -d error_reporting=-1 -d display_errors=1 %s --check --spec=%s 2>&1', escapeshellarg("{$root}/scripts/api-sync.php"), escapeshellarg($specPath)), $output, $exitCode);
+
+            $this->assertSame(0, $exitCode, implode("\n", $output));
+            $this->assertSame([], array_filter($output, fn ($l) => str_contains($l, 'Deprecated') || str_contains($l, 'Warning')));
+        } finally {
+            $this->removeDirectory($root);
+        }
+    }
+
+    // ---- resourceForTag ----
+
+    #[Test]
+    public function it_resource_for_tag_maps_the_tags_that_have_a_resource_in_src(): void
+    {
+        $expected = [
+            'Payables' => ['src/Resources/Payables/Payables.php', 'Payables'],
+            'Wallets' => ['src/Resources/CustodialWallets/CustodialWallets.php', 'CustodialWallets'],
+            'Transfer Quotes' => ['src/Resources/Transfers/Transfers.php', 'Transfers'],
+            'Solana' => ['src/Resources/Wallets/BlockchainWallets.php', 'BlockchainWallets'],
+            'Stellar' => ['src/Resources/Wallets/BlockchainWallets.php', 'BlockchainWallets'],
+        ];
+        foreach ($expected as $tag => [$file, $class]) {
+            $this->assertSame(['file' => $file, 'class' => $class], resourceForTag($tag), $tag);
+            // the table must point at real files and classes, not just plausible ones
+            $realFile = dirname(__DIR__, 2).'/'.$file;
+            $this->assertFileExists($realFile, $tag);
+            $this->assertMatchesRegularExpression('/^class '.$class.'$/m', file_get_contents($realFile), $tag);
+        }
+        $this->assertNull(resourceForTag('No Such Tag'));
+    }
+
+    // ---- generated code follows the SDK conventions (request options, Path::of, Query::build,
+    // ErrorResponse::validation, $response->map, open response enums) ----
+
+    /** Appends an empty `Widgets` resource class (and its own imports) to the fixture's Widgets.php
+     * so operation-insert has a class to splice into, then reconciles and applies every STANDARD
+     * operation $newSpec adds over the baseline. Returns the resulting file's source. */
+    private function applyOperationsToWidgetsResource(array $newSpec, string $imports = "use BlindPay\\SDK\\Internal\\ApiClientInterface;\n"): string
+    {
+        $path = "{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php";
+        $source = file_get_contents($path);
+        $source = str_replace("use BlindPay\\SDK\\Types\\WidgetColor;\n", $imports.'use BlindPay\\SDK\\Types\\WidgetColor;'."\n", $source);
+        $source = rtrim($source)."\n\nclass Widgets\n{\n    public function __construct(\n        private readonly string \$instanceId,\n        private readonly ApiClientInterface \$client\n    ) {}\n}\n";
+        file_put_contents($path, $source);
+
+        [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $newSpec, buildEnumIndex($this->widgetMap()));
+        $this->assertSame([], $needsHuman);
+        $this->assertNotEmpty($applicable);
+        foreach ($applicable as $change) {
+            applyOperationInsert($this->fixtureRoot, $change, $newSpec);
+        }
+        $this->assertPhpFileParses($path);
+
+        return file_get_contents($path);
+    }
+
+    private function widgetsOperation(string $verb, string $urlPath, array $op): array
+    {
+        return $this->baseSpec(['paths' => [$urlPath => [$verb => array_merge(['x-sdk' => true, 'tags' => ['Widgets']], $op)]]]);
+    }
+
+    private function jsonContent(array $schema): array
+    {
+        return ['content' => ['application/json' => ['schema' => $schema]]];
+    }
+
+    #[Test]
+    public function it_generated_delete_forwards_null_body_and_options_and_validates_the_id(): void
+    {
+        $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('delete', '/v1/instances/{instance_id}/widgets/{id}', [
+            'responses' => ['204' => ['description' => 'gone']],
+        ]));
+
+        $this->assertStringContainsString('public function delete(string $id, ?RequestOptions $options = null): BlindPayApiResponse', $source);
+        $this->assertStringContainsString("if (\$id === '') {\n", $source);
+        $this->assertStringContainsString("ErrorResponse::validation('ID cannot be empty')", $source);
+        $this->assertStringContainsString("return \$this->client->delete(Path::of('instances/%s/widgets/%s', \$this->instanceId, \$id), null, \$options);", $source);
+        $this->assertStringNotContainsString('->map(', $source, 'no response body, so nothing to decode');
+    }
+
+    #[Test]
+    public function it_generated_put_without_a_body_sends_an_empty_array_and_options(): void
+    {
+        $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('put', '/v1/instances/{instance_id}/customers/{customer_id}/widgets/{id}/archive', [
+            'responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['ok' => ['type' => 'boolean']], 'required' => ['ok']])],
+        ]));
+
+        $this->assertStringContainsString('public function update(string $customerId, string $id, ?RequestOptions $options = null): BlindPayApiResponse', $source);
+        $this->assertStringContainsString("ErrorResponse::validation('Customer ID cannot be empty')", $source);
+        $this->assertStringContainsString("\$this->client->put(Path::of('instances/%s/customers/%s/widgets/%s/archive', \$this->instanceId, \$customerId, \$id), [], \$options);", $source);
+        $this->assertStringContainsString('return $response->map(fn (array $data) => UpdateResponse::fromArray($data));', $source);
+    }
+
+    #[Test]
+    public function it_generated_get_with_query_parameters_uses_query_build(): void
+    {
+        $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}/history', [
+            'parameters' => [
+                ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'string']],
+                ['name' => 'status_filter', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string']],
+                ['name' => 'min_amount', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer']],
+                ['name' => 'Idempotency-Key', 'in' => 'header', 'required' => false, 'schema' => ['type' => 'string']],
+            ],
+            'responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']])],
+        ]));
+
+        $this->assertStringContainsString('public function list(string $id, ?ListInput $input = null, ?RequestOptions $options = null): BlindPayApiResponse', $source);
+        $this->assertStringContainsString("Path::of('instances/%s/widgets/%s/history', \$this->instanceId, \$id).Query::build(\$input?->toArray() ?? [])", $source);
+        $this->assertStringContainsString("public ?string \$statusFilter = null,\n        public ?int \$minAmount = null", $source);
+        $this->assertStringContainsString("\$data['status_filter'] = \$this->statusFilter;", $source);
+        $this->assertStringNotContainsString('Idempotency', $source, 'header parameters are not query parameters');
+        $this->assertStringContainsString("use BlindPay\\SDK\\Internal\\Query;\n", $source);
+    }
+
+    #[Test]
+    public function it_generated_get_with_a_required_query_parameter_takes_a_required_input(): void
+    {
+        $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/lookup', [
+            'parameters' => [['name' => 'code', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string']]],
+            'responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['id' => ['type' => 'string']]])],
+        ]));
+
+        $this->assertStringContainsString('public function list(LookupInput $input, ?RequestOptions $options = null)', str_replace('ListInput', 'LookupInput', $source));
+        $this->assertStringContainsString("Path::of('instances/%s/widgets/lookup', \$this->instanceId).Query::build(\$input->toArray())", $source);
+    }
+
+    #[Test]
+    public function it_enum_constrained_query_parameter_still_needs_a_human(): void
+    {
+        [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/by-color', [
+            'parameters' => [['name' => 'color', 'in' => 'query', 'schema' => ['type' => 'string', 'enum' => ['red', 'blue']]]],
+            'responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['id' => ['type' => 'string']]])],
+        ]));
+
+        $this->assertSame([], $applicable);
+        $this->assertStringContainsString('enum-constrained query parameter', $needsHuman[0]);
+    }
+
+    #[Test]
+    public function it_mapped_response_enum_is_decoded_open_with_decode_enum(): void
+    {
+        $widgetOut = ['$ref' => '#/components/schemas/WidgetOut'];
+        $spec = $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}/state', ['responses' => ['200' => $this->jsonContent($widgetOut)]]);
+        $spec['components']['schemas']['WidgetOut']['required'] = ['id', 'color'];
+
+        $source = $this->applyOperationsToWidgetsResource($spec);
+
+        $this->assertStringContainsString("public string \$id,\n        public WidgetColor|string \$color,\n        public ?string \$name = null\n", $source);
+        $this->assertStringContainsString("color: Decode::enum(WidgetColor::class, \$data['color']),", $source);
+        $this->assertStringContainsString("name: \$data['name'] ?? null\n", $source);
+        $this->assertStringContainsString("use BlindPay\\SDK\\Internal\\Decode;\n", $source);
+    }
+
+    #[Test]
+    public function it_optional_or_nullable_mapped_response_enum_is_typed_enum_string_null(): void
+    {
+        $spec = $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}/state', ['responses' => ['200' => $this->jsonContent(['$ref' => '#/components/schemas/WidgetOut'])]]);
+        // listed in `required` but nullable: still optional (C8)
+        $spec['components']['schemas']['WidgetOut']['required'] = ['id', 'color'];
+        $spec['components']['schemas']['WidgetOut']['properties']['color'] = ['type' => ['string', 'null'], 'enum' => ['red', 'blue', null]];
+
+        $source = $this->applyOperationsToWidgetsResource($spec);
+
+        $this->assertStringContainsString('public WidgetColor|string|null $color = null', $source);
+        $this->assertStringContainsString("color: Decode::enum(WidgetColor::class, \$data['color'] ?? null)", $source);
+    }
+
+    #[Test]
+    public function it_mapped_request_enum_stays_closed(): void
+    {
+        $widgetOut = ['$ref' => '#/components/schemas/WidgetOut'];
+        $spec = $this->widgetsOperation('post', '/v1/instances/{instance_id}/widgets/paint', [
+            'requestBody' => $this->jsonContent($widgetOut),
+            'responses' => ['204' => ['description' => 'ok']],
+        ]);
+        $spec['components']['schemas']['WidgetOut']['required'] = ['name', 'color'];
+
+        $source = $this->applyOperationsToWidgetsResource($spec);
+
+        $this->assertStringContainsString("public string \$name,\n        public WidgetColor \$color,\n        public ?string \$id = null\n", $source);
+        $this->assertStringContainsString("'color' => \$this->color->value,", $source);
+        $this->assertStringNotContainsString('Decode', $source);
+        $this->assertStringContainsString("\$this->client->post(\n            Path::of('instances/%s/widgets/paint', \$this->instanceId),\n            \$input->toArray(),\n            \$options\n        );", $source);
+    }
+
+    #[Test]
+    public function it_unmapped_enum_property_in_a_new_operation_still_needs_a_human(): void
+    {
+        [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $this->widgetsOperation('post', '/v1/instances/{instance_id}/widgets/paint', [
+            'requestBody' => $this->jsonContent(['type' => 'object', 'properties' => ['shade' => ['type' => 'string', 'enum' => ['light', 'dark']]]]),
+            'responses' => ['204' => ['description' => 'ok']],
+        ]), buildEnumIndex($this->widgetMap()));
+
+        $this->assertSame([], $applicable);
+        $this->assertStringContainsString('enum-constrained property in request body', $needsHuman[0]);
+    }
+
+    #[Test]
+    public function it_operation_the_sdk_already_implements_is_not_regenerated(): void
+    {
+        $path = "{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php";
+        file_put_contents($path, file_get_contents($path)."\nclass Existing\n{\n    public function get(string \$id)\n    {\n        return \$this->client->get(Path::of('instances/%s/widgets/%s', \$this->instanceId, \$id));\n    }\n\n    public function presign()\n    {\n        return \$this->client->post('presign'.Query::build([]), []);\n    }\n}\n");
+        $spec = $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}', ['responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['id' => ['type' => 'string']]])]]);
+        $isImplemented = fn (string $method, string $urlPath) => operationAlreadyImplemented($this->fixtureRoot, $method, $urlPath);
+
+        [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $spec, [], $isImplemented);
+
+        $this->assertSame([], $applicable);
+        $this->assertSame([], $needsHuman);
+        $this->assertTrue(operationAlreadyImplemented($this->fixtureRoot, 'post', '/v1/presign'));
+        $this->assertFalse(operationAlreadyImplemented($this->fixtureRoot, 'delete', '/v1/instances/{instance_id}/widgets/{id}'), 'same path, other verb is a different operation');
+        $this->assertFalse(operationAlreadyImplemented($this->fixtureRoot, 'get', '/v1/instances/{instance_id}/gadgets/{id}'));
+    }
+
+    // ---- use statements ----
+
+    #[Test]
+    public function it_ensure_use_statements_adds_only_what_is_missing_in_alphabetical_place(): void
+    {
+        $path = "{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php";
+        $before = file_get_contents($path); // imports only BlindPay\SDK\Types\WidgetColor
+
+        ensureUseStatements($path, ['BlindPay\SDK\Types\WidgetColor', 'BlindPay\SDK\Resources\Widgets\Sibling', 'BlindPay\SDK\Internal\Path', 'BlindPay\SDK\Types\RequestOptions', 'BlindPay\SDK\Internal\Path']);
+
+        $after = file_get_contents($path);
+        $this->assertStringContainsString("use BlindPay\\SDK\\Internal\\Path;\nuse BlindPay\\SDK\\Types\\RequestOptions;\nuse BlindPay\\SDK\\Types\\WidgetColor;\n", $after);
+        $this->assertStringNotContainsString('Sibling', $after, 'a class in the file\'s own namespace needs no import');
+        ensureUseStatements($path, ['BlindPay\SDK\Internal\Path']);
+        $this->assertSame($after, file_get_contents($path), 'idempotent');
+        $this->assertNotSame($before, $after);
+        $this->assertPhpFileParses($path);
+    }
+
+    #[Test]
+    public function it_ensure_use_statements_creates_the_block_in_a_file_that_imports_nothing(): void
+    {
+        $path = "{$this->fixtureRoot}/src/Types/WidgetColor.php";
+
+        ensureUseStatements($path, ['BlindPay\SDK\Internal\Decode']);
+
+        $this->assertStringContainsString("namespace BlindPay\\SDK\\Types;\n\nuse BlindPay\\SDK\\Internal\\Decode;\n\nenum WidgetColor", file_get_contents($path));
+        $this->assertPhpFileParses($path);
+    }
+
+    // ---- field insertion of enum-constrained fields ----
+
+    private function enumFieldChange(): array
+    {
+        return ['class' => 'EnumHolder', 'file' => 'src/Resources/Widgets/EnumHolder.php', 'enum' => ['class' => 'WidgetColor', 'file' => 'src/Types/WidgetColor.php']];
+    }
+
+    private function writeEnumHolder(string $body): string
+    {
+        $path = "{$this->fixtureRoot}/src/Resources/Widgets/EnumHolder.php";
+        file_put_contents($path, "<?php\n\ndeclare(strict_types=1);\n\nnamespace BlindPay\\SDK\\Resources\\Widgets;\n\n{$body}\n");
+
+        return $path;
+    }
+
+    #[Test]
+    public function it_new_enum_field_on_a_response_class_is_decoded_open(): void
+    {
+        $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public string \$id\n    ) {}\n\n    public static function fromArray(array \$data): self\n    {\n        return new self(\n            id: \$data['id']\n        );\n    }\n}");
+        $c = $this->enumFieldChange();
+
+        applyFieldInsertion($this->fixtureRoot, $c['file'], 'EnumHolder', 'color', ['type' => 'string', 'enum' => ['red', 'blue']], $c['enum']);
+
+        $source = file_get_contents($path);
+        $this->assertStringContainsString('public WidgetColor|string|null $color = null', $source);
+        $this->assertStringContainsString("color: Decode::enum(WidgetColor::class, \$data['color'] ?? null)", $source);
+        $this->assertStringContainsString("use BlindPay\\SDK\\Internal\\Decode;\nuse BlindPay\\SDK\\Types\\WidgetColor;\n", $source);
+        $this->assertPhpFileParses($path);
+    }
+
+    #[Test]
+    public function it_new_enum_field_on_an_input_class_stays_closed(): void
+    {
+        $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public string \$name,\n        public ?string \$extra = null\n    ) {}\n\n    public function toArray(): array\n    {\n        \$data = [\n            'name' => \$this->name,\n        ];\n\n        if (\$this->extra !== null) {\n            \$data['extra'] = \$this->extra;\n        }\n\n        return \$data;\n    }\n}");
+        $c = $this->enumFieldChange();
+
+        applyFieldInsertion($this->fixtureRoot, $c['file'], 'EnumHolder', 'color', ['type' => 'string', 'enum' => ['red', 'blue']], $c['enum']);
+
+        $source = file_get_contents($path);
+        $this->assertStringContainsString('public ?WidgetColor $color = null', $source);
+        $this->assertStringContainsString("\$data['color'] = \$this->color->value;", $source);
+        $this->assertStringNotContainsString('Decode', $source);
+        $this->assertStringContainsString("use BlindPay\\SDK\\Types\\WidgetColor;\n", $source);
+        $this->assertPhpFileParses($path);
+    }
+
+    #[Test]
+    public function it_new_enum_field_on_a_class_that_both_decodes_and_serialises_round_trips_through_decode_wire(): void
+    {
+        $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public string \$id\n    ) {}\n\n    public static function fromArray(array \$data): self\n    {\n        return new self(\n            id: \$data['id']\n        );\n    }\n\n    public function toArray(): array\n    {\n        return [\n            'id' => \$this->id,\n        ];\n    }\n}");
+        $c = $this->enumFieldChange();
+
+        applyFieldInsertion($this->fixtureRoot, $c['file'], 'EnumHolder', 'color', ['type' => 'string', 'enum' => ['red', 'blue']], $c['enum']);
+
+        $source = file_get_contents($path);
+        $this->assertStringContainsString("'color' => Decode::wire(\$this->color)", $source);
+        $this->assertStringContainsString("color: Decode::enum(WidgetColor::class, \$data['color'] ?? null)", $source);
+        $this->assertPhpFileParses($path);
+    }
+
+    #[Test]
+    public function it_reconcile_types_binds_a_new_enum_field_to_its_mapped_enum_class(): void
+    {
+        $map = $this->widgetMap();
+        $map['enums'][] = ['spec' => ['schema' => 'WidgetOut', 'property' => 'shade'], 'sdk' => ['file' => 'src/Types/WidgetColor.php', 'class' => 'WidgetColor']];
+        $newSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['shade' => ['type' => 'string', 'enum' => ['red']], 'plain' => ['type' => 'string']]]]]]);
+
+        [$applicable] = reconcileTypes($map, $newSpec, computeReachable($newSpec), scanAllClasses($this->fixtureRoot), []);
+
+        $byField = array_column($applicable, 'enum', 'field');
+        $this->assertSame(['class' => 'WidgetColor', 'file' => 'src/Types/WidgetColor.php'], $byField['shade']);
+        $this->assertNull($byField['plain']);
+    }
+
+    #[Test]
+    public function it_class_constant_access_is_not_mistaken_for_a_class_declaration(): void
+    {
+        $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public WidgetColor|string|null \$color = null\n    ) {}\n\n    public static function fromArray(array \$data): self\n    {\n        return new self(\n            color: Decode::enum(WidgetColor::class, \$data['color'] ?? null)\n        );\n    }\n\n    public function toArray(): array\n    {\n        return [\n            'color' => Decode::wire(\$this->color),\n        ];\n    }\n}\n\nclass Resource\n{\n    public function get(): string\n    {\n        return WidgetColor::class;\n    }\n}");
+
+        $classes = scanClassesDetailed($path);
+
+        $this->assertSame(['EnumHolder', 'Resource'], array_keys($classes));
+        $this->assertSame('literal', $classes['EnumHolder']['toArray']['style']);
+        $this->assertArrayHasKey('literal', $classes['EnumHolder']['toArray']);
+        $boundaries = findClassBoundaries($path, 'Resource');
+        $this->assertNotNull($boundaries['declLine']);
+        $this->assertNotNull($boundaries['endLine']);
+        $lines = file($path, FILE_IGNORE_NEW_LINES);
+        $this->assertSame('class Resource', $lines[$boundaries['declLine'] - 1]);
+        $this->assertSame('}', $lines[$boundaries['endLine'] - 1]);
+        $this->assertSame(count($lines), $boundaries['endLine'], 'the class ends at the file\'s last closing brace');
     }
 
     // ---- helper assertion ----

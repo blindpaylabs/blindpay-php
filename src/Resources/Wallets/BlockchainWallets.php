@@ -6,8 +6,11 @@ namespace BlindPay\SDK\Resources\Wallets;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
 use BlindPay\SDK\Types\Network;
+use BlindPay\SDK\Types\RequestOptions;
 
 readonly class BlockchainWallet
 {
@@ -18,7 +21,9 @@ readonly class BlockchainWallet
         public ?bool $isAccountAbstraction,
         public string $customerId,
         public ?string $address = null,
-        public ?string $signatureTxHash = null
+        public ?string $signatureTxHash = null,
+        /** null until set; a Brazilian customer's wallet must declare it (see setSelfCustody()) */
+        public ?bool $isSelfCustody = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -30,7 +35,8 @@ readonly class BlockchainWallet
             isAccountAbstraction: $data['is_account_abstraction'] ?? null,
             customerId: $data['customer_id'],
             address: $data['address'] ?? null,
-            signatureTxHash: $data['signature_tx_hash'] ?? null
+            signatureTxHash: $data['signature_tx_hash'] ?? null,
+            isSelfCustody: $data['is_self_custody'] ?? null,
         );
     }
 }
@@ -55,17 +61,24 @@ readonly class CreateBlockchainWalletWithAddressInput
         public string $customerId,
         public string $name,
         public Network $network,
-        public string $address
+        public string $address,
+        /** whether the customer holds the wallet's keys; required for Brazilian customers */
+        public ?bool $isSelfCustody = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'name' => $this->name,
             'network' => $this->network->value,
             'address' => $this->address,
             'is_account_abstraction' => true,
         ];
+        if ($this->isSelfCustody !== null) {
+            $data['is_self_custody'] = $this->isSelfCustody;
+        }
+
+        return $data;
     }
 }
 
@@ -75,17 +88,38 @@ readonly class CreateBlockchainWalletWithHashInput
         public string $customerId,
         public string $name,
         public Network $network,
-        public string $signatureTxHash
+        public string $signatureTxHash,
+        /** whether the customer holds the wallet's keys; required for Brazilian customers */
+        public ?bool $isSelfCustody = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'name' => $this->name,
             'network' => $this->network->value,
             'signature_tx_hash' => $this->signatureTxHash,
             'is_account_abstraction' => false,
         ];
+        if ($this->isSelfCustody !== null) {
+            $data['is_self_custody'] = $this->isSelfCustody;
+        }
+
+        return $data;
+    }
+}
+
+readonly class SetSelfCustodyInput
+{
+    public function __construct(
+        public string $customerId,
+        public string $id,
+        public bool $isSelfCustody,
+    ) {}
+
+    public function toArray(): array
+    {
+        return ['is_self_custody' => $this->isSelfCustody];
     }
 }
 
@@ -172,21 +206,27 @@ readonly class MintUsdbSolanaResponse
     }
 }
 
+/**
+ * Pass `quoteId` (recommended: the API takes the amount and token from the quote), or
+ * `tokenAddress` and `amount` (whole tokens, e.g. "10.5").
+ */
 readonly class PrepareSolanaDelegationTransactionInput
 {
     public function __construct(
-        public string $tokenAddress,
-        public string $amount,
-        public string $ownerAddress
+        public ?string $tokenAddress,
+        public ?string $amount,
+        public string $ownerAddress,
+        public ?string $quoteId = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        return array_filter([
+            'owner_address' => $this->ownerAddress,
+            'quote_id' => $this->quoteId,
             'token_address' => $this->tokenAddress,
             'amount' => $this->amount,
-            'owner_address' => $this->ownerAddress,
-        ];
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -194,14 +234,17 @@ readonly class PrepareSolanaDelegationTransactionResponse
 {
     public function __construct(
         public bool $success,
-        public ?string $transaction
+        /** the base64 transaction to sign, when success is true */
+        public ?string $transaction = null,
+        public mixed $debug = null,
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
             success: $data['success'],
-            transaction: $data['transaction'] ?? null
+            transaction: $data['transaction'] ?? null,
+            debug: $data['debug'] ?? null,
         );
     }
 }
@@ -221,28 +264,29 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<BlockchainWallet[]>
      */
-    public function list(string $customerId): BlindPayApiResponse
-    {
-        if (empty($customerId)) {
+    public function list(
+        string $customerId,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$customerId}/blockchain-wallets"
+            Path::of('instances/%s/customers/%s/blockchain-wallets', $this->instanceId, $customerId),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $wallets = array_map(
                 fn (array $item) => BlockchainWallet::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($wallets);
-        }
-
-        return $response;
+            return $wallets;
+        });
     }
 
     /**
@@ -250,20 +294,15 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<BlockchainWallet>
      */
-    public function createWithAddress(CreateBlockchainWalletWithAddressInput $input): BlindPayApiResponse
+    public function createWithAddress(CreateBlockchainWalletWithAddressInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/blockchain-wallets",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/blockchain-wallets', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                BlockchainWallet::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => BlockchainWallet::fromArray($data));
     }
 
     /**
@@ -271,20 +310,15 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<BlockchainWallet>
      */
-    public function createWithHash(CreateBlockchainWalletWithHashInput $input): BlindPayApiResponse
+    public function createWithHash(CreateBlockchainWalletWithHashInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/blockchain-wallets",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/blockchain-wallets', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                BlockchainWallet::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => BlockchainWallet::fromArray($data));
     }
 
     /**
@@ -292,25 +326,20 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<GetBlockchainWalletMessageResponse>
      */
-    public function getMessage(string $customerId): BlindPayApiResponse
+    public function getMessage(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$customerId}/blockchain-wallets/sign-message"
+            Path::of('instances/%s/customers/%s/blockchain-wallets/sign-message', $this->instanceId, $customerId),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                GetBlockchainWalletMessageResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => GetBlockchainWalletMessageResponse::fromArray($data));
     }
 
     /**
@@ -318,25 +347,20 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<BlockchainWallet>
      */
-    public function get(GetBlockchainWalletInput $input): BlindPayApiResponse
+    public function get(GetBlockchainWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->id)) {
+        if ($input->id === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Blockchain wallet ID cannot be empty')
+                ErrorResponse::validation('Blockchain wallet ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/blockchain-wallets/{$input->id}"
+            Path::of('instances/%s/customers/%s/blockchain-wallets/%s', $this->instanceId, $input->customerId, $input->id),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                BlockchainWallet::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => BlockchainWallet::fromArray($data));
     }
 
     /**
@@ -344,16 +368,18 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<null>
      */
-    public function delete(DeleteBlockchainWalletInput $input): BlindPayApiResponse
+    public function delete(DeleteBlockchainWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->id)) {
+        if ($input->id === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Blockchain wallet ID cannot be empty')
+                ErrorResponse::validation('Blockchain wallet ID cannot be empty')
             );
         }
 
         return $this->client->delete(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/blockchain-wallets/{$input->id}"
+            Path::of('instances/%s/customers/%s/blockchain-wallets/%s', $this->instanceId, $input->customerId, $input->id),
+            null,
+            $options
         );
     }
 
@@ -362,26 +388,21 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<CreateAssetTrustlineResponse>
      */
-    public function createAssetTrustline(string $address): BlindPayApiResponse
+    public function createAssetTrustline(string $address, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($address)) {
+        if ($address === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Address cannot be empty')
+                ErrorResponse::validation('Address cannot be empty')
             );
         }
 
         $response = $this->client->post(
-            "instances/{$this->instanceId}/create-asset-trustline",
-            ['address' => $address]
+            Path::of('instances/%s/create-asset-trustline', $this->instanceId),
+            ['address' => $address],
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateAssetTrustlineResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateAssetTrustlineResponse::fromArray($data));
     }
 
     /**
@@ -389,11 +410,12 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<null>
      */
-    public function mintUsdbStellar(MintUsdbStellarInput $input): BlindPayApiResponse
+    public function mintUsdbStellar(MintUsdbStellarInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->client->post(
-            "instances/{$this->instanceId}/mint-usdb-stellar",
-            $input->toArray()
+            Path::of('instances/%s/mint-usdb-stellar', $this->instanceId),
+            $input->toArray(),
+            $options
         );
     }
 
@@ -402,20 +424,15 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<MintUsdbSolanaResponse>
      */
-    public function mintUsdbSolana(MintUsdbSolanaInput $input): BlindPayApiResponse
+    public function mintUsdbSolana(MintUsdbSolanaInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/mint-usdb-solana",
-            $input->toArray()
+            Path::of('instances/%s/mint-usdb-solana', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                MintUsdbSolanaResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => MintUsdbSolanaResponse::fromArray($data));
     }
 
     /**
@@ -423,19 +440,33 @@ class BlockchainWallets
      *
      * @return BlindPayApiResponse<PrepareSolanaDelegationTransactionResponse>
      */
-    public function prepareSolanaDelegationTransaction(PrepareSolanaDelegationTransactionInput $input): BlindPayApiResponse
+    public function prepareSolanaDelegationTransaction(PrepareSolanaDelegationTransactionInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/prepare-delegate-solana",
-            $input->toArray()
+            Path::of('instances/%s/prepare-delegate-solana', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                PrepareSolanaDelegationTransactionResponse::fromArray($response->data)
-            );
+        return $response->map(fn (array $data) => PrepareSolanaDelegationTransactionResponse::fromArray($data));
+    }
+
+    /**
+     * Declare whether the customer holds the wallet's keys. It can be set once, while the wallet's
+     * value is still null; a second call fails with 409 WALLETS_SELF_CUSTODY_ALREADY_SET.
+     *
+     * @return BlindPayApiResponse<BlockchainWallet>
+     */
+    public function setSelfCustody(SetSelfCustodyInput $input, ?RequestOptions $options = null): BlindPayApiResponse
+    {
+        if ($input->id === '') {
+            return BlindPayApiResponse::error(ErrorResponse::validation('Blockchain wallet ID cannot be empty'));
         }
 
-        return $response;
+        return $this->client->patch(
+            Path::of('instances/%s/customers/%s/blockchain-wallets/%s', $this->instanceId, $input->customerId, $input->id),
+            $input->toArray(),
+            $options
+        )->map(fn (array $data) => BlockchainWallet::fromArray($data));
     }
 }

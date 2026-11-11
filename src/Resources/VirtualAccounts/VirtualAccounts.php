@@ -6,8 +6,11 @@ namespace BlindPay\SDK\Resources\VirtualAccounts;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BankingPartner;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Types\SoleProprietorDocType;
 use BlindPay\SDK\Types\StablecoinToken;
 
@@ -232,7 +235,12 @@ readonly class VirtualAccount
         public StablecoinToken|string $token,
         public ?string $blockchainWalletId,
         public BankingPartner|string|null $bankingPartner = null,
-        public ?string $kycStatus = null
+        public ?string $kycStatus = null,
+        public ?array $co = null,
+        public ?array $mx = null,
+        public ?array $blockchainWallet = null,
+        public ?string $partnerFeeId = null,
+        public ?string $customerId = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -243,7 +251,12 @@ readonly class VirtualAccount
             token: Decode::enum(StablecoinToken::class, $data['token']),
             blockchainWalletId: $data['blockchain_wallet_id'] ?? null,
             bankingPartner: Decode::enum(BankingPartner::class, $data['banking_partner'] ?? null),
-            kycStatus: $data['kyc_status'] ?? null
+            kycStatus: $data['kyc_status'] ?? null,
+            co: $data['co'] ?? null,
+            mx: $data['mx'] ?? null,
+            blockchainWallet: $data['blockchain_wallet'] ?? null,
+            partnerFeeId: $data['partner_fee_id'] ?? null,
+            customerId: $data['customer_id'] ?? null,
         );
     }
 
@@ -270,35 +283,31 @@ readonly class VirtualAccount
 
 readonly class CreateVirtualAccountInput
 {
+    /**
+     * @param  string|null  $breBGender  `male` or `female`; required by the bre_b banking partner
+     */
     public function __construct(
         public string $customerId,
         public string $blockchainWalletId,
         public StablecoinToken $token,
-        public ?BankingPartner $bankingPartner = null,
+        public BankingPartner $bankingPartner,
         public ?SoleProprietorDocType $soleProprietorDocType = null,
-        public ?string $soleProprietorDocFile = null
+        public ?string $soleProprietorDocFile = null,
+        public ?string $partnerFeeId = null,
+        public ?string $breBGender = null,
     ) {}
 
     public function toArray(): array
     {
-        $data = [
+        return array_filter([
+            'banking_partner' => $this->bankingPartner->value,
             'blockchain_wallet_id' => $this->blockchainWalletId,
             'token' => $this->token->value,
-        ];
-
-        if ($this->bankingPartner !== null) {
-            $data['banking_partner'] = $this->bankingPartner->value;
-        }
-
-        if ($this->soleProprietorDocType !== null) {
-            $data['sole_proprietor_doc_type'] = $this->soleProprietorDocType->value;
-        }
-
-        if ($this->soleProprietorDocFile !== null) {
-            $data['sole_proprietor_doc_file'] = $this->soleProprietorDocFile;
-        }
-
-        return $data;
+            'sole_proprietor_doc_type' => $this->soleProprietorDocType?->value,
+            'sole_proprietor_doc_file' => $this->soleProprietorDocFile,
+            'partner_fee_id' => $this->partnerFeeId,
+            'bre_b' => $this->breBGender === null ? null : ['gender' => $this->breBGender],
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -308,15 +317,17 @@ readonly class UpdateVirtualAccountInput
         public string $customerId,
         public string $virtualAccountId,
         public string $blockchainWalletId,
-        public StablecoinToken $token
+        public StablecoinToken $token,
+        public ?string $partnerFeeId = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        return array_filter([
             'blockchain_wallet_id' => $this->blockchainWalletId,
             'token' => $this->token->value,
-        ];
+            'partner_fee_id' => $this->partnerFeeId,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -332,20 +343,17 @@ class VirtualAccounts
      *
      * @return BlindPayApiResponse<VirtualAccount>
      */
-    public function create(CreateVirtualAccountInput $input): BlindPayApiResponse
-    {
+    public function create(
+        CreateVirtualAccountInput $input,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/virtual-accounts",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/virtual-accounts', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                VirtualAccount::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => VirtualAccount::fromArray($data));
     }
 
     /**
@@ -353,17 +361,18 @@ class VirtualAccounts
      *
      * @return BlindPayApiResponse<null>
      */
-    public function update(UpdateVirtualAccountInput $input): BlindPayApiResponse
+    public function update(UpdateVirtualAccountInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->virtualAccountId)) {
+        if ($input->virtualAccountId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Virtual Account ID cannot be empty')
+                ErrorResponse::validation('Virtual Account ID cannot be empty')
             );
         }
 
         return $this->client->put(
-            "instances/{$this->instanceId}/customers/{$input->customerId}/virtual-accounts/{$input->virtualAccountId}",
-            $input->toArray()
+            Path::of('instances/%s/customers/%s/virtual-accounts/%s', $this->instanceId, $input->customerId, $input->virtualAccountId),
+            $input->toArray(),
+            $options
         );
     }
 
@@ -372,31 +381,26 @@ class VirtualAccounts
      *
      * @return BlindPayApiResponse<VirtualAccount>
      */
-    public function get(string $customerId, string $virtualAccountId): BlindPayApiResponse
+    public function get(string $customerId, string $virtualAccountId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
-        if (empty($virtualAccountId)) {
+        if ($virtualAccountId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Virtual Account ID cannot be empty')
+                ErrorResponse::validation('Virtual Account ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$customerId}/virtual-accounts/{$virtualAccountId}"
+            Path::of('instances/%s/customers/%s/virtual-accounts/%s', $this->instanceId, $customerId, $virtualAccountId),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                VirtualAccount::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => VirtualAccount::fromArray($data));
     }
 
     /**
@@ -404,27 +408,26 @@ class VirtualAccounts
      *
      * @return BlindPayApiResponse<VirtualAccount[]>
      */
-    public function list(string $customerId): BlindPayApiResponse
+    public function list(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Customer ID cannot be empty')
+                ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
         $response = $this->client->get(
-            "instances/{$this->instanceId}/customers/{$customerId}/virtual-accounts"
+            Path::of('instances/%s/customers/%s/virtual-accounts', $this->instanceId, $customerId),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $items = array_map(
                 fn (array $item) => VirtualAccount::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($items);
-        }
-
-        return $response;
+            return $items;
+        });
     }
 }

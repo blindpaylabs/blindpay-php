@@ -15,5 +15,4 @@ enum BankingPartner: string
     case SPEI = 'spei';
     case PORTAGE_G = 'portage_g';
     /** @deprecated No longer returned by the API. */
-    case SSB = 'ssb';
 }

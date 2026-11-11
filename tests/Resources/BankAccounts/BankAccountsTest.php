@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Tests\Resources;
 
 use BlindPay\SDK\BlindPay;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Resources\BankAccounts\AchCopDocument;
 use BlindPay\SDK\Resources\BankAccounts\ArgentinaTransfers;
 use BlindPay\SDK\Resources\BankAccounts\BankAccountListItem;
@@ -24,13 +25,10 @@ use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\RecipientRelationship;
-use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 class BankAccountsTest extends TestCase
 {
@@ -41,23 +39,12 @@ class BankAccountsTest extends TestCase
     protected function setUp(): void
     {
         $this->mockHandler = new MockHandler;
-        $handlerStack = HandlerStack::create($this->mockHandler);
-        $httpClient = new Client(['handler' => $handlerStack]);
 
         $this->blindpay = new BlindPay(
             apiKey: 'test-key',
-            instanceId: 'in_000000000000'
+            instanceId: 'in_000000000000',
+            handler: $this->mockHandler,
         );
-
-        $this->injectHttpClient($httpClient);
-    }
-
-    private function injectHttpClient(Client $client): void
-    {
-        $reflection = new ReflectionClass($this->blindpay);
-        $property = $reflection->getProperty('httpClient');
-        $property->setAccessible(true);
-        $property->setValue($this->blindpay, $client);
     }
 
     private function mockResponse(array $body, int $status = 200): void
@@ -95,7 +82,7 @@ class BankAccountsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('ba_000000000000', $response->data->id);
-        $this->assertEquals('pix', $response->data->type);
+        $this->assertEquals('pix', Decode::wire($response->data->type));
         $this->assertEquals('PIX Account', $response->data->name);
         $this->assertEquals('14947677768', $response->data->pixKey);
     }
@@ -128,7 +115,7 @@ class BankAccountsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('ba_000000000000', $response->data->id);
-        $this->assertEquals('transfers_bitso', $response->data->type);
+        $this->assertEquals('transfers_bitso', Decode::wire($response->data->type));
         $this->assertEquals('Argentina Transfers Account', $response->data->name);
         $this->assertEquals('Individual full name or business name', $response->data->beneficiaryName);
         $this->assertEquals(ArgentinaTransfers::CVU, $response->data->transfersType);
@@ -143,7 +130,7 @@ class BankAccountsTest extends TestCase
             'type' => 'spei_bitso',
             'name' => 'SPEI Account',
             'beneficiary_name' => 'Individual full name or business name',
-            'spei_protocol' => 'SPEI',
+            'spei_protocol' => 'clabe',
             'spei_institution_code' => '40002',
             'spei_clabe' => '5482347403740546',
             'created_at' => '2021-01-01T00:00:00Z',
@@ -157,7 +144,7 @@ class BankAccountsTest extends TestCase
             name: 'SPEI Account',
             speiClabe: '5482347403740546',
             speiInstitutionCode: '40002',
-            speiProtocol: SpeiProtocol::SPEI
+            speiProtocol: SpeiProtocol::CLABE
         );
 
         $response = $this->blindpay->customers->bankAccounts->createSpei($input);
@@ -165,7 +152,7 @@ class BankAccountsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('ba_000000000000', $response->data->id);
-        $this->assertEquals('spei_bitso', $response->data->type);
+        $this->assertEquals('spei_bitso', Decode::wire($response->data->type));
         $this->assertEquals('SPEI Account', $response->data->name);
         $this->assertEquals('Individual full name or business name', $response->data->beneficiaryName);
         $this->assertEquals('5482347403740546', $response->data->speiClabe);
@@ -210,7 +197,7 @@ class BankAccountsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('ba_000000000000', $response->data->id);
-        $this->assertEquals('ach_cop_bitso', $response->data->type);
+        $this->assertEquals('ach_cop_bitso', Decode::wire($response->data->type));
         $this->assertEquals('Colombia ACH Account', $response->data->name);
         $this->assertEquals(BankAccountType::CHECKING, $response->data->accountType);
         $this->assertEquals('Fernando', $response->data->achCopBeneficiaryFirstName);
@@ -273,7 +260,7 @@ class BankAccountsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('ba_000000000000', $response->data->id);
-        $this->assertEquals('ach', $response->data->type);
+        $this->assertEquals('ach', Decode::wire($response->data->type));
         $this->assertEquals('ACH Account', $response->data->name);
         $this->assertEquals('Individual full name or business name', $response->data->beneficiaryName);
         $this->assertEquals('012345678', $response->data->routingNumber);
@@ -330,7 +317,7 @@ class BankAccountsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('ba_000000000000', $response->data->id);
-        $this->assertEquals('wire', $response->data->type);
+        $this->assertEquals('wire', Decode::wire($response->data->type));
         $this->assertEquals('Wire Account', $response->data->name);
         $this->assertEquals('Individual full name or business name', $response->data->beneficiaryName);
         $this->assertEquals('012345678', $response->data->routingNumber);
@@ -414,7 +401,7 @@ class BankAccountsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('ba_000000000000', $response->data->id);
-        $this->assertEquals('international_swift', $response->data->type);
+        $this->assertEquals('international_swift', Decode::wire($response->data->type));
         $this->assertEquals('International Swift Account', $response->data->name);
         $this->assertNull($response->data->beneficiaryName);
         $this->assertEquals('123456789', $response->data->swiftCodeBic);
@@ -481,7 +468,7 @@ class BankAccountsTest extends TestCase
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
         $this->assertEquals('ba_JW5ZtlKMlgS1', $response->data->id);
-        $this->assertEquals('rtp', $response->data->type);
+        $this->assertEquals('rtp', Decode::wire($response->data->type));
         $this->assertEquals('John Doe RTP', $response->data->name);
         $this->assertEquals('John Doe', $response->data->beneficiaryName);
         $this->assertEquals('121000358', $response->data->routingNumber);
@@ -551,7 +538,7 @@ class BankAccountsTest extends TestCase
                 'state_province_region' => 'State/Province/Region',
                 'country' => 'US',
                 'postal_code' => 'Postal code',
-                'spei_protocol' => 'SPEI',
+                'spei_protocol' => 'clabe',
                 'spei_institution_code' => '40002',
                 'spei_clabe' => '5482347403740546',
                 'transfers_type' => 'CVU',

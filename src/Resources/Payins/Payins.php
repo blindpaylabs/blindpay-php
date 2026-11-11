@@ -4,20 +4,27 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK\Resources\Payins;
 
+use BlindPay\SDK\BlindPayApiException;
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\AutoPager;
 use BlindPay\SDK\Internal\Decode;
+use BlindPay\SDK\Internal\Path;
+use BlindPay\SDK\Internal\Query;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\ListResponse;
 use BlindPay\SDK\Types\ManualExecutionStatus;
 use BlindPay\SDK\Types\Network;
-use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
 use BlindPay\SDK\Types\PayinTrackingPayment;
+use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TrackingComplete;
 use BlindPay\SDK\Types\TrackingPartnerFee;
 use BlindPay\SDK\Types\TrackingTransaction;
 use BlindPay\SDK\Types\TransactionStatus;
 use DateTimeImmutable;
+use Generator;
 
 readonly class BankAch
 {
@@ -201,7 +208,7 @@ readonly class Payin
     public function __construct(
         public string $customerId,
         public string $id,
-        public TransactionStatus $status,
+        public TransactionStatus|string $status,
         public string $payinQuoteId,
         public string $instanceId,
         public ?DateTimeImmutable $createdAt,
@@ -221,7 +228,7 @@ readonly class Payin
         public string $name,
         public ?string $address,
         public Network|string $network,
-        public ?BankDetails $BankDetails,
+        public ?BankDetails $blindpayBankDetails,
         public ?string $pixCode = null,
         public ?string $memoCode = null,
         public ?string $clabe = null,
@@ -240,7 +247,13 @@ readonly class Payin
         public ?string $psePaymentLink = null,
         public ?string $pseTaxId = null,
         public ?string $partnerFeeId = null,
-        public ?ManualExecutionStatus $manualExecutionStatus = null
+        public ManualExecutionStatus|string|null $manualExecutionStatus = null,
+        public ?int $partnerFee = null,
+        /** a date-time; its wire shape varies, so it is passed through as returned */
+        public mixed $manualConcludedAt = null,
+        public ?string $manualConcludedBy = null,
+        public ?float $transactionFeeAmount = null,
+        public ?array $payerRules = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -248,7 +261,7 @@ readonly class Payin
         return new self(
             customerId: $data['customer_id'],
             id: $data['id'],
-            status: TransactionStatus::from($data['status']),
+            status: Decode::enum(TransactionStatus::class, $data['status']),
             payinQuoteId: $data['payin_quote_id'],
             instanceId: $data['instance_id'],
             createdAt: isset($data['created_at'])
@@ -271,7 +284,7 @@ readonly class Payin
             name: $data['name'],
             address: $data['address'] ?? null,
             network: Decode::enum(Network::class, $data['network']),
-            BankDetails: isset($data['blindpay_bank_details']) ? BankDetails::fromArray($data['blindpay_bank_details']) : null,
+            blindpayBankDetails: isset($data['blindpay_bank_details']) ? BankDetails::fromArray($data['blindpay_bank_details']) : null,
             pixCode: $data['pix_code'] ?? null,
             memoCode: $data['memo_code'] ?? null,
             clabe: $data['clabe'] ?? null,
@@ -290,96 +303,63 @@ readonly class Payin
             psePaymentLink: $data['pse_payment_link'] ?? null,
             pseTaxId: $data['pse_tax_id'] ?? null,
             partnerFeeId: $data['partner_fee_id'] ?? null,
-            manualExecutionStatus: isset($data['manual_execution_status']) ? ManualExecutionStatus::from($data['manual_execution_status']) : null
+            manualExecutionStatus: Decode::enum(ManualExecutionStatus::class, $data['manual_execution_status'] ?? null),
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null,
+            manualConcludedAt: $data['manual_concluded_at'] ?? null,
+            manualConcludedBy: $data['manual_concluded_by'] ?? null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            payerRules: $data['payer_rules'] ?? null,
         );
     }
 }
 
 readonly class ListPayinsInput extends PaginationParams
 {
+    /**
+     * @param  int|null  $offset  deprecated: ignored by the API; use $startingAfter
+     */
     public function __construct(
         public ?TransactionStatus $status = null,
         public ?string $customerId = null,
         ?int $limit = null,
         ?int $offset = null,
         ?string $startingAfter = null,
-        ?string $endingBefore = null
+        ?string $endingBefore = null,
+        public ?string $customerName = null,
+        public ?string $bankAccountId = null,
+        public ?string $country = null,
+        /** the rail / payment method wire value, e.g. pix, ach, wire, spei_bitso */
+        public ?string $paymentMethod = null,
+        public ?Network $network = null,
+        public ?StablecoinToken $token = null,
     ) {
         parent::__construct($limit, $offset, $startingAfter, $endingBefore);
     }
 
     public function toArray(): array
     {
-        $params = parent::toArray();
-
-        if ($this->status !== null) {
-            $params['status'] = $this->status->value;
-        }
-
-        if ($this->customerId !== null) {
-            $params['customer_id'] = $this->customerId;
-        }
-
-        return $params;
+        return parent::toArray() + array_filter([
+            'status' => $this->status?->value,
+            'customer_id' => $this->customerId,
+            'customer_name' => $this->customerName,
+            'bank_account_id' => $this->bankAccountId,
+            'country' => $this->country,
+            'payment_method' => $this->paymentMethod,
+            'network' => $this->network?->value,
+            'token' => $this->token?->value,
+        ], static fn ($value) => $value !== null);
     }
 }
 
-readonly class ListPayinsResponse
+/**
+ * @extends ListResponse<Payin>
+ */
+readonly class ListPayinsResponse extends ListResponse
 {
-    /**
-     * @param  Payin[]  $data
-     * @param  PaginationMetadata|null  $pagination  set when the request sent limit, starting_after or ending_before
-     */
-    public function __construct(
-        public array $data,
-        public ?PaginationMetadata $pagination = null,
-    ) {}
-
-    /**
-     * Accepts both shapes the API returns: a bare array, or {data, pagination} when the request
-     * sent limit, starting_after or ending_before.
-     */
+    /** Accepts both shapes the API returns (see ListResponse). */
     public static function fromArray(array $data): self
     {
-        [$items, $pagination] = Decode::listEnvelope($data);
-
-        return new self(
-            data: array_map(fn (array $item) => Payin::fromArray($item), $items),
-            pagination: $pagination,
-        );
-    }
-}
-
-readonly class ExportPayinsInput
-{
-    public function __construct(
-        public TransactionStatus $status,
-        public ?int $limit = null,
-        public ?int $offset = null
-    ) {}
-
-    public function toArray(): array
-    {
-        $params = [
-            'status' => $this->status->value,
-        ];
-
-        if ($this->limit !== null) {
-            $params['limit'] = (string) $this->limit;
-        }
-
-        if ($this->offset !== null) {
-            $params['offset'] = (string) $this->offset;
-        }
-
-        return $params;
-    }
-
-    public function toQueryString(): string
-    {
-        $params = $this->toArray();
-
-        return empty($params) ? '' : '?'.http_build_query($params);
+        return self::decode($data, Payin::fromArray(...));
     }
 }
 
@@ -387,34 +367,44 @@ readonly class CreateEvmPayinResponse
 {
     public function __construct(
         public string $id,
-        public TransactionStatus $status,
+        public TransactionStatus|string $status,
         public ?string $customerId,
         public ?float $receiverAmount,
-        public ?BankDetails $BankDetails,
+        public ?BankDetails $blindpayBankDetails,
         public ?string $pixCode = null,
         public ?string $memoCode = null,
         public ?string $clabe = null,
         public ?TrackingComplete $trackingComplete = null,
         public ?PayinTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
-        public ?TrackingPartnerFee $trackingPartnerFee = null
+        public ?TrackingPartnerFee $trackingPartnerFee = null,
+        public ?int $partnerFee = null,
+        public ?float $billingFeeAmount = null,
+        public ?float $transactionFeeAmount = null,
+        public ?string $paymentMethod = null,
+        public ?float $senderAmount = null,
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
             id: $data['id'],
-            status: TransactionStatus::from($data['status']),
+            status: Decode::enum(TransactionStatus::class, $data['status']),
             customerId: $data['customer_id'] ?? null,
             receiverAmount: isset($data['receiver_amount']) ? (float) $data['receiver_amount'] : null,
-            BankDetails: isset($data['blindpay_bank_details']) ? BankDetails::fromArray($data['blindpay_bank_details']) : null,
+            blindpayBankDetails: isset($data['blindpay_bank_details']) ? BankDetails::fromArray($data['blindpay_bank_details']) : null,
             pixCode: $data['pix_code'] ?? null,
             memoCode: $data['memo_code'] ?? null,
             clabe: $data['clabe'] ?? null,
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
             trackingPayment: isset($data['tracking_payment']) ? PayinTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
-            trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null
+            trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
+            partnerFee: isset($data['partner_fee']) ? (int) $data['partner_fee'] : null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
+            transactionFeeAmount: isset($data['transaction_fee_amount']) ? (float) $data['transaction_fee_amount'] : null,
+            paymentMethod: $data['payment_method'] ?? null,
+            senderAmount: isset($data['sender_amount']) ? (float) $data['sender_amount'] : null,
         );
     }
 }
@@ -426,124 +416,103 @@ class Payins
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * List all payins with optional filters
      *
-     * @param ListPayinsInput|null $params Optional filters for listing payins
+     * @param  ListPayinsInput|null  $params  Optional filters for listing payins
      * @return BlindPayApiResponse<ListPayinsResponse>
      */
-    public function list(?ListPayinsInput $params = null): BlindPayApiResponse
+    public function list(?ListPayinsInput $params = null, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get("instances/{$this->instanceId}/payins{$queryParams}");
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                ListPayinsResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $this->listPage($params?->toArray() ?? [], $options);
     }
 
-    /*
+    /**
+     * Every payin matching $params, fetched lazily page by page (`limit` 100 unless you set one),
+     * following `pagination.next_page` until `has_more` is false. Forward only: `endingBefore` is
+     * rejected. A failed page request throws BlindPayApiException (it carries the ErrorResponse).
+     *
+     *     foreach ($blindpay->payins->listAutoPaging() as $payin) { ... }
+     *
+     * @return Generator<int, Payin>
+     *
+     * @throws BlindPayApiException
+     */
+    public function listAutoPaging(?ListPayinsInput $params = null, ?RequestOptions $options = null): Generator
+    {
+        return AutoPager::iterate($params?->toArray() ?? [], fn (array $query) => $this->listPage($query, $options));
+    }
+
+    /**
+     * @param  array<string, string>  $query
+     * @return BlindPayApiResponse<ListPayinsResponse>
+     */
+    private function listPage(array $query, ?RequestOptions $options): BlindPayApiResponse
+    {
+        return $this->client->get(Path::of('instances/%s/payins', $this->instanceId).Query::build($query), $options)
+            ->map(fn (array $data) => ListPayinsResponse::fromArray($data));
+    }
+
+    /**
      * Get a specific payin by ID
      *
-     * @param string $payinId The payin ID
+     * @param  string  $payinId  The payin ID
      * @return BlindPayApiResponse<Payin>
      */
-    public function get(string $payinId): BlindPayApiResponse
+    public function get(string $payinId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($payinId)) {
+        if ($payinId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Payin ID cannot be empty')
+                ErrorResponse::validation('Payin ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("instances/{$this->instanceId}/payins/{$payinId}");
+        $response = $this->client->get(Path::of('instances/%s/payins/%s', $this->instanceId, $payinId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                Payin::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => Payin::fromArray($data));
     }
 
-    /*
+    /**
      * Get payin tracking information
      *
-     * @param string $payinId The payin ID to track
+     * @param  string  $payinId  The payin ID to track
+     *                           Public tracking endpoint for BlindPay's web and iOS apps: a server-side call gets 401 in
+     *                           production. Use get() instead.
      * @return BlindPayApiResponse<Payin>
      */
-    public function getTrack(string $payinId): BlindPayApiResponse
+    public function getTrack(string $payinId, ?string $checkoutToken = null, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($payinId)) {
+        if ($payinId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Payin ID cannot be empty')
+                ErrorResponse::validation('Payin ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("e/payins/{$payinId}");
+        $response = $this->client->get(Path::of('e/payins/%s', $payinId).Query::build(['checkout_token' => $checkoutToken]), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                Payin::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => Payin::fromArray($data));
     }
 
-    /*
-     * Export payins by status
-     *
-     * @param ExportPayinsInput $params Export parameters
-     * @return BlindPayApiResponse<Payin[]>
-     */
-    public function export(ExportPayinsInput $params): BlindPayApiResponse
-    {
-        $queryParams = $params->toQueryString();
-        $response = $this->client->get("instances/{$this->instanceId}/export/payins{$queryParams}");
-
-        if ($response->isSuccess() && is_array($response->data)) {
-            $payins = array_map(
-                fn (array $item) => Payin::fromArray($item),
-                $response->data
-            );
-
-            return BlindPayApiResponse::success($payins);
-        }
-
-        return $response;
-    }
-
-    /*
+    /**
      * Create an EVM payin from a quote
      *
-     * @param string $payinQuoteId The payin quote ID
+     * @param  string  $payinQuoteId  The payin quote ID
      * @return BlindPayApiResponse<CreateEvmPayinResponse>
      */
-    public function createEvm(string $payinQuoteId): BlindPayApiResponse
+    public function createEvm(string $payinQuoteId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($payinQuoteId)) {
+        if ($payinQuoteId === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('Payin quote ID cannot be empty')
+                ErrorResponse::validation('Payin quote ID cannot be empty')
             );
         }
 
         $response = $this->client->post(
-            "instances/{$this->instanceId}/payins/evm",
-            ['payin_quote_id' => $payinQuoteId]
+            Path::of('instances/%s/payins/evm', $this->instanceId),
+            ['payin_quote_id' => $payinQuoteId],
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateEvmPayinResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateEvmPayinResponse::fromArray($data));
     }
 }

@@ -11,14 +11,10 @@ use BlindPay\SDK\Types\Currency;
 use BlindPay\SDK\Types\CurrencyType;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\StablecoinToken;
-use BlindPay\SDK\Types\TransactionDocumentType;
-use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 class QuotesTest extends TestCase
 {
@@ -29,23 +25,12 @@ class QuotesTest extends TestCase
     protected function setUp(): void
     {
         $this->mockHandler = new MockHandler;
-        $handlerStack = HandlerStack::create($this->mockHandler);
-        $httpClient = new Client(['handler' => $handlerStack]);
 
         $this->blindpay = new BlindPay(
             apiKey: 'test-key',
-            instanceId: 'in_000000000000'
+            instanceId: 'in_000000000000',
+            handler: $this->mockHandler,
         );
-
-        $this->injectHttpClient($httpClient);
-    }
-
-    private function injectHttpClient(Client $client): void
-    {
-        $reflection = new ReflectionClass($this->blindpay);
-        $property = $reflection->getProperty('httpClient');
-        $property->setAccessible(true);
-        $property->setValue($this->blindpay, $client);
     }
 
     private function mockResponse(array $body, int $status = 200): void
@@ -94,9 +79,6 @@ class QuotesTest extends TestCase
             requestAmount: 1000,
             coverFees: true,
             partnerFeeId: 'pf_000000000000',
-            transactionDocumentFile: null,
-            transactionDocumentId: null,
-            transactionDocumentType: TransactionDocumentType::INVOICE,
             network: Network::SEPOLIA,
             token: StablecoinToken::USDC,
             description: 'Memo code or description, only works with USD and BRL'

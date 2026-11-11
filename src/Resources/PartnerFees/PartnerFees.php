@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\PartnerFees;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\RequestOptions;
 
 readonly class PartnerFee
 {
@@ -53,39 +56,28 @@ readonly class PartnerFee
     }
 }
 
+/** Percentage fees are basis points (100 = 1%); flat fees are cents. */
 readonly class CreatePartnerFeeInput
 {
     public function __construct(
-        public string $evmWalletAddress,
         public string $name,
-        public float $payinFlatFee,
-        public float $payinPercentageFee,
-        public float $payoutFlatFee,
-        public float $payoutPercentageFee,
+        public int $payinFlatFee,
+        public int $payinPercentageFee,
+        public int $payoutFlatFee,
+        public int $payoutPercentageFee,
         public ?bool $virtualAccountSet = null,
-        public ?string $stellarWalletAddress = null
     ) {}
 
     public function toArray(): array
     {
-        $data = [
-            'evm_wallet_address' => $this->evmWalletAddress,
+        return array_filter([
             'name' => $this->name,
             'payin_flat_fee' => $this->payinFlatFee,
             'payin_percentage_fee' => $this->payinPercentageFee,
             'payout_flat_fee' => $this->payoutFlatFee,
             'payout_percentage_fee' => $this->payoutPercentageFee,
-        ];
-
-        if ($this->virtualAccountSet !== null) {
-            $data['virtual_account_set'] = $this->virtualAccountSet;
-        }
-
-        if ($this->stellarWalletAddress !== null) {
-            $data['stellar_wallet_address'] = $this->stellarWalletAddress;
-        }
-
-        return $data;
+            'virtual_account_set' => $this->virtualAccountSet,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -157,88 +149,72 @@ class PartnerFees
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * List all partner fees
      *
      * @return BlindPayApiResponse<PartnerFee[]>
      */
-    public function list(): BlindPayApiResponse
+    public function list(?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->get("instances/{$this->instanceId}/partner-fees");
+        $response = $this->client->get(Path::of('instances/%s/partner-fees', $this->instanceId), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
+        return $response->map(function (array $data) {
             $fees = array_map(
                 fn (array $item) => PartnerFee::fromArray($item),
-                $response->data
+                $data
             );
 
-            return BlindPayApiResponse::success($fees);
-        }
-
-        return $response;
+            return $fees;
+        });
     }
 
-    /*
+    /**
      * Create a new partner fee
      *
-     * @param CreatePartnerFeeInput $input
      * @return BlindPayApiResponse<CreatePartnerFeeResponse>
      */
-    public function create(CreatePartnerFeeInput $input): BlindPayApiResponse
+    public function create(CreatePartnerFeeInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/partner-fees",
-            $input->toArray()
+            Path::of('instances/%s/partner-fees', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreatePartnerFeeResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreatePartnerFeeResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get a partner fee by ID
      *
-     * @param string $id
      * @return BlindPayApiResponse<GetPartnerFeeResponse>
      */
-    public function get(string $id): BlindPayApiResponse
+    public function get(string $id, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($id)) {
+        if ($id === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('ID cannot be empty')
+                ErrorResponse::validation('ID cannot be empty')
             );
         }
 
-        $response = $this->client->get("instances/{$this->instanceId}/partner-fees/{$id}");
+        $response = $this->client->get(Path::of('instances/%s/partner-fees/%s', $this->instanceId, $id), $options);
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                GetPartnerFeeResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => GetPartnerFeeResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Delete a partner fee
      *
-     * @param string $id
      * @return BlindPayApiResponse<null>
      */
-    public function delete(string $id): BlindPayApiResponse
+    public function delete(string $id, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($id)) {
+        if ($id === '') {
             return BlindPayApiResponse::error(
-                new \BlindPay\SDK\Types\ErrorResponse('ID cannot be empty')
+                ErrorResponse::validation('ID cannot be empty')
             );
         }
 
-        return $this->client->delete("instances/{$this->instanceId}/partner-fees/{$id}");
+        return $this->client->delete(Path::of('instances/%s/partner-fees/%s', $this->instanceId, $id), null, $options);
     }
 }

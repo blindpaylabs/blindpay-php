@@ -5,17 +5,13 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Tests\Resources;
 
 use BlindPay\SDK\BlindPay;
-use BlindPay\SDK\Resources\Payins\ExportPayinsInput;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TransactionStatus;
-use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 class PayinsTest extends TestCase
 {
@@ -26,23 +22,12 @@ class PayinsTest extends TestCase
     protected function setUp(): void
     {
         $this->mockHandler = new MockHandler;
-        $handlerStack = HandlerStack::create($this->mockHandler);
-        $httpClient = new Client(['handler' => $handlerStack]);
 
         $this->blindpay = new BlindPay(
             apiKey: 'test-key',
-            instanceId: 'in_000000000000'
+            instanceId: 'in_000000000000',
+            handler: $this->mockHandler,
         );
-
-        $this->injectHttpClient($httpClient);
-    }
-
-    private function injectHttpClient(Client $client): void
-    {
-        $reflection = new ReflectionClass($this->blindpay);
-        $property = $reflection->getProperty('httpClient');
-        $property->setAccessible(true);
-        $property->setValue($this->blindpay, $client);
     }
 
     private function mockResponse(array $body, int $status = 200): void
@@ -236,27 +221,6 @@ class PayinsTest extends TestCase
         $this->assertEquals('0x123...890', $response->data->trackingTransaction->transactionHash);
         $this->assertEquals('on_hold', $response->data->trackingPayment->step);
         $this->assertEquals('blockchain', $response->data->trackingPayment->providerName);
-    }
-
-    #[Test]
-    public function it_exports_payins(): void
-    {
-        $mockedExportPayins = [$this->getPayinMockData()];
-
-        $this->mockResponse($mockedExportPayins);
-
-        $input = new ExportPayinsInput(
-            status: TransactionStatus::PROCESSING
-        );
-
-        $response = $this->blindpay->payins->export($input);
-
-        $this->assertTrue($response->isSuccess());
-        $this->assertNull($response->error);
-        $this->assertIsArray($response->data);
-        $this->assertCount(1, $response->data);
-        $this->assertEquals('re_000000000000', $response->data[0]->id);
-        $this->assertEquals(TransactionStatus::PROCESSING, $response->data[0]->status);
     }
 
     #[Test]

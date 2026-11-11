@@ -9,13 +9,10 @@ use BlindPay\SDK\Resources\CustodialWallets\CreateCustodialWalletInput;
 use BlindPay\SDK\Resources\CustodialWallets\DeleteCustodialWalletInput;
 use BlindPay\SDK\Resources\CustodialWallets\GetCustodialWalletInput;
 use BlindPay\SDK\Types\Network;
-use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 class CustodialWalletsTest extends TestCase
 {
@@ -26,23 +23,12 @@ class CustodialWalletsTest extends TestCase
     protected function setUp(): void
     {
         $this->mockHandler = new MockHandler;
-        $handlerStack = HandlerStack::create($this->mockHandler);
-        $httpClient = new Client(['handler' => $handlerStack]);
 
         $this->blindpay = new BlindPay(
             apiKey: 'test-key',
-            instanceId: 'in_000000000000'
+            instanceId: 'in_000000000000',
+            handler: $this->mockHandler,
         );
-
-        $this->injectHttpClient($httpClient);
-    }
-
-    private function injectHttpClient(Client $client): void
-    {
-        $reflection = new ReflectionClass($this->blindpay);
-        $property = $reflection->getProperty('httpClient');
-        $property->setAccessible(true);
-        $property->setValue($this->blindpay, $client);
     }
 
     private function mockResponse(array $body, int $status = 200): void

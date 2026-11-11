@@ -162,6 +162,18 @@
       "field": "tracking_partner_fee",
       "reason": "In the current public spec (CreateTransferOut.tracking_partner_fee, blindpay-v2@66144f3b2) but not in the stale committed snapshot. Remove when the snapshot is refreshed.",
       "owner": "sdk-parity"
+    },
+    {
+      "schema": "ErrorResponse",
+      "field": "request_id",
+      "reason": "SDK-side metadata in ErrorResponse::toArray() (the X-Request-Id response header, the SDK's retry classification); not an API wire key.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "ErrorResponse",
+      "field": "retryable",
+      "reason": "SDK-side metadata in ErrorResponse::toArray() (the X-Request-Id response header, the SDK's retry classification); not an API wire key.",
+      "owner": "support@blindpay.com"
     }
   ]
 }

@@ -8,13 +8,10 @@ use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\Resources\Payouts\AuthorizeStellarTokenInput;
 use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutInput;
 use BlindPay\SDK\Resources\Payouts\CreateStellarPayoutInput;
-use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 class PayoutsTest extends TestCase
 {
@@ -25,23 +22,12 @@ class PayoutsTest extends TestCase
     protected function setUp(): void
     {
         $this->mockHandler = new MockHandler;
-        $handlerStack = HandlerStack::create($this->mockHandler);
-        $httpClient = new Client(['handler' => $handlerStack]);
 
         $this->blindpay = new BlindPay(
             apiKey: 'test-key',
-            instanceId: 'in_000000000000'
+            instanceId: 'in_000000000000',
+            handler: $this->mockHandler,
         );
-
-        $this->injectHttpClient($httpClient);
-    }
-
-    private function injectHttpClient(Client $client): void
-    {
-        $reflection = new ReflectionClass($this->blindpay);
-        $property = $reflection->getProperty('httpClient');
-        $property->setAccessible(true);
-        $property->setValue($this->blindpay, $client);
     }
 
     private function mockResponse(array $body, int $status = 200): void
@@ -200,27 +186,6 @@ class PayoutsTest extends TestCase
         $this->assertEquals('Bank Account Name', $response->data->name);
         $this->assertEquals('wire', $response->data->type->value);
         $this->assertTrue($response->data->hasVirtualAccount);
-    }
-
-    #[Test]
-    public function it_exports_payouts(): void
-    {
-        $mockedExportPayouts = [
-            $this->getPayoutMockData(),
-        ];
-
-        $this->mockResponse($mockedExportPayouts);
-
-        $response = $this->blindpay->payouts->export();
-
-        $this->assertTrue($response->isSuccess());
-        $this->assertNull($response->error);
-        $this->assertIsArray($response->data);
-        $this->assertCount(1, $response->data);
-        $this->assertEquals('pa_000000000000', $response->data[0]->id);
-        $this->assertEquals('re_000000000000', $response->data[0]->customerId);
-        $this->assertEquals('processing', $response->data[0]->status->value);
-        $this->assertEquals('0x123...890', $response->data[0]->senderWalletAddress);
     }
 
     #[Test]

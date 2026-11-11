@@ -2,7 +2,7 @@
 
 /**
  * Contract check: verifies the SDK's declared wire keys against the committed
- * OpenAPI spec snapshot at .api-sync/spec-snapshot.json.
+ * OpenAPI spec snapshot at .api-sync/spec-snapshot.json (or the file given with --spec=PATH).
  *
  * Direction A (hard fail): every string key the SDK reads via `$var['key']` inside a
  * fromArray() method, or writes via `'key' => ...` inside a toArray() method, must
@@ -23,6 +23,11 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 $specPath = $root.'/.api-sync/spec-snapshot.json';
+foreach (array_slice($argv, 1) as $arg) {
+    if (str_starts_with($arg, '--spec=')) {
+        $specPath = substr($arg, strlen('--spec='));
+    }
+}
 $allowlistPath = $root.'/.api-sync/contract-allowlist.json';
 
 function fail(string $message): never
@@ -53,8 +58,8 @@ foreach ($allowlistRaw['entries'] ?? [] as $entry) {
 }
 
 /**
- * Recursively collect every key that appears as an OpenAPI "properties" map key,
- * anywhere in the document.
+ * Recursively collect every key that appears as an OpenAPI "properties" map key, or as the name
+ * of a query parameter (list filters are written by toArray() too), anywhere in the document.
  */
 function collectSpecProperties(mixed $node, array &$out): void
 {
@@ -63,6 +68,9 @@ function collectSpecProperties(mixed $node, array &$out): void
             foreach ($node['properties'] as $key => $_) {
                 $out[$key] = true;
             }
+        }
+        if (($node['in'] ?? null) === 'query' && is_string($node['name'] ?? null)) {
+            $out[$node['name']] = true;
         }
         foreach ($node as $value) {
             collectSpecProperties($value, $out);

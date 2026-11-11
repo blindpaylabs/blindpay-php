@@ -30,7 +30,12 @@ readonly class TrackingTransaction extends BaseTracking
         public ?array $tedInstruction = null,
         public ?string $ledgerInTransactionId = null,
         public ?string $ledgerOutTransactionId = null,
-        ?DateTimeImmutable $completedAt = null
+        ?DateTimeImmutable $completedAt = null,
+        public ?array $cardInstruction = null,
+        public ?array $cardEvidence = null,
+        public ?int $cardFailedAttempts = null,
+        public ?string $cardClaimAt = null,
+        public ?string $cardGatesFailedAt = null,
     ) {
         parent::__construct($step, $completedAt);
     }
@@ -61,7 +66,12 @@ readonly class TrackingTransaction extends BaseTracking
             ledgerOutTransactionId: $data['ledger_out_transaction_id'] ?? null,
             completedAt: isset($data['completed_at'])
                 ? new DateTimeImmutable($data['completed_at'])
-                : null
+                : null,
+            cardInstruction: $data['card_instruction'] ?? null,
+            cardEvidence: $data['card_evidence'] ?? null,
+            cardFailedAttempts: isset($data['card_failed_attempts']) ? (int) $data['card_failed_attempts'] : null,
+            cardClaimAt: $data['card_claim_at'] ?? null,
+            cardGatesFailedAt: $data['card_gates_failed_at'] ?? null,
         );
     }
 

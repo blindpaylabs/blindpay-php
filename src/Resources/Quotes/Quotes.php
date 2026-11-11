@@ -5,53 +5,55 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Quotes;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Currency;
 use BlindPay\SDK\Types\CurrencyType;
 use BlindPay\SDK\Types\Network;
+use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Types\StablecoinToken;
-use BlindPay\SDK\Types\TransactionDocumentType;
 
+/**
+ * A payout quote. Quote a bank account (`bankAccountId`) or a payable (`payableId`): exactly one
+ * of them, which the API checks. `requestAmount` is integer cents of the side `currencyType`
+ * names (1000 = 10.00); a payable quote takes its amount from the payable.
+ */
 readonly class CreateQuoteInput
 {
     public function __construct(
-        public string $bankAccountId,
-        public CurrencyType $currencyType,
-        public float $requestAmount,
-        public ?bool $coverFees,
-        public ?string $partnerFeeId,
-        public ?string $transactionDocumentFile,
-        public ?string $transactionDocumentId,
-        public TransactionDocumentType $transactionDocumentType,
-        public ?Network $network = null,
-        public ?StablecoinToken $token = null,
+        public Network $network,
+        public StablecoinToken $token,
+        public ?string $bankAccountId = null,
+        public ?string $payableId = null,
+        public ?CurrencyType $currencyType = null,
+        public ?int $requestAmount = null,
+        public ?bool $coverFees = null,
+        public ?string $partnerFeeId = null,
         public ?string $description = null,
-        public ?string $refundWalletAddress = null
+        public ?string $refundWalletAddress = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        return array_filter([
             'bank_account_id' => $this->bankAccountId,
-            'currency_type' => $this->currencyType->value,
+            'payable_id' => $this->payableId,
+            'network' => $this->network->value,
+            'token' => $this->token->value,
+            'currency_type' => $this->currencyType?->value,
             'request_amount' => $this->requestAmount,
             'cover_fees' => $this->coverFees,
             'partner_fee_id' => $this->partnerFeeId,
-            'transaction_document_file' => $this->transactionDocumentFile,
-            'transaction_document_id' => $this->transactionDocumentId,
-            'transaction_document_type' => $this->transactionDocumentType->value,
-            'network' => $this->network?->value,
-            'token' => $this->token?->value,
             'description' => $this->description,
             'refund_wallet_address' => $this->refundWalletAddress,
-        ];
+        ], static fn ($value) => $value !== null);
     }
 }
 
 readonly class QuoteContract
 {
-    /*
-     * @param array<array<string, mixed>> $abi
+    /**
+     * @param  array<array<string, mixed>>  $abi
      */
     public function __construct(
         public array $abi,
@@ -115,6 +117,7 @@ readonly class CreateQuoteResponse
 {
     public function __construct(
         public string $id,
+        /** Unix time in milliseconds; quotes expire after 5 minutes */
         public ?int $expiresAt,
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
@@ -124,7 +127,8 @@ readonly class CreateQuoteResponse
         public ?float $flatFee,
         public ?QuoteContract $contract,
         public ?float $customerLocalAmount,
-        public ?string $description
+        public ?string $description,
+        public ?float $billingFeeAmount = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -140,7 +144,8 @@ readonly class CreateQuoteResponse
             flatFee: isset($data['flat_fee']) ? (float) $data['flat_fee'] : null,
             contract: isset($data['contract']) ? QuoteContract::fromArray($data['contract']) : null,
             customerLocalAmount: isset($data['customer_local_amount']) ? (float) $data['customer_local_amount'] : null,
-            description: $data['description'] ?? null
+            description: $data['description'] ?? null,
+            billingFeeAmount: isset($data['billing_fee_amount']) ? (float) $data['billing_fee_amount'] : null,
         );
     }
 
@@ -158,6 +163,7 @@ readonly class CreateQuoteResponse
             'contract' => $this->contract?->toArray(),
             'customer_local_amount' => $this->customerLocalAmount,
             'description' => $this->description,
+            'billing_fee_amount' => $this->billingFeeAmount,
         ];
     }
 }
@@ -168,7 +174,8 @@ readonly class GetFxRateInput
         public CurrencyType $currencyType,
         public Currency $from,
         public Currency $to,
-        public float $requestAmount
+        /** integer cents of the side currencyType names (1000 = 10.00) */
+        public int $requestAmount
     ) {}
 
     public function toArray(): array
@@ -189,6 +196,7 @@ readonly class GetFxRateResponse
         public ?float $blindpayQuotation,
         public float $resultAmount,
         public ?float $instanceFlatFee,
+        /** basis points (100 = 1%) */
         public float $instancePercentageFee
     ) {}
 
@@ -222,47 +230,37 @@ class Quotes
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * Create a quote
      *
-     * @param CreateQuoteInput $input
      * @return BlindPayApiResponse<CreateQuoteResponse>
      */
-    public function create(CreateQuoteInput $input): BlindPayApiResponse
-    {
+    public function create(
+        CreateQuoteInput $input,
+        ?RequestOptions $options = null
+    ): BlindPayApiResponse {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/quotes",
-            $input->toArray()
+            Path::of('instances/%s/quotes', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                CreateQuoteResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => CreateQuoteResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get FX rate
      *
-     * @param GetFxRateInput $input
      * @return BlindPayApiResponse<GetFxRateResponse>
      */
-    public function getFxRate(GetFxRateInput $input): BlindPayApiResponse
+    public function getFxRate(GetFxRateInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         $response = $this->client->post(
-            "instances/{$this->instanceId}/quotes/fx",
-            $input->toArray()
+            Path::of('instances/%s/quotes/fx', $this->instanceId),
+            $input->toArray(),
+            $options
         );
 
-        if ($response->isSuccess() && is_array($response->data)) {
-            return BlindPayApiResponse::success(
-                GetFxRateResponse::fromArray($response->data)
-            );
-        }
-
-        return $response;
+        return $response->map(fn (array $data) => GetFxRateResponse::fromArray($data));
     }
 }

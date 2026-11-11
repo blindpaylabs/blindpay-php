@@ -7,3 +7,6 @@
 /.gitignore export-ignore
 /phpunit.xml.dist export-ignore
 /pint.json export-ignore
+/phpstan.neon.dist export-ignore
+/CLAUDE.md export-ignore
+/examples export-ignore
