@@ -31,6 +31,5 @@ interface ApiClientInterface
      * @param  list<array<string, mixed>>  $multipart
      * @return BlindPayApiResponse<mixed>
      */
-    /** @return BlindPayApiResponse<mixed> */
     public function postMultipart(string $path, array $multipart, ?RequestOptions $options = null): BlindPayApiResponse;
 }

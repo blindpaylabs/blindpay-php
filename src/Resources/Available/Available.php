@@ -6,6 +6,7 @@ namespace BlindPay\SDK\Resources\Available;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Path;
+use BlindPay\SDK\Internal\Query;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\RequestOptions;
@@ -145,7 +146,7 @@ class Available
         Rail $rail,
         ?RequestOptions $options = null
     ): BlindPayApiResponse {
-        $response = $this->client->get("available/bank-details?rail={$rail->value}", $options);
+        $response = $this->client->get('available/bank-details'.Query::build(['rail' => $rail->value]), $options);
 
         return $response->map(function (array $data) {
             $bankDetails = array_map(

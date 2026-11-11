@@ -112,8 +112,8 @@ final class Transport implements ApiClientInterface
     /**
      * @param  array<string, mixed>|null  $body  JSON body; serialised once and resent byte for byte
      * @param  list<array<string, mixed>>|null  $multipart  Guzzle multipart parts (never idempotent)
+     * @return BlindPayApiResponse<mixed>
      */
-    /** @return BlindPayApiResponse<mixed> */
     private function send(string $method, string $path, ?array $body, ?RequestOptions $options, ?array $multipart = null): BlindPayApiResponse
     {
         $options ??= new RequestOptions;

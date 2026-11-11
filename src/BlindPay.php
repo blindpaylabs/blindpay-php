@@ -92,7 +92,7 @@ class BlindPay implements ApiClientInterface
      *                           proxy you trust: every request, with your API key, goes there.
      * @param  float  $timeout  seconds allowed per attempt (default 60)
      * @param  int  $maxRetries  retries after the first attempt (default 2; 0 disables). GETs are
-     *                           retried on network errors, 408, 429 and 5xx; POST/PUT/PATCH/DELETE
+     *                           retried on network errors, 408, 429, 500, 502, 503 and 504; POST/PUT/PATCH/DELETE
      *                           only on network errors, 429 and 409 idempotency_key_in_flight, always
      *                           with the same Idempotency-Key (generated per call when you pass none).
      * @param  callable|null  $handler  a Guzzle handler or HandlerStack, e.g. a MockHandler in tests or
