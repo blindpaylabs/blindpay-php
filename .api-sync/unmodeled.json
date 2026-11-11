@@ -459,6 +459,415 @@
       "field": "*",
       "reason": "SWIFT intermediary-bank sub-object; VirtualAccountUsDetails models swift_receiving_bank but not swift_intermediary_bank.",
       "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "path": "tracking_transaction.card_evidence",
+      "field": "*",
+      "reason": "Card payment evidence, kept as the raw array on the tracking transaction.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinOut",
+      "path": "tracking_transaction.card_instruction",
+      "field": "*",
+      "reason": "Card payment instructions, kept as the raw array (CreatePayinQuoteResponse::$cardInstruction).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayinQuoteOut",
+      "path": "card_instruction",
+      "field": "*",
+      "reason": "Card payment instructions, kept as the raw array (CreatePayinQuoteResponse::$cardInstruction).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreateVirtualAccountIn",
+      "path": "bre_b",
+      "field": "*",
+      "reason": "Only `gender` is sent, via CreateVirtualAccountInput::$breBGender.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "path": "tracking_transaction.card_evidence",
+      "field": "*",
+      "reason": "Card payment evidence, kept as the raw array on the tracking transaction.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinOut",
+      "path": "tracking_transaction.card_instruction",
+      "field": "*",
+      "reason": "Card payment instructions, kept as the raw array (CreatePayinQuoteResponse::$cardInstruction).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "RfiField",
+      "path": "items[]",
+      "field": "*",
+      "reason": "Select options, kept as raw arrays on RfiField::$items.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "blockchain_wallet",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "co",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "co.beneficiary",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "co.bre_b",
+      "field": "*",
+      "reason": "Only `gender` is sent, via CreateVirtualAccountInput::$breBGender.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "mx",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "mx.beneficiary",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "mx.spei",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "us",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "us.ach",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "us.beneficiary",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "us.receiving_bank",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "us.rtp",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "us.swift_intermediary_bank",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "us.swift_receiving_bank",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "path": "us.wire",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "blockchain_wallet",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "co",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "co.beneficiary",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "co.bre_b",
+      "field": "*",
+      "reason": "Only `gender` is sent, via CreateVirtualAccountInput::$breBGender.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "mx",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "mx.beneficiary",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "mx.spei",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "us",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "us.ach",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "us.beneficiary",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "us.receiving_bank",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "us.rtp",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "us.swift_intermediary_bank",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "us.swift_receiving_bank",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "path": "us.wire",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "path": "co",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "path": "co.beneficiary",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "path": "co.bre_b",
+      "field": "*",
+      "reason": "Only `gender` is sent, via CreateVirtualAccountInput::$breBGender.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "path": "mx",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "path": "mx.beneficiary",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountOut",
+      "path": "mx.spei",
+      "field": "*",
+      "reason": "Country-specific account details (co / mx), kept as raw arrays on VirtualAccount.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "GetFeesOut",
+      "field": "yield",
+      "reason": "Yield is excluded from the SDK surface (x-sdk: false); its fee block is not modeled.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreateBankAccountIn",
+      "field": "swift_intermediary_bank_routing_number",
+      "reason": "Intermediary routing number for SWIFT accounts; not yet a CreateInternationalSwiftInput field (the response, BankAccountListItem, decodes it).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "field": "cnae_condition",
+      "reason": "Compliance metadata on the customer, not modeled on the customer classes yet (CustomerCnaeCondition / CustomerVirtualAccountPreapproval are object shapes).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "field": "is_nested",
+      "reason": "Compliance metadata on the customer, not modeled on the customer classes yet (CustomerCnaeCondition / CustomerVirtualAccountPreapproval are object shapes).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CustomerOut",
+      "field": "virtual_account_preapproval",
+      "reason": "Compliance metadata on the customer, not modeled on the customer classes yet (CustomerCnaeCondition / CustomerVirtualAccountPreapproval are object shapes).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Rfi",
+      "field": "customer_aiprise_session_id",
+      "reason": "provider-named field; pending blindpay-v2 decision",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Rfi",
+      "field": "customer_aiprise_user_profile_id",
+      "reason": "provider-named field; pending blindpay-v2 decision",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "BlockchainWalletUpdateWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayableNewWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayableUpdateWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayableCompleteWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "TransferNewWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "TransferUpdateWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "TransferCompleteWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountNewWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "VirtualAccountCompleteWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "WalletNewWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "WalletUpdateWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
     }
   ]
 }

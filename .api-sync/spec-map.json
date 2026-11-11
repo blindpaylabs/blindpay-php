@@ -140,6 +140,74 @@
     {
       "spec": { "schema": "UploadIn", "property": "bucket" },
       "sdk": { "file": "src/Resources/Upload/Upload.php", "class": "UploadBucket" }
+    },
+    {
+      "spec": { "schema": "InstanceRfi", "property": "status" },
+      "sdk": { "file": "src/Resources/Rfi/Rfi.php", "class": "RfiStatus" }
+    },
+    {
+      "spec": { "schema": "PayableBankAccount", "property": "type" },
+      "sdk": { "file": "src/Resources/Payables/Payables.php", "class": "PayableBankAccountType" }
+    },
+    {
+      "spec": { "schema": "PayableCompleteWebhookOut", "property": "last_attempt_status" },
+      "sdk": { "file": "src/Resources/Payables/Payables.php", "class": "PayableLastAttemptStatus" }
+    },
+    {
+      "spec": { "schema": "PayableCompleteWebhookOut", "property": "status" },
+      "sdk": { "file": "src/Resources/Payables/Payables.php", "class": "PayableStatus" }
+    },
+    {
+      "spec": { "schema": "PayableNewWebhookOut", "property": "last_attempt_status" },
+      "sdk": { "file": "src/Resources/Payables/Payables.php", "class": "PayableLastAttemptStatus" }
+    },
+    {
+      "spec": { "schema": "PayableNewWebhookOut", "property": "status" },
+      "sdk": { "file": "src/Resources/Payables/Payables.php", "class": "PayableStatus" }
+    },
+    {
+      "spec": { "schema": "PayableOut", "property": "last_attempt_status" },
+      "sdk": { "file": "src/Resources/Payables/Payables.php", "class": "PayableLastAttemptStatus" }
+    },
+    {
+      "spec": { "schema": "PayableOut", "property": "status" },
+      "sdk": { "file": "src/Resources/Payables/Payables.php", "class": "PayableStatus" }
+    },
+    {
+      "spec": { "schema": "PayableUpdateWebhookOut", "property": "last_attempt_status" },
+      "sdk": { "file": "src/Resources/Payables/Payables.php", "class": "PayableLastAttemptStatus" }
+    },
+    {
+      "spec": { "schema": "PayableUpdateWebhookOut", "property": "status" },
+      "sdk": { "file": "src/Resources/Payables/Payables.php", "class": "PayableStatus" }
+    },
+    {
+      "spec": { "schema": "RetrieveInstanceOut", "property": "onboarding_step" },
+      "sdk": { "file": "src/Resources/Instances/Instances.php", "class": "OnboardingStep" }
+    },
+    {
+      "spec": { "schema": "RetrieveInstanceOut", "property": "type" },
+      "sdk": { "file": "src/Resources/Instances/Instances.php", "class": "InstanceType" }
+    },
+    {
+      "spec": { "schema": "Rfi", "property": "status" },
+      "sdk": { "file": "src/Resources/Rfi/Rfi.php", "class": "RfiStatus" }
+    },
+    {
+      "spec": { "schema": "RfiField", "property": "aiprise_document_type" },
+      "sdk": { "file": "src/Types/AipriseDocumentType.php", "class": "AipriseDocumentType" }
+    },
+    {
+      "spec": { "schema": "UploadAnalyzeIn", "property": "type" },
+      "sdk": { "file": "src/Resources/Upload/Upload.php", "class": "UploadAnalyzeType" }
+    },
+    {
+      "spec": { "schema": "UploadAnalyzeOut", "property": "approval_rate" },
+      "sdk": { "file": "src/Types/ApprovalRate.php", "class": "ApprovalRate" }
+    },
+    {
+      "spec": { "schema": "WalletDepositOut", "property": "status" },
+      "sdk": { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "WalletDepositStatus" }
     }
   ],
   "typesNote": "Class-per-file below always refers to src/Resources/**/*.php unless the file starts with src/Types/.",
@@ -288,22 +356,22 @@
       "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankReceivingBank" } ]
     },
     {
-      "spec": ["TransferOut", "CreateTransferOut"],
+      "spec": ["TransferOut", "CreateTransferOut", "TransferNewWebhookOut", "TransferUpdateWebhookOut", "TransferCompleteWebhookOut"],
       "path": "tracking_complete",
       "sdk": [ { "file": "src/Types/TrackingComplete.php", "class": "TrackingComplete" } ]
     },
     {
-      "spec": ["TransferOut", "CreateTransferOut"],
+      "spec": ["TransferOut", "CreateTransferOut", "TransferNewWebhookOut", "TransferUpdateWebhookOut", "TransferCompleteWebhookOut"],
       "path": "tracking_paymaster",
       "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "TransferTrackingPaymaster" } ]
     },
     {
-      "spec": ["TransferOut", "CreateTransferOut"],
+      "spec": ["TransferOut", "CreateTransferOut", "TransferNewWebhookOut", "TransferUpdateWebhookOut", "TransferCompleteWebhookOut"],
       "path": "tracking_bridge_swap",
       "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "TransferTrackingBridgeSwap" } ]
     },
     {
-      "spec": ["TransferOut", "CreateTransferOut"],
+      "spec": ["TransferOut", "CreateTransferOut", "TransferNewWebhookOut", "TransferUpdateWebhookOut", "TransferCompleteWebhookOut"],
       "path": "tracking_transaction_monitoring",
       "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "TransferTrackingTransactionMonitoring" } ]
     },
@@ -349,18 +417,45 @@
     { "spec": "AvailableNaicsList", "sdk": [ { "file": "src/Resources/Available/Available.php", "class": "NaicsCode" } ] },
     { "spec": "UploadIn", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "UploadInput" } ] },
     { "spec": "UploadOut", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "UploadResponse" } ] },
-    { "spec": "PaginationMetadata", "sdk": [ { "file": "src/Types/PaginationMetadata.php", "class": "PaginationMetadata" } ], "note": "referenced from the customers/payouts/payins/transfers list-response envelopes." }
+    { "spec": "PaginationMetadata", "sdk": [ { "file": "src/Types/PaginationMetadata.php", "class": "PaginationMetadata" } ], "note": "referenced from the customers/payouts/payins/transfers list-response envelopes." },
+    { "spec": "PayableOut", "sdk": [ { "file": "src/Resources/Payables/Payables.php", "class": "Payable" } ]},
+    { "spec": ["PayableNewWebhookOut", "PayableUpdateWebhookOut", "PayableCompleteWebhookOut"], "sdk": [ { "file": "src/Resources/Payables/Payables.php", "class": "Payable" } ], "note": "WebhookEvent::fromArray() decodes payable.* payloads as Payable" },
+    { "spec": "PayableParty", "sdk": [ { "file": "src/Resources/Payables/Payables.php", "class": "PayableParty" } ]},
+    { "spec": "PayableLineItem", "sdk": [ { "file": "src/Resources/Payables/Payables.php", "class": "PayableLineItem" } ]},
+    { "spec": "PayableBankAccount", "sdk": [ { "file": "src/Resources/Payables/Payables.php", "class": "PayableBankAccount" } ]},
+    { "spec": "CreatePayableIn", "sdk": [ { "file": "src/Resources/Payables/Payables.php", "class": "CreatePayableInput" } ]},
+    { "spec": "PlaidLinkOut", "sdk": [ { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "PlaidLinkResponse" } ]},
+    { "spec": "PresignOut", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "PresignResponse" } ]},
+    { "spec": "UploadAnalyzeIn", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "AnalyzeUploadInput" } ]},
+    { "spec": "UploadAnalyzeOut", "sdk": [ { "file": "src/Resources/Upload/Upload.php", "class": "AnalyzeUploadResponse" } ]},
+    { "spec": "RetrieveInstanceOut", "sdk": [ { "file": "src/Resources/Instances/Instances.php", "class": "Instance" } ]},
+    { "spec": "Rfi", "sdk": [ { "file": "src/Resources/Rfi/Rfi.php", "class": "Rfi" } ]},
+    { "spec": "InstanceRfi", "sdk": [ { "file": "src/Resources/Rfi/Rfi.php", "class": "InstanceRfi" } ]},
+    { "spec": "RfiSection", "sdk": [ { "file": "src/Resources/Rfi/Rfi.php", "class": "RfiSection" } ]},
+    { "spec": "RfiField", "sdk": [ { "file": "src/Resources/Rfi/Rfi.php", "class": "RfiField" } ]},
+    { "spec": ["TransferNewWebhookOut", "TransferUpdateWebhookOut", "TransferCompleteWebhookOut"], "sdk": [ { "file": "src/Resources/Transfers/Transfers.php", "class": "CreateTransferResponse" } ], "note": "WebhookEvent::fromArray() decodes transfer.* payloads as CreateTransferResponse" },
+    { "spec": "UpdateBlockchainWalletIn", "sdk": [ { "file": "src/Resources/Wallets/BlockchainWallets.php", "class": "SetSelfCustodyInput" } ]},
+    { "spec": "BlockchainWalletUpdateWebhookOut", "sdk": [ { "file": "src/Resources/Wallets/BlockchainWallets.php", "class": "BlockchainWallet" } ]},
+    { "spec": "UpdateOfframpWalletIn", "sdk": [ { "file": "src/Resources/Wallets/OfframpWallets.php", "class": "UpdateOfframpWalletInput" } ]},
+    { "spec": ["VirtualAccountNewWebhookOut", "VirtualAccountCompleteWebhookOut"], "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccount" } ]},
+    { "spec": "WalletDepositOut", "sdk": [ { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "WalletDeposit" } ]},
+    { "spec": ["WalletNewWebhookOut", "WalletUpdateWebhookOut"], "sdk": [ { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "CustodialWallet" } ]},
+    { "spec": ["TransferOut", "CreateTransferOut", "TransferNewWebhookOut", "TransferUpdateWebhookOut", "TransferCompleteWebhookOut"], "path": "tracking_partner_fee", "sdk": [ { "file": "src/Types/TrackingPartnerFee.php", "class": "TrackingPartnerFee" } ]}
   ],
-  "webhookPayloadsNote": "This SDK never deserializes webhook request bodies into typed classes -- BlindPay::verifyWebhookSignature() only verifies the signature and returns bool; callers get the raw payload. Consequently no `*WebhookOut` schema (BankAccountWebhookOut, BlockchainWalletWebhookOut, CustomerNewWebhookOut, CustomerUpdateWebhookOut, CustomerDeleteWebhookOut, PayinNewWebhookOut, PayinUpdateWebhookOut, PayinCompleteWebhookOut, PayinPartnerFeeWebhookOut, PayoutNewWebhookOut, PayoutUpdateWebhookOut, PayoutCompleteWebhookOut, PayoutPartnerFeeWebhookOut, LimitIncreaseNewWebhookOut, LimitIncreaseUpdateWebhookOut, TosAcceptWebhookOut) is mapped below; this is a structural fact about the SDK, not an oversight, and shows up as non-blocking coverage gaps rather than reconciliation failures.",
+  "webhookPayloadsNote": "WebhookVerifier::constructEvent() decodes webhook bodies into the resource types (see WebhookEvent). The *WebhookOut schemas added with the reference spec are mapped above to the class that decodes them; the older ones are covered by tests/Webhooks/WebhookEventTest.php, which decodes every variant of every event.",
   "ignore": {
     "schemas": [
-      { "schema": "LedgerOperation", "reason": "Unreferenced by any public operation or webhook (zero $ref anywhere in the spec) -- an orphan schema left over in components.schemas. Confirmed identical between .api-sync/spec-snapshot.json and the current spec." },
-      { "schema": "Rfi", "reason": "RFI (request-for-information) resource is not implemented by this SDK. 4 operations, tracked as a Phase C item per the design doc." },
-      { "schema": "RfiField", "reason": "Part of the unimplemented RFI resource, see Rfi." },
-      { "schema": "RfiSection", "reason": "Part of the unimplemented RFI resource, see Rfi." },
-      { "schema": "InstanceRfi", "reason": "Part of the unimplemented RFI resource, see Rfi." },
-      { "schema": "UploadAnalyzeIn", "reason": "POST /v1/upload/analyze is not implemented by this SDK. Tracked as a Phase C item per the design doc." },
-      { "schema": "UploadAnalyzeOut", "reason": "Part of the unimplemented upload/analyze operation, see UploadAnalyzeIn." }
+      { "schema": "WalletInboundWebhookOut", "reason": "Decoded by Webhooks\\WalletInboundPayload (src/Webhooks, outside the scanned resource tree); covered by tests/Webhooks/WebhookEventTest.php." },
+      { "schema": "WalletInboundTokenOut", "reason": "Decoded by Webhooks\\WalletInboundToken; see WalletInboundWebhookOut." },
+      { "schema": "LedgerOperation", "reason": "Unreferenced by any public operation or webhook (zero $ref anywhere in the spec) -- an orphan schema left over in components.schemas." },
+      { "schema": "CreatePlaidLinkIn", "reason": "Its one field is a parameter of BankAccounts::createPlaidLink($customerId, ?$redirectUrl); no input class." },
+      { "schema": "PresignIn", "reason": "Its one field is the parameter of Upload::presign($fileUrl); no input class." },
+      { "schema": "WalletDepositsOut", "reason": "The {data, pagination} envelope; decoded by ListWalletDepositsResponse (ListResponse), items mapped as WalletDepositOut." },
+      { "schema": "LimitIncreaseSupportingDocument", "reason": "RequestLimitIncreaseInput::$supportingDocuments takes these as ['type' => ..., 'file' => ...] arrays." },
+      { "schema": "CustomerCnaeCondition", "reason": "Nested customer compliance detail not modeled as a class; unknown to the SDK's customer types." },
+      { "schema": "CustomerVirtualAccountPreapproval", "reason": "Nested customer compliance detail not modeled as a class; unknown to the SDK's customer types." },
+      { "schema": "YieldFee", "reason": "Yield is excluded from the SDK surface (x-sdk: false ops); referenced only from the fees and wallet payloads." },
+      { "schema": "YieldStatus", "reason": "Yield is excluded from the SDK surface; CustodialWallet::$yieldStatus keeps the wire string." }
     ]
   }
 }
