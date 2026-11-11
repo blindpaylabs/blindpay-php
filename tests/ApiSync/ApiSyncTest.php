@@ -142,6 +142,7 @@ class ApiSyncTest extends TestCase
             'paths' => [
                 '/v1/widgets' => [
                     'post' => [
+                        'x-sdk' => true,
                         'requestBody' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/WidgetOut']]]],
                         'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/WidgetOut']]]]],
                     ],
@@ -586,7 +587,7 @@ class ApiSyncTest extends TestCase
         // its concern.
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
-        $newSpec['paths']['/v1/gadgets'] = ['post' => ['tags' => ['Gadgets'], 'requestBody' => [], 'responses' => []]];
+        $newSpec['paths']['/v1/gadgets'] = ['post' => ['x-sdk' => true, 'tags' => ['Gadgets'], 'requestBody' => [], 'responses' => []]];
         $reachableOld = computeReachable($oldSpec);
         $reachableNew = computeReachable($newSpec);
 
@@ -603,6 +604,7 @@ class ApiSyncTest extends TestCase
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
         $newSpec['paths']['/v1/gadgets'] = ['post' => [
+            'x-sdk' => true,
             'tags' => ['Gadgets'],
             'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
         ]];
@@ -619,6 +621,7 @@ class ApiSyncTest extends TestCase
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
         $newSpec['paths']['/v1/instances/{instance_id}/widgets/upload'] = ['post' => [
+            'x-sdk' => true,
             'tags' => ['Available'],
             'requestBody' => ['content' => ['multipart/form-data' => ['schema' => ['type' => 'object']]]],
             'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => []]]]]],
@@ -636,6 +639,7 @@ class ApiSyncTest extends TestCase
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
         $newSpec['paths']['/v1/instances/{instance_id}/widgets/poly'] = ['get' => [
+            'x-sdk' => true,
             'tags' => ['Available'],
             'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['oneOf' => [['type' => 'object'], ['type' => 'string']]]]]]],
         ]];
@@ -652,6 +656,7 @@ class ApiSyncTest extends TestCase
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
         $newSpec['paths']['/v1/instances/{instance_id}/widgets/standard'] = ['get' => [
+            'x-sdk' => true,
             'tags' => ['Available'],
             'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
         ]];
@@ -679,6 +684,7 @@ class ApiSyncTest extends TestCase
             'paths' => [
                 '/v1/instances/{instance_id}/widgets/{id}' => [
                     'get' => [
+                        'x-sdk' => true,
                         'tags' => ['Widgets'],
                         'responses' => ['200' => ['content' => ['application/json' => ['schema' => [
                             'type' => 'object',
@@ -689,6 +695,7 @@ class ApiSyncTest extends TestCase
                 ],
                 '/v1/instances/{instance_id}/widgets' => [
                     'post' => [
+                        'x-sdk' => true,
                         'tags' => ['Widgets'],
                         'requestBody' => ['content' => ['application/json' => ['schema' => [
                             'type' => 'object',
@@ -929,6 +936,7 @@ class ApiSyncTest extends TestCase
             // auto-generated.
             $specWithMultipart = $this->goldenNewSpec();
             $specWithMultipart['paths']['/v1/instances/{instance_id}/widgets/upload'] = ['post' => [
+                'x-sdk' => true,
                 'tags' => ['Widgets'],
                 'requestBody' => ['content' => ['multipart/form-data' => ['schema' => ['type' => 'object']]]],
                 'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
@@ -1659,6 +1667,259 @@ class ApiSyncTest extends TestCase
             file_get_contents("{$this->fixtureRoot}/.api-sync/spec-snapshot.json"),
             'refreshed snapshot must be a byte-identical copy of the source spec file, not a re-serialization'
         );
+    }
+
+    // ---- x-sdk filter: public-but-not-SDK operations are not this tool's business ----
+
+    /** A spec whose only SDK operation is POST /v1/widgets plus one public-but-non-SDK operation
+     * (no `x-sdk`) on a known tag, with a schema that only that operation references. */
+    private function specWithNonSdkOperation(): array
+    {
+        $spec = $this->baseSpec();
+        $spec['paths']['/v1/instances/{instance_id}/widgets/{id}/yield'] = ['get' => [
+            'tags' => ['Widgets'],
+            'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/YieldOut']]]]],
+        ]];
+        $spec['components']['schemas']['YieldOut'] = [
+            'type' => 'object',
+            'properties' => ['id' => ['type' => 'string'], 'state' => ['$ref' => '#/components/schemas/YieldState']],
+        ];
+        $spec['components']['schemas']['YieldState'] = ['type' => 'string', 'enum' => ['on', 'off']];
+
+        return $spec;
+    }
+
+    #[Test]
+    public function an_operation_without_x_sdk_true_is_not_an_sdk_operation(): void
+    {
+        $spec = $this->specWithNonSdkOperation();
+        $spec['paths']['/v1/instances/{instance_id}/widgets/{id}/string-flag'] = ['get' => ['x-sdk' => 'true', 'tags' => ['Widgets']]];
+        $spec['paths']['/v1/instances/{instance_id}/widgets/{id}/false-flag'] = ['get' => ['x-sdk' => false, 'tags' => ['Widgets']]];
+
+        $this->assertSame(['post /v1/widgets'], array_keys(pathMethodSet($spec)));
+        $this->assertTrue(isSdkOperation(['x-sdk' => true]));
+        $this->assertFalse(isSdkOperation(['tags' => ['Widgets']]));
+    }
+
+    #[Test]
+    public function reconcile_operations_ignores_a_new_non_sdk_operation_even_on_a_mapped_tag(): void
+    {
+        [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $this->specWithNonSdkOperation());
+
+        $this->assertSame([], $applicable);
+        $this->assertSame([], $needsHuman);
+    }
+
+    #[Test]
+    public function schemas_only_non_sdk_operations_reference_are_unreachable_and_never_need_a_mapping_decision(): void
+    {
+        $oldSpec = $this->baseSpec();
+        $newSpec = $this->specWithNonSdkOperation();
+
+        $reachable = computeReachable($newSpec);
+        $issues = computeStructuralDiff($oldSpec, $newSpec, computeReachable($oldSpec), $reachable, $this->widgetMap());
+
+        $this->assertArrayNotHasKey('YieldOut', $reachable);
+        $this->assertArrayNotHasKey('YieldState', $reachable, 'a schema reachable only through a non-SDK schema is unreachable too');
+        $this->assertSame([], array_filter($issues, fn ($i) => str_contains($i, 'Yield')));
+        $this->assertSame([], computeCoverageReport($this->widgetMap(), $newSpec, $reachable));
+    }
+
+    #[Test]
+    public function a_schema_shared_with_an_sdk_operation_stays_reachable(): void
+    {
+        $spec = $this->specWithNonSdkOperation();
+        $spec['paths']['/v1/widgets']['post']['responses']['200']['content']['application/json']['schema'] = ['$ref' => '#/components/schemas/YieldOut'];
+
+        $this->assertArrayHasKey('YieldOut', computeReachable($spec));
+        $this->assertArrayHasKey('YieldState', computeReachable($spec));
+    }
+
+    #[Test]
+    public function check_mode_exits_zero_for_a_spec_whose_only_new_surface_is_non_sdk(): void
+    {
+        $root = $this->buildGoldenRepo();
+
+        try {
+            $specPath = "{$root}/.api-sync/spec-current.json";
+            file_put_contents($specPath, json_encode($this->specWithNonSdkOperation()));
+
+            exec(sprintf('php %s --check --spec=%s 2>&1', escapeshellarg("{$root}/scripts/api-sync.php"), escapeshellarg($specPath)), $output, $exitCode);
+
+            $this->assertSame(0, $exitCode, implode("\n", $output));
+            $this->assertSame([], array_filter($output, fn ($l) => str_contains($l, 'Yield')));
+        } finally {
+            $this->removeDirectory($root);
+        }
+    }
+
+    #[Test]
+    public function an_operation_that_loses_x_sdk_is_reported_as_removed(): void
+    {
+        $oldSpec = $this->baseSpec();
+        $newSpec = $this->baseSpec();
+        unset($newSpec['paths']['/v1/widgets']['post']['x-sdk']);
+
+        $issues = computeStructuralDiff($oldSpec, $newSpec, computeReachable($oldSpec), computeReachable($newSpec), $this->widgetMap());
+
+        $this->assertNotEmpty(array_filter($issues, fn ($i) => str_contains($i, 'operation removed: post /v1/widgets')));
+    }
+
+    // ---- coverage and reconciliation key on METHOD + path, never the path alone ----
+
+    #[Test]
+    public function a_new_method_on_an_already_known_path_is_a_new_operation(): void
+    {
+        $oldSpec = $this->baseSpec(); // POST /v1/widgets only
+        $newSpec = $this->baseSpec();
+        $newSpec['paths']['/v1/widgets']['get'] = [
+            'x-sdk' => true,
+            'tags' => ['Gadgets'],
+            'responses' => ['200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]]]]]],
+        ];
+
+        [$applicable, $needsHuman] = reconcileOperations($oldSpec, $newSpec);
+
+        $this->assertSame([], $applicable);
+        $this->assertCount(1, $needsHuman);
+        $this->assertStringContainsString('get /v1/widgets', $needsHuman[0]);
+        $this->assertStringNotContainsString('post /v1/widgets', $needsHuman[0]);
+    }
+
+    #[Test]
+    public function removing_one_method_of_a_path_reports_only_that_method(): void
+    {
+        $oldSpec = $this->baseSpec();
+        $oldSpec['paths']['/v1/widgets']['get'] = ['x-sdk' => true, 'tags' => ['Widgets']];
+        $newSpec = $this->baseSpec();
+
+        $issues = computeStructuralDiff($oldSpec, $newSpec, computeReachable($oldSpec), computeReachable($newSpec), $this->widgetMap());
+
+        $this->assertNotEmpty(array_filter($issues, fn ($i) => str_contains($i, 'operation removed: get /v1/widgets')));
+        $this->assertSame([], array_filter($issues, fn ($i) => str_contains($i, 'post /v1/widgets')));
+    }
+
+    #[Test]
+    public function a_non_sdk_method_does_not_hide_or_hold_up_an_sdk_method_on_the_same_path(): void
+    {
+        $spec = $this->baseSpec();
+        $spec['paths']['/v1/widgets']['get'] = ['tags' => ['Widgets']]; // public, not SDK
+        $sdkPaths = sdkPaths($spec);
+
+        $this->assertSame(['post'], array_keys($sdkPaths['/v1/widgets']));
+        $this->assertSame(['post /v1/widgets'], array_keys(pathMethodSet($spec)));
+    }
+
+    // ---- nullable enums: `"enum": ["a", "b", null]` ----
+
+    /** Runs $body with every PHP deprecation/warning turned into an exception, so a "Using null as
+     * an array offset" style regression fails the test instead of printing to stderr. */
+    private function withStrictErrors(callable $body): mixed
+    {
+        set_error_handler(static function (int $severity, string $message): never {
+            throw new \ErrorException($message, 0, $severity);
+        });
+
+        try {
+            return $body();
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    #[Test]
+    public function a_null_member_of_a_spec_enum_is_not_an_enum_value(): void
+    {
+        $spec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', null, 'blue']]]]]]]);
+
+        $this->assertSame(['red', 'blue'], specEnumValues($spec, 'WidgetOut', 'color'));
+        $this->assertSame(['red', 'blue'], enumSpecValues($spec, ['spec' => ['schema' => 'WidgetOut', 'property' => 'color']]));
+    }
+
+    #[Test]
+    public function reconcile_enums_survives_a_nullable_enum_without_a_false_positive_or_a_deprecation(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $newSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', null]]]]]]]);
+
+        [$applicable, $needsHuman] = $this->withStrictErrors(fn () => reconcileEnums($this->widgetMap(), $newSpec, computeReachable($newSpec), $classIndex, []));
+
+        $this->assertSame([], $applicable);
+        $this->assertSame([], $needsHuman);
+    }
+
+    #[Test]
+    public function a_nullable_enum_with_a_genuinely_new_value_schedules_only_that_value(): void
+    {
+        $classIndex = scanAllClasses($this->fixtureRoot);
+        $newSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', 'green', null]]]]]]]);
+
+        [$applicable] = $this->withStrictErrors(fn () => reconcileEnums($this->widgetMap(), $newSpec, computeReachable($newSpec), $classIndex, []));
+
+        $this->assertSame(['green'], array_column($applicable, 'value'));
+    }
+
+    #[Test]
+    public function adding_or_dropping_a_null_enum_member_is_not_a_removed_value(): void
+    {
+        $withNull = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', null]]]]]]]);
+        $withoutNull = $this->baseSpec();
+
+        foreach ([[$withNull, $withoutNull], [$withoutNull, $withNull]] as [$old, $new]) {
+            $issues = $this->withStrictErrors(fn () => computeStructuralDiff($old, $new, computeReachable($old), computeReachable($new), $this->widgetMap()));
+            $this->assertSame([], array_filter($issues, fn ($i) => str_contains($i, 'enum value(s) removed')));
+        }
+    }
+
+    #[Test]
+    public function a_null_enum_member_makes_the_spec_type_nullable(): void
+    {
+        $this->assertTrue(specTypeCategory(['type' => 'string', 'enum' => ['a', null]])['nullable']);
+        $this->assertSame('enum', specTypeCategory(['type' => 'string', 'enum' => ['a', null]])['category']);
+        $this->assertFalse(specTypeCategory(['type' => 'string', 'enum' => ['a']])['nullable']);
+    }
+
+    #[Test]
+    public function check_mode_runs_clean_against_a_nullable_enum_spec(): void
+    {
+        $root = $this->buildGoldenRepo();
+
+        try {
+            // The baseline already carries the nullable enum, so nullability is not newly added.
+            $nullableSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', null]]]]]]]);
+            file_put_contents("{$root}/.api-sync/spec-snapshot.json", json_encode($nullableSpec));
+            $specPath = "{$root}/.api-sync/spec-current.json";
+            file_put_contents($specPath, json_encode($nullableSpec));
+
+            exec(sprintf('php -d error_reporting=-1 -d display_errors=1 %s --check --spec=%s 2>&1', escapeshellarg("{$root}/scripts/api-sync.php"), escapeshellarg($specPath)), $output, $exitCode);
+
+            $this->assertSame(0, $exitCode, implode("\n", $output));
+            $this->assertSame([], array_filter($output, fn ($l) => str_contains($l, 'Deprecated') || str_contains($l, 'Warning')));
+        } finally {
+            $this->removeDirectory($root);
+        }
+    }
+
+    // ---- resourceForTag ----
+
+    #[Test]
+    public function resource_for_tag_maps_the_tags_that_have_a_resource_in_src(): void
+    {
+        $expected = [
+            'Payables' => ['src/Resources/Payables/Payables.php', 'Payables'],
+            'Wallets' => ['src/Resources/CustodialWallets/CustodialWallets.php', 'CustodialWallets'],
+            'Transfer Quotes' => ['src/Resources/Transfers/Transfers.php', 'Transfers'],
+            'Solana' => ['src/Resources/Wallets/BlockchainWallets.php', 'BlockchainWallets'],
+            'Stellar' => ['src/Resources/Wallets/BlockchainWallets.php', 'BlockchainWallets'],
+        ];
+        foreach ($expected as $tag => [$file, $class]) {
+            $this->assertSame(['file' => $file, 'class' => $class], resourceForTag($tag), $tag);
+            // the table must point at real files and classes, not just plausible ones
+            $realFile = dirname(__DIR__, 2).'/'.$file;
+            $this->assertFileExists($realFile, $tag);
+            $this->assertMatchesRegularExpression('/^class '.$class.'$/m', file_get_contents($realFile), $tag);
+        }
+        $this->assertNull(resourceForTag('No Such Tag'));
     }
 
     // ---- helper assertion ----

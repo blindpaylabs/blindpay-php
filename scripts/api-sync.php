@@ -153,12 +153,53 @@ function collectRefs(mixed $node, array &$out): void
     }
 }
 
-/** BFS transitive closure of schema names reachable from paths + webhooks. */
+/** The HTTP methods an OpenAPI path item can carry that this SDK models. */
+const API_SYNC_HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
+
+/**
+ * Whether a spec operation belongs to the SDK surface: only operations flagged `x-sdk: true` are.
+ * The public spec also carries operations that are public but deliberately not part of the SDKs
+ * (card-payment, yield, simulate-*, tos/passthrough, upload/extract); those, and the schemas only
+ * they reference, are none of this tool's business.
+ */
+function isSdkOperation(mixed $op): bool
+{
+    return is_array($op) && ($op['x-sdk'] ?? null) === true;
+}
+
+/**
+ * The spec's `paths` reduced to its SDK operations (see isSdkOperation()). Path-level members
+ * other than operations (`parameters`, `summary`, ...) are kept only for paths that still have an
+ * operation, so a path whose every operation is excluded disappears entirely.
+ */
+function sdkPaths(array $spec): array
+{
+    $out = [];
+    foreach ($spec['paths'] ?? [] as $urlPath => $item) {
+        if (! is_array($item)) {
+            continue;
+        }
+        $kept = [];
+        foreach ($item as $member => $value) {
+            if (in_array($member, API_SYNC_HTTP_METHODS, true) && ! isSdkOperation($value)) {
+                continue;
+            }
+            $kept[$member] = $value;
+        }
+        if (array_intersect(array_keys($kept), API_SYNC_HTTP_METHODS) !== []) {
+            $out[$urlPath] = $kept;
+        }
+    }
+
+    return $out;
+}
+
+/** BFS transitive closure of schema names reachable from SDK operations + webhooks. */
 function computeReachable(array $spec): array
 {
     $schemas = $spec['components']['schemas'] ?? [];
     $roots = [];
-    collectRefs($spec['paths'] ?? [], $roots);
+    collectRefs(sdkPaths($spec), $roots);
     collectRefs($spec['webhooks'] ?? [], $roots);
 
     $visited = $roots;
@@ -206,7 +247,23 @@ function specEnumValues(array $spec, string $schema, string $propertyPath): ?arr
         }
     }
 
-    return $node['enum'] ?? null;
+    return withoutNullEnumMember($node['enum'] ?? null);
+}
+
+/**
+ * A nullable enum is written `"enum": ["a", "b", null]`. `null` is how the spec says "may be
+ * absent", not a wire value the SDK needs a case for, so it never takes part in enum
+ * reconciliation: it cannot be an array key (a deprecation since PHP 8.5) or a case name.
+ *
+ * @return list<mixed>|null
+ */
+function withoutNullEnumMember(?array $values): ?array
+{
+    if ($values === null) {
+        return null;
+    }
+
+    return array_values(array_filter($values, static fn ($v) => $v !== null));
 }
 
 /** Enum values for an inline (non-$ref) request-body property, addressed by "METHOD /path". */
@@ -218,7 +275,7 @@ function operationEnumValues(array $spec, string $operation, string $property): 
     $method = strtolower($method);
     $node = $spec['paths'][$urlPath][$method]['requestBody']['content']['application/json']['schema']['properties'][$property] ?? null;
 
-    return $node['enum'] ?? null;
+    return withoutNullEnumMember($node['enum'] ?? null);
 }
 
 /**
@@ -705,7 +762,9 @@ function specTypeCategory(array $propSchema): array
         return ['category' => null, 'nullable' => null];
     }
     $types = is_array($type) ? $type : [$type];
-    $nullable = in_array('null', $types, true);
+    // A nullable enum may spell its nullability as a `null` member of `enum` instead of (or as
+    // well as) a `null` entry in `type`.
+    $nullable = in_array('null', $types, true) || (isset($propSchema['enum']) && is_array($propSchema['enum']) && in_array(null, $propSchema['enum'], true));
     $nonNull = array_values(array_diff($types, ['null']));
     if (count($nonNull) !== 1) {
         return ['category' => 'ambiguous', 'nullable' => $nullable];
@@ -1248,12 +1307,17 @@ function nestedPropSchema(array $spec, string $schema, string $schemaPath, strin
 // Structural diff (old vs new): removals + new-and-unmapped surface
 // ---------------------------------------------------------------------------
 
+/**
+ * "method path" => true for every SDK operation (x-sdk: true) of $spec. Keyed on the method AND
+ * the path: GET and POST on one path are two operations, and an operation is only ever matched
+ * against the same method on the same path.
+ */
 function pathMethodSet(array $spec): array
 {
     $out = [];
     foreach ($spec['paths'] ?? [] as $p => $methods) {
-        foreach ($methods as $m => $_) {
-            if (in_array($m, ['get', 'post', 'put', 'patch', 'delete'], true)) {
+        foreach ($methods as $m => $op) {
+            if (in_array($m, API_SYNC_HTTP_METHODS, true) && isSdkOperation($op)) {
                 $out["{$m} {$p}"] = true;
             }
         }
@@ -1402,14 +1466,21 @@ function resourceForTag(string $tag): ?array
         'Instances' => ['file' => 'src/Resources/Instances/Instances.php', 'class' => 'Instances'],
         'Offramp Wallets' => ['file' => 'src/Resources/Wallets/OfframpWallets.php', 'class' => 'OfframpWallets'],
         'Partner Fees' => ['file' => 'src/Resources/PartnerFees/PartnerFees.php', 'class' => 'PartnerFees'],
+        'Payables' => ['file' => 'src/Resources/Payables/Payables.php', 'class' => 'Payables'],
         'Payin Quotes' => ['file' => 'src/Resources/Payins/Quotes.php', 'class' => 'Quotes'],
         'Payins' => ['file' => 'src/Resources/Payins/Payins.php', 'class' => 'Payins'],
         'Payouts' => ['file' => 'src/Resources/Payouts/Payouts.php', 'class' => 'Payouts'],
         'Payouts Quotes' => ['file' => 'src/Resources/Quotes/Quotes.php', 'class' => 'Quotes'],
+        // The chain-specific mint/trustline/delegation endpoints live on BlockchainWallets.
+        'Solana' => ['file' => 'src/Resources/Wallets/BlockchainWallets.php', 'class' => 'BlockchainWallets'],
+        'Stellar' => ['file' => 'src/Resources/Wallets/BlockchainWallets.php', 'class' => 'BlockchainWallets'],
         'Terms Of Service' => ['file' => 'src/Resources/TermsOfService/TermsOfService.php', 'class' => 'TermsOfService'],
+        'Transfer Quotes' => ['file' => 'src/Resources/Transfers/Transfers.php', 'class' => 'Transfers'],
         'Transfers' => ['file' => 'src/Resources/Transfers/Transfers.php', 'class' => 'Transfers'],
         'Upload' => ['file' => 'src/Resources/Upload/Upload.php', 'class' => 'Upload'],
         'Virtual Accounts' => ['file' => 'src/Resources/VirtualAccounts/VirtualAccounts.php', 'class' => 'VirtualAccounts'],
+        // Custodial wallets: "Wallets" is the tag the API uses for /customers/{id}/wallets.
+        'Wallets' => ['file' => 'src/Resources/CustodialWallets/CustodialWallets.php', 'class' => 'CustodialWallets'],
         'Webhook Endpoints' => ['file' => 'src/Resources/Webhooks/Webhooks.php', 'class' => 'Webhooks'],
         // Not a real spec tag -- backs tests/ApiSync/ApiSyncTest.php's fixture repo (shaped like
         // this one, but small and fully controlled), which exercises the operation-insert
