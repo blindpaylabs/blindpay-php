@@ -147,7 +147,7 @@
     { "spec": "BankAccountOut", "sdk": [ { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "BankAccountListItem" } ] },
     {
       "spec": "CreateBankAccountIn",
-      "discriminator": { "property": "type", "values": ["pix", "transfers_bitso", "spei_bitso", "ach_cop_bitso", "ach", "wire", "international_swift", "rtp", "pix_safe", "sepa"] },
+      "discriminator": { "property": "type", "values": ["pix", "transfers_bitso", "spei_bitso", "ach_cop_bitso", "ach", "wire", "international_swift", "rtp", "pix_safe", "sepa", "ted", "faster_payments"] },
       "sdk": [
         { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreatePixInput" },
         { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateArgentinaTransfersInput" },
@@ -158,9 +158,10 @@
         { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateInternationalSwiftInput" },
         { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateRtpInput" },
         { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreatePixSafeInput" },
-        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateSepaInput" }
-      ],
-      "note": "spec's `type` enum also has `ted`, which this SDK does not implement (no createTed method) -- a known, pre-existing coverage gap, not modeled here, tracked as a Phase C item."
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateSepaInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateTedInput" },
+        { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "CreateFasterPaymentsInput" }
+      ]
     },
     {
       "spec": "CreateCustomerIn",
