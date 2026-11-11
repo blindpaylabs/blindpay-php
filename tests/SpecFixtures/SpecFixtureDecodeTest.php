@@ -70,14 +70,11 @@ use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TransactionDocumentType;
 use Closure;
 use ErrorException;
-use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 use Throwable;
 
 /**
@@ -385,8 +382,7 @@ final class SpecFixtureDecodeTest extends TestCase
     private function decode(string $operation, mixed $body): ?string
     {
         $mock = new MockHandler([new Response(200, ['Content-Type' => 'application/json'], json_encode($body, JSON_THROW_ON_ERROR))]);
-        $blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000');
-        (new ReflectionProperty(BlindPay::class, 'httpClient'))->setValue($blindpay, new Client(['handler' => HandlerStack::create($mock)]));
+        $blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000', handler: $mock);
 
         set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
             throw new ErrorException($message, 0, $severity, $file, $line);

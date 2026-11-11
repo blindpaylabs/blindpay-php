@@ -6,6 +6,7 @@ namespace BlindPay\SDK;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\BlindPayException;
+use BlindPay\SDK\Internal\Transport;
 use BlindPay\SDK\Resources\Available\Available;
 use BlindPay\SDK\Resources\BankAccounts\BankAccounts;
 use BlindPay\SDK\Resources\CustodialWallets\CustodialWallets;
@@ -30,21 +31,30 @@ use BlindPay\SDK\Resources\Wallets\OfframpWallets;
 use BlindPay\SDK\Resources\Wallets\WalletsWrapper;
 use BlindPay\SDK\Resources\Webhooks\Webhooks;
 use BlindPay\SDK\Types\BlindPayApiResponse;
-use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Webhooks\WebhookVerifier;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
-use Throwable;
 
+/**
+ * The BlindPay API client.
+ *
+ *     $blindpay = new BlindPay(apiKey: getenv('BLINDPAY_API_KEY'), instanceId: 'in_...');
+ *
+ * A configured client is immutable and safe to share; per-request options (RequestOptions)
+ * never change it. var_dump()/print_r() of the client never show the API key.
+ */
 class BlindPay implements ApiClientInterface
 {
-    private const BASE_URL = 'https://api.blindpay.com/v1/';
+    public const DEFAULT_BASE_URL = 'https://api.blindpay.com';
+
+    /** Seconds allowed per attempt (connect + send + receive). */
+    public const DEFAULT_TIMEOUT = 60.0;
+
+    /** Retries after the first attempt (so 3 attempts in total); 0 disables retries. */
+    public const DEFAULT_MAX_RETRIES = 2;
 
     private const VERSION = '3.5.0';
 
-    private Client $httpClient;
-
-    private array $headers;
+    private readonly Transport $transport;
 
     public readonly Available $available;
 
@@ -72,30 +82,53 @@ class BlindPay implements ApiClientInterface
 
     public readonly Upload $upload;
 
+    /**
+     * @param  string  $apiKey  your API key (sent as `Authorization: Bearer ...`)
+     * @param  string  $instanceId  your instance ID (`in_...`)
+     * @param  string  $baseUrl  API origin without the `/v1` prefix. Override it only for tests or a
+     *                           proxy you trust: every request, with your API key, goes there.
+     * @param  float  $timeout  seconds allowed per attempt (default 60)
+     * @param  int  $maxRetries  retries after the first attempt (default 2; 0 disables). GETs are
+     *                           retried on network errors, 408, 429 and 5xx; POST/PUT/PATCH/DELETE
+     *                           only on network errors, 429 and 409 idempotency_key_in_flight, always
+     *                           with the same Idempotency-Key (generated per call when you pass none).
+     * @param  callable|null  $handler  a Guzzle handler or HandlerStack, e.g. a MockHandler in tests or
+     *                                  a stack with your own middleware (logging, metrics)
+     * @param  callable(float): void|null  $sleep  waits the given seconds between retries (test seam;
+     *                                             defaults to usleep)
+     *
+     * @throws BlindPayException on an empty API key or instance ID, or an invalid option
+     */
     public function __construct(
-        private readonly string $apiKey,
-        private readonly string $instanceId
+        string $apiKey,
+        private readonly string $instanceId,
+        string $baseUrl = self::DEFAULT_BASE_URL,
+        float $timeout = self::DEFAULT_TIMEOUT,
+        int $maxRetries = self::DEFAULT_MAX_RETRIES,
+        ?callable $handler = null,
+        ?callable $sleep = null,
     ) {
-        if (empty($this->apiKey)) {
+        if ($apiKey === '') {
             throw new BlindPayException('API key not provided, get your API key on BlindPay dashboard');
         }
 
-        if (empty($this->instanceId)) {
+        if ($this->instanceId === '') {
             throw new BlindPayException('Instance ID not provided, get your instance ID on BlindPay dashboard');
         }
 
-        $this->headers = [
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json',
-            'User-Agent' => 'blindpay-php/'.self::VERSION,
-            'Authorization' => 'Bearer '.$this->apiKey,
-        ];
+        if ($timeout <= 0) {
+            throw BlindPayException::configuration('timeout must be greater than 0 seconds');
+        }
 
-        $this->httpClient = new Client([
-            'base_uri' => self::BASE_URL,
-            'headers' => $this->headers,
-            'http_errors' => false,
-        ]);
+        if ($maxRetries < 0) {
+            throw BlindPayException::configuration('maxRetries must be 0 or greater');
+        }
+
+        if (! preg_match('~^https?://[^/?#]+~i', $baseUrl)) {
+            throw BlindPayException::configuration('baseUrl must be an absolute http(s) URL');
+        }
+
+        $this->transport = new Transport($apiKey, $baseUrl, 'blindpay-php/'.self::VERSION, $timeout, $maxRetries, $handler, $sleep);
 
         $this->available = new Available($this);
         $this->partnerFees = new PartnerFees($this->instanceId, $this);
@@ -152,68 +185,34 @@ class BlindPay implements ApiClientInterface
         $this->wallets = new WalletsWrapper($blockchainResource, $offrampResource, $custodialResource);
     }
 
-    private function request(string $method, string $path, ?array $body = null): BlindPayApiResponse
+    public function get(string $path, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        try {
-            $options = [];
-            if ($body !== null) {
-                $options['json'] = $body;
-            }
-
-            $response = $this->httpClient->request($method, $path, $options);
-            $statusCode = $response->getStatusCode();
-            $content = $response->getBody()->getContents();
-            $data = json_decode($content, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                return BlindPayApiResponse::error(
-                    new ErrorResponse('JSON decode error: '.json_last_error_msg().' | Raw response: '.substr($content, 0, 200))
-                );
-            }
-
-            if ($statusCode >= 400) {
-                $errorMessage = $data['message'] ?? 'Unknown error';
-
-                return BlindPayApiResponse::error(
-                    new ErrorResponse($errorMessage)
-                );
-            }
-
-            return BlindPayApiResponse::success($data);
-        } catch (GuzzleException $e) {
-            return BlindPayApiResponse::error(
-                new ErrorResponse($e->getMessage())
-            );
-        } catch (Throwable $e) {
-            return BlindPayApiResponse::error(
-                new ErrorResponse($e->getMessage())
-            );
-        }
+        return $this->transport->get($path, $options);
     }
 
-    public function get(string $path): BlindPayApiResponse
+    public function post(string $path, array $body, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        return $this->request('GET', $path);
+        return $this->transport->post($path, $body, $options);
     }
 
-    public function post(string $path, array $body): BlindPayApiResponse
+    public function put(string $path, array $body, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        return $this->request('POST', $path, $body);
+        return $this->transport->put($path, $body, $options);
     }
 
-    public function put(string $path, array $body): BlindPayApiResponse
+    public function patch(string $path, array $body, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        return $this->request('PUT', $path, $body);
+        return $this->transport->patch($path, $body, $options);
     }
 
-    public function patch(string $path, array $body): BlindPayApiResponse
+    public function delete(string $path, ?array $body = null, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        return $this->request('PATCH', $path, $body);
+        return $this->transport->delete($path, $body, $options);
     }
 
-    public function delete(string $path, ?array $body = null): BlindPayApiResponse
+    public function postMultipart(string $path, array $multipart, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        return $this->request('DELETE', $path, $body);
+        return $this->transport->postMultipart($path, $multipart, $options);
     }
 
     /**
@@ -252,5 +251,11 @@ class BlindPay implements ApiClientInterface
     public function getInstanceId(): string
     {
         return $this->instanceId;
+    }
+
+    /** Never expose the API key in var_dump() / print_r(). */
+    public function __debugInfo(): array
+    {
+        return ['instanceId' => $this->instanceId, 'transport' => $this->transport];
     }
 }

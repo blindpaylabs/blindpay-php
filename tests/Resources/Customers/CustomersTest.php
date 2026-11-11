@@ -16,14 +16,11 @@ use BlindPay\SDK\Resources\Customers\OwnerRole;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\SourceOfWealth;
-use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 use TypeError;
 
 class CustomersTest extends TestCase
@@ -35,9 +32,7 @@ class CustomersTest extends TestCase
     protected function setUp(): void
     {
         $this->mockHandler = new MockHandler;
-        $this->blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000');
-        (new ReflectionProperty(BlindPay::class, 'httpClient'))
-            ->setValue($this->blindpay, new Client(['handler' => HandlerStack::create($this->mockHandler)]));
+        $this->blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000', handler: $this->mockHandler);
     }
 
     private function mockResponse(array $body): void
