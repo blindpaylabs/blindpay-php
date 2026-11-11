@@ -6,11 +6,15 @@ namespace BlindPay\SDK\Tests\Resources;
 
 use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\Resources\Customers\BusinessWithStandardKYB;
+use BlindPay\SDK\Resources\Customers\IdentificationDocument;
 use BlindPay\SDK\Resources\Customers\IndividualWithEnhancedKYC;
 use BlindPay\SDK\Resources\Customers\IndividualWithStandardKYC;
 use BlindPay\SDK\Resources\Customers\KycType;
 use BlindPay\SDK\Resources\Customers\ListCustomersResponse;
+use BlindPay\SDK\Resources\Customers\Owner;
+use BlindPay\SDK\Resources\Customers\OwnerRole;
 use BlindPay\SDK\Types\AccountClass;
+use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\SourceOfWealth;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -20,6 +24,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
+use TypeError;
 
 class CustomersTest extends TestCase
 {
@@ -161,5 +166,78 @@ class CustomersTest extends TestCase
 
         $this->assertTrue($response->isSuccess(), (string) $response->error?->message);
         $this->assertSame('lottery_winnings', $response->data->sourceOfWealth);
+    }
+
+    /** @return array<string, mixed> constructor arguments of an owner ready for customer creation */
+    private function ownerArguments(): array
+    {
+        return [
+            'id' => 'ub_000000000000',
+            'instanceId' => 'in_000000000000',
+            'role' => OwnerRole::BENEFICIAL_OWNER,
+            'firstName' => 'Jane',
+            'lastName' => 'Doe',
+            'dateOfBirth' => '1990-01-01',
+            'taxId' => '123456789',
+            'addressLine1' => '1 Main St',
+            'addressLine2' => null,
+            'city' => 'Austin',
+            'stateProvinceRegion' => 'TX',
+            'country' => Country::US,
+            'postalCode' => '78701',
+            'idDocCountry' => Country::US,
+            'idDocType' => IdentificationDocument::cases()[0],
+            'idDocFrontFile' => 'https://example.com/id.png',
+            'idDocBackFile' => null,
+            'proofOfAddressDocType' => null,
+            'proofOfAddressDocFile' => null,
+        ];
+    }
+
+    #[Test]
+    public function it_decodes_a_business_owner_without_tax_id_or_id_document(): void
+    {
+        $this->mockResponse($this->customer(['type' => 'business', 'legal_name' => 'Acme LLC', 'owners' => [[
+            'id' => 'ub_000000000000',
+            'instance_id' => 'in_000000000000',
+            'role' => 'beneficial_owner',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'date_of_birth' => '1990-01-01',
+            'address_line_1' => '1 Main St',
+            'city' => 'Austin',
+            'state_province_region' => 'TX',
+            'country' => 'US',
+            'postal_code' => '78701',
+            'id_doc_country' => 'US',
+            'id_doc_type' => IdentificationDocument::cases()[0]->value,
+        ]]]));
+
+        $response = $this->blindpay->customers->get('cu_000000000000');
+
+        $this->assertTrue($response->isSuccess(), (string) $response->error?->message);
+        $owner = $response->data->owners[0];
+        $this->assertInstanceOf(Owner::class, $owner);
+        $this->assertSame('Jane', $owner->firstName);
+        $this->assertNull($owner->taxId);
+        $this->assertNull($owner->idDocFrontFile);
+        $this->assertNull($owner->proofOfAddressDocType);
+    }
+
+    #[Test]
+    public function it_still_requires_tax_id_and_id_document_on_an_owner_built_for_customer_creation(): void
+    {
+        $owner = new Owner(...$this->ownerArguments());
+        $this->assertSame('123456789', $owner->toArray()['tax_id']);
+        $this->assertSame('https://example.com/id.png', $owner->toArray()['id_doc_front_file']);
+
+        foreach (['taxId', 'idDocFrontFile'] as $required) {
+            try {
+                new Owner(...[...$this->ownerArguments(), $required => null]);
+                $this->fail("Owner accepted a null {$required}");
+            } catch (TypeError $e) {
+                $this->assertStringContainsString('$'.$required, $e->getMessage());
+            }
+        }
     }
 }

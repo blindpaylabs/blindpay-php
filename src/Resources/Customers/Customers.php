@@ -18,6 +18,7 @@ use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
 use BlindPay\SDK\Types\SourceOfWealth;
 use DateTimeImmutable;
+use ReflectionClass;
 
 enum ProofOfAddressDocType: string
 {
@@ -114,6 +115,18 @@ enum OwnerTaxType: string
 
 readonly class Owner
 {
+    /**
+     * Required when you build an Owner for customer creation (the constructor takes a string).
+     * Null only on an Owner decoded from a response that omits it.
+     */
+    public ?string $taxId;
+
+    /**
+     * Required when you build an Owner for customer creation (the constructor takes a string).
+     * Null only on an Owner decoded from a response that omits it.
+     */
+    public ?string $idDocFrontFile;
+
     public function __construct(
         public string $id,
         public string $instanceId,
@@ -121,7 +134,7 @@ readonly class Owner
         public string $firstName,
         public string $lastName,
         public string $dateOfBirth,
-        public ?string $taxId,
+        string $taxId,
         public string $addressLine1,
         public ?string $addressLine2,
         public string $city,
@@ -130,7 +143,7 @@ readonly class Owner
         public string $postalCode,
         public Country $idDocCountry,
         public IdentificationDocument $idDocType,
-        public ?string $idDocFrontFile,
+        string $idDocFrontFile,
         public ?string $idDocBackFile,
         public ?ProofOfAddressDocType $proofOfAddressDocType,
         public ?string $proofOfAddressDocFile,
@@ -138,35 +151,49 @@ readonly class Owner
         public ?string $title = null,
         public ?OwnerTaxType $taxType = null,
         public ?string $customerId = null
-    ) {}
+    ) {
+        $this->taxId = $taxId;
+        $this->idDocFrontFile = $idDocFrontFile;
+    }
 
+    /**
+     * Owner is both the customer-create input and part of the customer response. A response may
+     * omit tax_id and id_doc_front_file, which the constructor requires, so decoding sets the
+     * properties directly instead of going through it.
+     */
     public static function fromArray(array $data): self
     {
-        return new self(
-            id: $data['id'],
-            instanceId: $data['instance_id'],
-            role: OwnerRole::from($data['role']),
-            firstName: $data['first_name'],
-            lastName: $data['last_name'],
-            dateOfBirth: $data['date_of_birth'],
-            taxId: $data['tax_id'] ?? null,
-            addressLine1: $data['address_line_1'],
-            addressLine2: $data['address_line_2'] ?? null,
-            city: $data['city'],
-            stateProvinceRegion: $data['state_province_region'],
-            country: Country::from($data['country']),
-            postalCode: $data['postal_code'],
-            idDocCountry: Country::from($data['id_doc_country']),
-            idDocType: IdentificationDocument::from($data['id_doc_type']),
-            idDocFrontFile: $data['id_doc_front_file'] ?? null,
-            idDocBackFile: $data['id_doc_back_file'] ?? null,
-            proofOfAddressDocType: isset($data['proof_of_address_doc_type']) ? ProofOfAddressDocType::from($data['proof_of_address_doc_type']) : null,
-            proofOfAddressDocFile: $data['proof_of_address_doc_file'] ?? null,
-            ownershipPercentage: isset($data['ownership_percentage']) ? (int) $data['ownership_percentage'] : null,
-            title: $data['title'] ?? null,
-            taxType: isset($data['tax_type']) ? OwnerTaxType::from($data['tax_type']) : null,
-            customerId: $data['customer_id'] ?? null
-        );
+        $owner = (new ReflectionClass(self::class))->newInstanceWithoutConstructor();
+        $properties = [
+            'id' => $data['id'],
+            'instanceId' => $data['instance_id'],
+            'role' => OwnerRole::from($data['role']),
+            'firstName' => $data['first_name'],
+            'lastName' => $data['last_name'],
+            'dateOfBirth' => $data['date_of_birth'],
+            'taxId' => $data['tax_id'] ?? null,
+            'addressLine1' => $data['address_line_1'],
+            'addressLine2' => $data['address_line_2'] ?? null,
+            'city' => $data['city'],
+            'stateProvinceRegion' => $data['state_province_region'],
+            'country' => Country::from($data['country']),
+            'postalCode' => $data['postal_code'],
+            'idDocCountry' => Country::from($data['id_doc_country']),
+            'idDocType' => IdentificationDocument::from($data['id_doc_type']),
+            'idDocFrontFile' => $data['id_doc_front_file'] ?? null,
+            'idDocBackFile' => $data['id_doc_back_file'] ?? null,
+            'proofOfAddressDocType' => isset($data['proof_of_address_doc_type']) ? ProofOfAddressDocType::from($data['proof_of_address_doc_type']) : null,
+            'proofOfAddressDocFile' => $data['proof_of_address_doc_file'] ?? null,
+            'ownershipPercentage' => isset($data['ownership_percentage']) ? (int) $data['ownership_percentage'] : null,
+            'title' => $data['title'] ?? null,
+            'taxType' => isset($data['tax_type']) ? OwnerTaxType::from($data['tax_type']) : null,
+            'customerId' => $data['customer_id'] ?? null,
+        ];
+        foreach ($properties as $property => $value) {
+            $owner->{$property} = $value;
+        }
+
+        return $owner;
     }
 
     public function toArray(): array
