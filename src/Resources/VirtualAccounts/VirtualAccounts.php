@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\VirtualAccounts;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\BankingPartner;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\SoleProprietorDocType;
@@ -17,7 +18,7 @@ readonly class VirtualAccountUsDetails
         public VirtualAccountUsWire $wire,
         public ?VirtualAccountUsRtp $rtp,
         public ?string $swiftBicCode,
-        public string $accountType,
+        public ?string $accountType,
         public ?VirtualAccountBeneficiary $beneficiary,
         public ?VirtualAccountReceivingBank $receivingBank,
         public ?string $swiftAccountNumber = null,
@@ -32,7 +33,7 @@ readonly class VirtualAccountUsDetails
             wire: VirtualAccountUsWire::fromArray($data['wire']),
             rtp: isset($data['rtp']) ? VirtualAccountUsRtp::fromArray($data['rtp']) : null,
             swiftBicCode: $data['swift_bic_code'] ?? null,
-            accountType: $data['account_type'],
+            accountType: $data['account_type'] ?? null,
             beneficiary: isset($data['beneficiary']) ? VirtualAccountBeneficiary::fromArray($data['beneficiary']) : null,
             receivingBank: isset($data['receiving_bank']) ? VirtualAccountReceivingBank::fromArray($data['receiving_bank']) : null,
             swiftAccountNumber: $data['swift_account_number'] ?? null,
@@ -226,10 +227,11 @@ readonly class VirtualAccount
 {
     public function __construct(
         public string $id,
-        public VirtualAccountUsDetails $us,
-        public StablecoinToken $token,
+        /** US rails; null for accounts on other rails (e.g. Colombian or Mexican accounts). */
+        public ?VirtualAccountUsDetails $us,
+        public StablecoinToken|string $token,
         public ?string $blockchainWalletId,
-        public ?BankingPartner $bankingPartner = null,
+        public BankingPartner|string|null $bankingPartner = null,
         public ?string $kycStatus = null
     ) {}
 
@@ -237,10 +239,10 @@ readonly class VirtualAccount
     {
         return new self(
             id: $data['id'],
-            us: VirtualAccountUsDetails::fromArray($data['us']),
-            token: StablecoinToken::from($data['token']),
+            us: isset($data['us']) ? VirtualAccountUsDetails::fromArray($data['us']) : null,
+            token: Decode::enum(StablecoinToken::class, $data['token']),
             blockchainWalletId: $data['blockchain_wallet_id'] ?? null,
-            bankingPartner: isset($data['banking_partner']) ? BankingPartner::from($data['banking_partner']) : null,
+            bankingPartner: Decode::enum(BankingPartner::class, $data['banking_partner'] ?? null),
             kycStatus: $data['kyc_status'] ?? null
         );
     }
@@ -249,13 +251,13 @@ readonly class VirtualAccount
     {
         $data = [
             'id' => $this->id,
-            'us' => $this->us->toArray(),
-            'token' => $this->token->value,
+            'us' => $this->us?->toArray(),
+            'token' => Decode::wire($this->token),
             'blockchain_wallet_id' => $this->blockchainWalletId,
         ];
 
         if ($this->bankingPartner !== null) {
-            $data['banking_partner'] = $this->bankingPartner->value;
+            $data['banking_partner'] = Decode::wire($this->bankingPartner);
         }
 
         if ($this->kycStatus !== null) {

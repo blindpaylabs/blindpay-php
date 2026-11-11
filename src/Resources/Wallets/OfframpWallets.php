@@ -74,7 +74,7 @@ readonly class CreateOfframpWalletResponse
 {
     public function __construct(
         public string $id,
-        public string $externalId,
+        public ?string $externalId,
         public string $network,
         public string $address,
         public ?string $circleWalletId = null
@@ -84,7 +84,7 @@ readonly class CreateOfframpWalletResponse
     {
         return new self(
             id: $data['id'],
-            externalId: $data['external_id'],
+            externalId: $data['external_id'] ?? null,
             network: $data['network'],
             address: $data['address'],
             circleWalletId: $data['circle_wallet_id'] ?? null

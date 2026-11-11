@@ -28,7 +28,7 @@ readonly class InstanceMember
         public ?string $middleName,
         public string $lastName,
         public ?string $imageUrl,
-        public DateTimeImmutable $createdAt,
+        public ?DateTimeImmutable $createdAt,
         public InstanceMemberRole $role
     ) {}
 
@@ -41,7 +41,7 @@ readonly class InstanceMember
             middleName: $data['middle_name'] ?? null,
             lastName: $data['last_name'],
             imageUrl: $data['image_url'] ?? null,
-            createdAt: new DateTimeImmutable($data['created_at']),
+            createdAt: isset($data['created_at']) ? new DateTimeImmutable($data['created_at']) : null,
             role: InstanceMemberRole::from($data['role'])
         );
     }
@@ -55,7 +55,7 @@ readonly class InstanceMember
             'middle_name' => $this->middleName,
             'last_name' => $this->lastName,
             'image_url' => $this->imageUrl,
-            'created_at' => $this->createdAt->format(\DateTimeInterface::ATOM),
+            'created_at' => $this->createdAt?->format(\DateTimeInterface::ATOM),
             'role' => $this->role->value,
         ];
     }

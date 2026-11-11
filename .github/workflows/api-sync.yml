@@ -102,6 +102,17 @@ jobs:
         if: steps.changes.outputs.has_changes == 'false'
         run: echo "No pending drift. Nothing to sync."
 
+      - name: Verify the patched SDK before committing
+        if: steps.changes.outputs.has_changes == 'true'
+        # v3.4.1 shipped patcher output that passed `php -l` but threw a TypeError on every payin
+        # read, because nothing ran the SDK's own suite on it. Fail here, before any commit, push
+        # or PR (auto-merge below is not gated on status checks).
+        run: |
+          composer install --prefer-dist --no-progress --no-interaction
+          composer run lint:check
+          composer run test
+          php scripts/contract-check.php
+
       - name: Determine version bump
         if: steps.changes.outputs.has_changes == 'true'
         id: bump
@@ -148,4 +159,6 @@ jobs:
             PR_NUMBER=$(gh pr list --head api-sync --json number --jq '.[0].number')
           fi
 
+          # Without required status checks on main, --auto merges immediately; the "Verify the
+          # patched SDK" step above is the gate until branch protection requires the tests check.
           gh pr merge "$PR_NUMBER" --auto --squash

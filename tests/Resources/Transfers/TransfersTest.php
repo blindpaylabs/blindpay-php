@@ -7,9 +7,11 @@ namespace BlindPay\SDK\Tests\Resources;
 use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\Resources\Transfers\CreateTransferInput;
 use BlindPay\SDK\Resources\Transfers\CreateTransferQuoteInput;
+use BlindPay\SDK\Resources\Transfers\CreateTransferResponse;
 use BlindPay\SDK\Types\CurrencyType;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\StablecoinToken;
+use BlindPay\SDK\Types\TransactionStatus;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -163,9 +165,15 @@ class TransfersTest extends TestCase
     #[Test]
     public function it_creates_a_transfer(): void
     {
-        $mockedTransfer = $this->mockTransferData();
-
-        $this->mockResponse($mockedTransfer);
+        // POST /transfers returns CreateTransferOut (id, status, tracking_*), not the full TransferOut.
+        $this->mockResponse([
+            'id' => 'tr_000000000000',
+            'status' => 'processing',
+            'tracking_transaction_monitoring' => ['step' => 'processing', 'completed_at' => null],
+            'tracking_paymaster' => ['step' => 'processing', 'transaction_hash' => null, 'completed_at' => null],
+            'tracking_bridge_swap' => ['step' => 'processing', 'transaction_hash' => null, 'completed_at' => null],
+            'tracking_complete' => ['step' => 'processing', 'transaction_hash' => null, 'completed_at' => null],
+        ]);
 
         $input = new CreateTransferInput(transferQuoteId: 'tq_000000000000');
 
@@ -173,16 +181,12 @@ class TransfersTest extends TestCase
 
         $this->assertTrue($response->isSuccess());
         $this->assertNull($response->error);
+        $this->assertInstanceOf(CreateTransferResponse::class, $response->data);
         $this->assertEquals('tr_000000000000', $response->data->id);
-        $this->assertEquals('processing', $response->data->status->value);
-        $this->assertEquals('tq_000000000000', $response->data->transferQuoteId);
-        $this->assertEquals('wl_000000000000', $response->data->walletId);
-        $this->assertEquals('USDC', $response->data->senderToken->value);
-        $this->assertEquals(100.00, $response->data->senderAmount);
-        $this->assertEquals(98.50, $response->data->receiverAmount);
-        $this->assertEquals('USDT', $response->data->customerToken->value);
-        $this->assertEquals('base', $response->data->customerNetwork->value);
-        $this->assertEquals('0xabc123', $response->data->customerWalletAddress);
+        $this->assertSame(TransactionStatus::PROCESSING, $response->data->status);
+        $this->assertSame('processing', $response->data->trackingComplete->step);
+        $this->assertNull($response->data->trackingComplete->status);
+        $this->assertNull($response->data->trackingPartnerFee);
     }
 
     #[Test]

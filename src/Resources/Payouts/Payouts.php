@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Payouts;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Currency;
 use BlindPay\SDK\Types\Network;
+use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
 use BlindPay\SDK\Types\PayoutTrackingPayment;
 use BlindPay\SDK\Types\Rail;
@@ -51,15 +53,16 @@ readonly class Payout
         public PayoutTrackingPayment $trackingPayment,
         public ?TrackingLiquidity $trackingLiquidity,
         public TrackingComplete $trackingComplete,
-        public TrackingPartnerFee $trackingPartnerFee,
+        /** @deprecated The API no longer returns tracking_partner_fee on payouts; always null. */
+        public ?TrackingPartnerFee $trackingPartnerFee,
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
         public ?string $imageUrl,
         public ?string $firstName,
         public ?string $lastName,
         public ?string $legalName,
-        public Network $network,
-        public StablecoinToken $token,
+        public Network|string $network,
+        public StablecoinToken|string $token,
         public ?string $description,
         public ?float $senderAmount,
         public ?float $receiverAmount,
@@ -68,12 +71,12 @@ readonly class Payout
         public ?float $blindpayQuotation,
         public ?float $totalFeeAmount,
         public ?float $customerLocalAmount,
-        public Currency $currency,
+        public Currency|string $currency,
         public ?string $transactionDocumentFile,
         public ?TransactionDocumentType $transactionDocumentType,
         public ?string $transactionDocumentId,
-        public string $name,
-        public Rail $type,
+        public ?string $name,
+        public Rail|string|null $type,
         public ?string $pixKey,
         public ?string $accountNumber,
         public ?string $routingNumber,
@@ -126,7 +129,7 @@ readonly class Payout
             trackingPayment: PayoutTrackingPayment::fromArray($data['tracking_payment']),
             trackingLiquidity: isset($data['tracking_liquidity']) ? TrackingLiquidity::fromArray($data['tracking_liquidity']) : null,
             trackingComplete: TrackingComplete::fromArray($data['tracking_complete']),
-            trackingPartnerFee: TrackingPartnerFee::fromArray($data['tracking_partner_fee']),
+            trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
             createdAt: isset($data['created_at'])
                 ? new DateTimeImmutable($data['created_at'])
                 : null,
@@ -137,8 +140,8 @@ readonly class Payout
             firstName: $data['first_name'] ?? null,
             lastName: $data['last_name'] ?? null,
             legalName: $data['legal_name'] ?? null,
-            network: Network::from($data['network']),
-            token: StablecoinToken::from($data['token']),
+            network: Decode::enum(Network::class, $data['network']),
+            token: Decode::enum(StablecoinToken::class, $data['token']),
             description: $data['description'] ?? null,
             senderAmount: isset($data['sender_amount']) ? (float) $data['sender_amount'] : null,
             receiverAmount: isset($data['receiver_amount']) ? (float) $data['receiver_amount'] : null,
@@ -147,12 +150,12 @@ readonly class Payout
             blindpayQuotation: isset($data['blindpay_quotation']) ? (float) $data['blindpay_quotation'] : null,
             totalFeeAmount: isset($data['total_fee_amount']) ? (float) $data['total_fee_amount'] : null,
             customerLocalAmount: isset($data['customer_local_amount']) ? (float) $data['customer_local_amount'] : null,
-            currency: Currency::from($data['currency']),
+            currency: Decode::enum(Currency::class, $data['currency']),
             transactionDocumentFile: $data['transaction_document_file'] ?? null,
             transactionDocumentType: isset($data['transaction_document_type']) ? TransactionDocumentType::from($data['transaction_document_type']) : null,
             transactionDocumentId: $data['transaction_document_id'] ?? null,
-            name: $data['name'],
-            type: Rail::from($data['type']),
+            name: $data['name'] ?? null,
+            type: Decode::enum(Rail::class, $data['type'] ?? null),
             pixKey: $data['pix_key'] ?? null,
             accountNumber: $data['account_number'] ?? null,
             routingNumber: $data['routing_number'] ?? null,
@@ -219,17 +222,26 @@ readonly class ListPayoutsInput extends PaginationParams
 
 readonly class ListPayoutsResponse
 {
+    /**
+     * @param  Payout[]  $data
+     * @param  PaginationMetadata|null  $pagination  set when the request sent limit, starting_after or ending_before
+     */
     public function __construct(
         public array $data,
+        public ?PaginationMetadata $pagination = null,
     ) {}
 
+    /**
+     * Accepts both shapes the API returns: a bare array, or {data, pagination} when the request
+     * sent limit, starting_after or ending_before.
+     */
     public static function fromArray(array $data): self
     {
+        [$items, $pagination] = Decode::listEnvelope($data);
+
         return new self(
-            data: array_map(
-                fn (array $item) => Payout::fromArray($item),
-                $data
-            ),
+            data: array_map(fn (array $item) => Payout::fromArray($item), $items),
+            pagination: $pagination,
         );
     }
 }
@@ -326,7 +338,7 @@ readonly class CreateStellarPayoutResponse
         public string $id,
         public TransactionStatus $status,
         public string $senderWalletAddress,
-        public string $customerId,
+        public ?string $customerId,
         public ?TrackingComplete $trackingComplete = null,
         public ?PayoutTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
@@ -340,7 +352,7 @@ readonly class CreateStellarPayoutResponse
             id: $data['id'],
             status: TransactionStatus::from($data['status']),
             senderWalletAddress: $data['sender_wallet_address'],
-            customerId: $data['customer_id'],
+            customerId: $data['customer_id'] ?? null,
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
             trackingPayment: isset($data['tracking_payment']) ? PayoutTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
@@ -372,7 +384,7 @@ readonly class CreateEvmPayoutResponse
         public string $id,
         public TransactionStatus $status,
         public string $senderWalletAddress,
-        public string $customerId,
+        public ?string $customerId,
         public ?TrackingComplete $trackingComplete = null,
         public ?PayoutTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
@@ -386,7 +398,7 @@ readonly class CreateEvmPayoutResponse
             id: $data['id'],
             status: TransactionStatus::from($data['status']),
             senderWalletAddress: $data['sender_wallet_address'],
-            customerId: $data['customer_id'],
+            customerId: $data['customer_id'] ?? null,
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
             trackingPayment: isset($data['tracking_payment']) ? PayoutTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,
@@ -418,7 +430,7 @@ readonly class CreateSolanaPayoutResponse
         public string $id,
         public TransactionStatus $status,
         public string $senderWalletAddress,
-        public string $customerId,
+        public ?string $customerId,
         public ?TrackingComplete $trackingComplete = null,
         public ?PayoutTrackingPayment $trackingPayment = null,
         public ?TrackingTransaction $trackingTransaction = null,
@@ -432,7 +444,7 @@ readonly class CreateSolanaPayoutResponse
             id: $data['id'],
             status: TransactionStatus::from($data['status']),
             senderWalletAddress: $data['sender_wallet_address'],
-            customerId: $data['customer_id'],
+            customerId: $data['customer_id'] ?? null,
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
             trackingPayment: isset($data['tracking_payment']) ? PayoutTrackingPayment::fromArray($data['tracking_payment']) : null,
             trackingTransaction: isset($data['tracking_transaction']) ? TrackingTransaction::fromArray($data['tracking_transaction']) : null,

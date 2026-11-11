@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Wallets;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Network;
 
@@ -13,7 +14,7 @@ readonly class BlockchainWallet
     public function __construct(
         public string $id,
         public ?string $name,
-        public ?Network $network,
+        public Network|string|null $network,
         public ?bool $isAccountAbstraction,
         public string $customerId,
         public ?string $address = null,
@@ -25,7 +26,7 @@ readonly class BlockchainWallet
         return new self(
             id: $data['id'],
             name: $data['name'] ?? null,
-            network: isset($data['network']) ? Network::from($data['network']) : null,
+            network: Decode::enum(Network::class, $data['network'] ?? null),
             isAccountAbstraction: $data['is_account_abstraction'] ?? null,
             customerId: $data['customer_id'],
             address: $data['address'] ?? null,
@@ -156,16 +157,17 @@ readonly class MintUsdbSolanaResponse
 {
     public function __construct(
         public bool $success,
-        public string $signature,
-        public string $error
+        public ?string $signature,
+        public ?string $error
     ) {}
 
+    /** The API returns either `signature` (on success) or `error`, never both. */
     public static function fromArray(array $data): self
     {
         return new self(
             success: $data['success'],
-            signature: $data['signature'],
-            error: $data['error']
+            signature: $data['signature'] ?? null,
+            error: $data['error'] ?? null
         );
     }
 }
@@ -192,14 +194,14 @@ readonly class PrepareSolanaDelegationTransactionResponse
 {
     public function __construct(
         public bool $success,
-        public string $transaction
+        public ?string $transaction
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
             success: $data['success'],
-            transaction: $data['transaction']
+            transaction: $data['transaction'] ?? null
         );
     }
 }

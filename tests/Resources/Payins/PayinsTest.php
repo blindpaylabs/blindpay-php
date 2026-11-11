@@ -183,6 +183,22 @@ class PayinsTest extends TestCase
     }
 
     #[Test]
+    public function it_decodes_the_deprecated_billing_fee_as_null_when_the_api_omits_it(): void
+    {
+        $mockedPayin = $this->getPayinMockData();
+        unset($mockedPayin['billing_fee']);
+        $this->mockResponse($mockedPayin);
+        $this->mockResponse($this->getPayinMockData());
+
+        $absent = $this->blindpay->payins->get('pi_000000000000');
+        $present = $this->blindpay->payins->get('pi_000000000000');
+
+        $this->assertTrue($absent->isSuccess(), (string) $absent->error?->message);
+        $this->assertNull($absent->data->billingFee);
+        $this->assertSame(100.0, $present->data->billingFee);
+    }
+
+    #[Test]
     public function it_gets_payin_tracking_information(): void
     {
         $mockedPayinTrack = $this->getPayinMockData();

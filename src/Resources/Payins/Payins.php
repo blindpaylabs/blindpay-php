@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Payins;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\ManualExecutionStatus;
 use BlindPay\SDK\Types\Network;
+use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
 use BlindPay\SDK\Types\PayinTrackingPayment;
 use BlindPay\SDK\Types\StablecoinToken;
@@ -92,17 +94,17 @@ readonly class BankRtp
 readonly class BankBeneficiary
 {
     public function __construct(
-        public string $name,
-        public string $addressLine1,
-        public string $addressLine2
+        public ?string $name,
+        public ?string $addressLine1,
+        public ?string $addressLine2
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
-            name: $data['name'],
-            addressLine1: $data['address_line_1'],
-            addressLine2: $data['address_line_2']
+            name: $data['name'] ?? null,
+            addressLine1: $data['address_line_1'] ?? null,
+            addressLine2: $data['address_line_2'] ?? null
         );
     }
 
@@ -119,17 +121,17 @@ readonly class BankBeneficiary
 readonly class BankReceivingBank
 {
     public function __construct(
-        public string $name,
-        public string $addressLine1,
-        public string $addressLine2
+        public ?string $name,
+        public ?string $addressLine1,
+        public ?string $addressLine2
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
-            name: $data['name'],
-            addressLine1: $data['address_line_1'],
-            addressLine2: $data['address_line_2']
+            name: $data['name'] ?? null,
+            addressLine1: $data['address_line_1'] ?? null,
+            addressLine2: $data['address_line_2'] ?? null
         );
     }
 
@@ -146,9 +148,9 @@ readonly class BankReceivingBank
 readonly class BankDetails
 {
     public function __construct(
-        public string $routingNumber,
-        public string $accountNumber,
-        public string $accountType,
+        public ?string $routingNumber,
+        public ?string $accountNumber,
+        public ?string $accountType,
         public ?string $swiftBicCode,
         public ?BankAch $ach,
         public ?BankWire $wire,
@@ -162,9 +164,9 @@ readonly class BankDetails
     public static function fromArray(array $data): self
     {
         return new self(
-            routingNumber: $data['routing_number'],
-            accountNumber: $data['account_number'],
-            accountType: $data['account_type'],
+            routingNumber: $data['routing_number'] ?? null,
+            accountNumber: $data['account_number'] ?? null,
+            accountType: $data['account_type'] ?? null,
             swiftBicCode: $data['swift_bic_code'] ?? null,
             ach: isset($data['ach']) ? BankAch::fromArray($data['ach']) : null,
             wire: isset($data['wire']) ? BankWire::fromArray($data['wire']) : null,
@@ -208,17 +210,18 @@ readonly class Payin
         public string $paymentMethod,
         public ?float $senderAmount,
         public ?float $receiverAmount,
-        public StablecoinToken $token,
+        public StablecoinToken|string $token,
         public ?float $partnerFeeAmount,
         public ?float $totalFeeAmount,
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
         public string $currency,
-        public float $billingFee,
+        /** @deprecated The API no longer returns billing_fee, so this is null unless it does. Use $billingFeeAmount. */
+        public ?float $billingFee,
         public string $name,
         public ?string $address,
-        public Network $network,
-        public BankDetails $BankDetails,
+        public Network|string $network,
+        public ?BankDetails $BankDetails,
         public ?string $pixCode = null,
         public ?string $memoCode = null,
         public ?string $clabe = null,
@@ -258,17 +261,17 @@ readonly class Payin
             paymentMethod: $data['payment_method'],
             senderAmount: isset($data['sender_amount']) ? (float) $data['sender_amount'] : null,
             receiverAmount: isset($data['receiver_amount']) ? (float) $data['receiver_amount'] : null,
-            token: StablecoinToken::from($data['token']),
+            token: Decode::enum(StablecoinToken::class, $data['token']),
             partnerFeeAmount: isset($data['partner_fee_amount']) ? (float) $data['partner_fee_amount'] : null,
             totalFeeAmount: isset($data['total_fee_amount']) ? (float) $data['total_fee_amount'] : null,
             commercialQuotation: isset($data['commercial_quotation']) ? (float) $data['commercial_quotation'] : null,
             blindpayQuotation: isset($data['blindpay_quotation']) ? (float) $data['blindpay_quotation'] : null,
             currency: $data['currency'],
-            billingFee: (float) $data['billing_fee'],
+            billingFee: isset($data['billing_fee']) ? (float) $data['billing_fee'] : null,
             name: $data['name'],
             address: $data['address'] ?? null,
-            network: Network::from($data['network']),
-            BankDetails: BankDetails::fromArray($data['blindpay_bank_details']),
+            network: Decode::enum(Network::class, $data['network']),
+            BankDetails: isset($data['blindpay_bank_details']) ? BankDetails::fromArray($data['blindpay_bank_details']) : null,
             pixCode: $data['pix_code'] ?? null,
             memoCode: $data['memo_code'] ?? null,
             clabe: $data['clabe'] ?? null,
@@ -323,17 +326,26 @@ readonly class ListPayinsInput extends PaginationParams
 
 readonly class ListPayinsResponse
 {
+    /**
+     * @param  Payin[]  $data
+     * @param  PaginationMetadata|null  $pagination  set when the request sent limit, starting_after or ending_before
+     */
     public function __construct(
         public array $data,
+        public ?PaginationMetadata $pagination = null,
     ) {}
 
+    /**
+     * Accepts both shapes the API returns: a bare array, or {data, pagination} when the request
+     * sent limit, starting_after or ending_before.
+     */
     public static function fromArray(array $data): self
     {
+        [$items, $pagination] = Decode::listEnvelope($data);
+
         return new self(
-            data: array_map(
-                fn (array $item) => Payin::fromArray($item),
-                $data
-            ),
+            data: array_map(fn (array $item) => Payin::fromArray($item), $items),
+            pagination: $pagination,
         );
     }
 }
@@ -378,7 +390,7 @@ readonly class CreateEvmPayinResponse
         public TransactionStatus $status,
         public ?string $customerId,
         public ?float $receiverAmount,
-        public BankDetails $BankDetails,
+        public ?BankDetails $BankDetails,
         public ?string $pixCode = null,
         public ?string $memoCode = null,
         public ?string $clabe = null,
@@ -395,7 +407,7 @@ readonly class CreateEvmPayinResponse
             status: TransactionStatus::from($data['status']),
             customerId: $data['customer_id'] ?? null,
             receiverAmount: isset($data['receiver_amount']) ? (float) $data['receiver_amount'] : null,
-            BankDetails: BankDetails::fromArray($data['blindpay_bank_details']),
+            BankDetails: isset($data['blindpay_bank_details']) ? BankDetails::fromArray($data['blindpay_bank_details']) : null,
             pixCode: $data['pix_code'] ?? null,
             memoCode: $data['memo_code'] ?? null,
             clabe: $data['clabe'] ?? null,

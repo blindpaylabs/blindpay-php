@@ -31,6 +31,7 @@ use BlindPay\SDK\Resources\Wallets\WalletsWrapper;
 use BlindPay\SDK\Resources\Webhooks\Webhooks;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\ErrorResponse;
+use BlindPay\SDK\Webhooks\WebhookVerifier;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Throwable;
@@ -39,7 +40,7 @@ class BlindPay implements ApiClientInterface
 {
     private const BASE_URL = 'https://api.blindpay.com/v1/';
 
-    private const VERSION = '3.4.1';
+    private const VERSION = '3.5.0';
 
     private Client $httpClient;
 
@@ -215,14 +216,24 @@ class BlindPay implements ApiClientInterface
         return $this->request('DELETE', $path, $body);
     }
 
-    /*
-     * Verifies the BlindPay webhook signature
+    /**
+     * Verifies the BlindPay webhook signature.
      *
-     * @param string $secret The webhook secret from BlindPay dashboard
-     * @param string $id The value of the `svix-id` header
-     * @param string $timestamp The value of the `svix-timestamp` header
-     * @param string $payload The raw request body
-     * @param string $svixSignature The value of the `svix-signature` header
+     * Accepts the `svix-signature` header as sent (`v1,<sig>`, possibly several space-separated
+     * entries) and rejects timestamps more than $tolerance seconds (default 5 minutes) from the
+     * current time. For backwards
+     * compatibility a bare signature without the `v1,` prefix is still accepted here (earlier
+     * versions compared the whole header to a bare signature, so callers had to strip it).
+     *
+     * @deprecated Use \BlindPay\SDK\Webhooks\WebhookVerifier::verify(), which needs no API client
+     *             and takes the request headers directly.
+     *
+     * @param  string  $secret  The webhook secret from BlindPay dashboard
+     * @param  string  $id  The value of the `svix-id` header
+     * @param  string  $timestamp  The value of the `svix-timestamp` header
+     * @param  string  $payload  The raw request body
+     * @param  string  $svixSignature  The value of the `svix-signature` header
+     * @param  int  $tolerance  Maximum allowed |now - timestamp|, in seconds
      * @return bool True if the signature is valid, false otherwise
      */
     public function verifyWebhookSignature(
@@ -230,18 +241,12 @@ class BlindPay implements ApiClientInterface
         string $id,
         string $timestamp,
         string $payload,
-        string $svixSignature
+        string $svixSignature,
+        int $tolerance = WebhookVerifier::DEFAULT_TOLERANCE
     ): bool {
-        $signedContent = "{$id}.{$timestamp}.{$payload}";
-        $secretParts = explode('_', $secret);
-        $secretBytes = base64_decode($secretParts[1]);
+        $signatureHeader = str_contains($svixSignature, ',') ? $svixSignature : "v1,{$svixSignature}";
 
-        $expectedSignature = base64_encode(
-            hash_hmac('sha256', $signedContent, $secretBytes, true)
-        );
-
-        return strlen($svixSignature) === strlen($expectedSignature)
-            && hash_equals($expectedSignature, $svixSignature);
+        return WebhookVerifier::verifySignature($payload, $id, $timestamp, $signatureHeader, $secret, $tolerance, time());
     }
 
     public function getInstanceId(): string

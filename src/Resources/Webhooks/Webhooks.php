@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Webhooks;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use DateTimeImmutable;
 
@@ -19,6 +20,7 @@ enum WebhookEvents: string
     case PAYOUT_COMPLETE = 'payout.complete';
     case PAYOUT_PARTNER_FEE = 'payout.partnerFee';
     case BLOCKCHAIN_WALLET_NEW = 'blockchainWallet.new';
+    case BLOCKCHAIN_WALLET_UPDATE = 'blockchainWallet.update';
     case PAYIN_NEW = 'payin.new';
     case PAYIN_UPDATE = 'payin.update';
     case PAYIN_COMPLETE = 'payin.complete';
@@ -33,18 +35,22 @@ enum WebhookEvents: string
     case VIRTUAL_ACCOUNT_COMPLETE = 'virtualAccount.complete';
     case WALLET_INBOUND = 'wallet.inbound';
     case WALLET_NEW = 'wallet.new';
+    case WALLET_UPDATE = 'wallet.update';
+    case PAYABLE_NEW = 'payable.new';
+    case PAYABLE_UPDATE = 'payable.update';
+    case PAYABLE_COMPLETE = 'payable.complete';
 }
 
 readonly class WebhookEndpoint
 {
     /**
-     * @param  WebhookEvents[]  $events
+     * @param  array<WebhookEvents|string>  $events  an event this SDK version does not know yet is kept as its raw name
      */
     public function __construct(
         public string $id,
         public string $url,
         public array $events,
-        public string $lastEventAt,
+        public ?string $lastEventAt,
         public string $instanceId,
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt
@@ -56,10 +62,10 @@ readonly class WebhookEndpoint
             id: $data['id'],
             url: $data['url'],
             events: array_map(
-                fn (string $event) => WebhookEvents::from($event),
+                fn (string $event) => Decode::enum(WebhookEvents::class, $event),
                 $data['events']
             ),
-            lastEventAt: $data['last_event_at'],
+            lastEventAt: $data['last_event_at'] ?? null,
             instanceId: $data['instance_id'],
             createdAt: isset($data['created_at'])
                 ? new DateTimeImmutable($data['created_at'])
@@ -75,10 +81,7 @@ readonly class WebhookEndpoint
         return [
             'id' => $this->id,
             'url' => $this->url,
-            'events' => array_map(
-                fn (WebhookEvents $event) => $event->value,
-                $this->events
-            ),
+            'events' => array_map(Decode::wire(...), $this->events),
             'last_event_at' => $this->lastEventAt,
             'instance_id' => $this->instanceId,
             'created_at' => $this->createdAt?->format(\DateTimeInterface::ATOM),

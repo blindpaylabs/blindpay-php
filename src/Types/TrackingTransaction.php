@@ -10,7 +10,7 @@ readonly class TrackingTransaction extends BaseTracking
 {
     public function __construct(
         string $step,
-        public string $status,
+        public ?string $status,
         public ?string $transactionHash,
         public ?string $externalId = null,
         public ?string $providerName = null,
@@ -39,7 +39,7 @@ readonly class TrackingTransaction extends BaseTracking
     {
         return new self(
             step: $data['step'],
-            status: $data['status'],
+            status: $data['status'] ?? null,
             transactionHash: $data['transaction_hash'] ?? null,
             externalId: $data['external_id'] ?? null,
             providerName: $data['provider_name'] ?? null,

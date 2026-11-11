@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\BankAccounts;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\BlindPayApiResponse;
@@ -34,7 +35,12 @@ enum AchCopDocument: string
 
 enum SpeiProtocol: string
 {
+    case CLABE = 'clabe';
+    case DEBITCARD = 'debitcard';
+    case PHONENUM = 'phonenum';
+    /** @deprecated Not a valid spei_protocol value; the API rejects it. Use CLABE, DEBITCARD or PHONENUM. */
     case SPEI = 'SPEI';
+    /** @deprecated Not a valid spei_protocol value; the API rejects it. Use CLABE, DEBITCARD or PHONENUM. */
     case STP = 'STP';
 }
 
@@ -45,7 +51,7 @@ readonly class BankAccountListItem
      */
     public function __construct(
         public string $id,
-        public Rail $type,
+        public Rail|string $type,
         public string $name,
         public ?string $pixKey,
         public ?string $beneficiaryName,
@@ -104,7 +110,7 @@ readonly class BankAccountListItem
     {
         return new self(
             id: $data['id'],
-            type: Rail::from($data['type']),
+            type: Decode::enum(Rail::class, $data['type']),
             name: $data['name'],
             pixKey: $data['pix_key'] ?? null,
             beneficiaryName: $data['beneficiary_name'] ?? null,
@@ -191,6 +197,11 @@ readonly class GetBankAccountInput
     ) {}
 }
 
+/**
+ * @deprecated Never matched the API (BankAccountOut has none of customer_id, account_holder_name,
+ *             bank_name, is_primary or updated_at), so decoding always failed. get() returns a
+ *             BankAccountListItem, the type the API's BankAccountOut maps to.
+ */
 readonly class BankAccountResponse
 {
     public function __construct(
@@ -1051,7 +1062,7 @@ class BankAccounts
      * Get a specific bank account
      *
      * @param GetBankAccountInput $input
-     * @return BlindPayApiResponse<BankAccountResponse>
+     * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function get(GetBankAccountInput $input): BlindPayApiResponse
     {
@@ -1067,7 +1078,7 @@ class BankAccounts
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
-                BankAccountResponse::fromArray($response->data)
+                BankAccountListItem::fromArray($response->data)
             );
         }
 

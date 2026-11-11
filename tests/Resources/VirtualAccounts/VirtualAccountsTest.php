@@ -7,6 +7,7 @@ namespace BlindPay\SDK\Tests\Resources;
 use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\Resources\VirtualAccounts\CreateVirtualAccountInput;
 use BlindPay\SDK\Resources\VirtualAccounts\UpdateVirtualAccountInput;
+use BlindPay\SDK\Types\BankingPartner;
 use BlindPay\SDK\Types\StablecoinToken;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -199,5 +200,26 @@ class VirtualAccountsTest extends TestCase
         $this->assertEquals('JPMorgan Chase', $response->data->us->receivingBank->name);
         $this->assertEquals('270 Park Ave', $response->data->us->receivingBank->addressLine1);
         $this->assertEquals('New York, NY, 10017-2070', $response->data->us->receivingBank->addressLine2);
+    }
+
+    #[Test]
+    public function it_gets_a_colombian_virtual_account_without_us_details(): void
+    {
+        // VirtualAccountOut: us, co and mx are each optional; a Colombian account carries co only.
+        $this->mockResponse([
+            'id' => 'va_000000000000',
+            'banking_partner' => 'bre_b',
+            'kyc_status' => 'approved',
+            'token' => 'USDC',
+            'blockchain_wallet_id' => 'bw_000000000000',
+            'co' => ['bre_b' => ['key' => '3001234567'], 'beneficiary' => ['name' => 'Jane Doe']],
+        ]);
+
+        $response = $this->blindpay->virtualAccounts->get('cu_000000000000', 'va_000000000000');
+
+        $this->assertTrue($response->isSuccess());
+        $this->assertNull($response->data->us);
+        $this->assertSame(BankingPartner::BRE_B, $response->data->bankingPartner);
+        $this->assertSame(StablecoinToken::USDC, $response->data->token);
     }
 }

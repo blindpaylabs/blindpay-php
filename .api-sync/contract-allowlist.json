@@ -156,6 +156,12 @@
       "field": "iban",
       "reason": "Absent from the public spec snapshot; only appeared alongside internal-only surface in the unfiltered spec. Pre-existing SDK field, unrelated to the customers rename; needs its own investigation.",
       "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CreateTransferResponse",
+      "field": "tracking_partner_fee",
+      "reason": "In the current public spec (CreateTransferOut.tracking_partner_fee, blindpay-v2@66144f3b2) but not in the stale committed snapshot. Remove when the snapshot is refreshed.",
+      "owner": "sdk-parity"
     }
   ]
 }

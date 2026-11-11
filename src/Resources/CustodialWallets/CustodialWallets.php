@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\CustodialWallets;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Network;
 use DateTimeImmutable;
@@ -13,9 +14,11 @@ readonly class CustodialWallet
 {
     public function __construct(
         public string $id,
-        public string $customerId,
-        public string $instanceId,
-        public Network $network,
+        /** @deprecated Not returned by the API (WalletOut has no customer_id); always null. */
+        public ?string $customerId,
+        /** @deprecated Not returned by the API (WalletOut has no instance_id); always null. */
+        public ?string $instanceId,
+        public Network|string $network,
         public ?string $address,
         public ?DateTimeImmutable $createdAt
     ) {}
@@ -24,9 +27,9 @@ readonly class CustodialWallet
     {
         return new self(
             id: $data['id'],
-            customerId: $data['customer_id'],
-            instanceId: $data['instance_id'],
-            network: Network::from($data['network']),
+            customerId: $data['customer_id'] ?? null,
+            instanceId: $data['instance_id'] ?? null,
+            network: Decode::enum(Network::class, $data['network']),
             address: $data['address'] ?? null,
             createdAt: isset($data['created_at'])
                 ? new DateTimeImmutable($data['created_at'])
@@ -37,6 +40,9 @@ readonly class CustodialWallet
 
 readonly class WalletTokenBalance
 {
+    /**
+     * @param  string  $token  the token symbol (wire key `symbol`), e.g. USDC
+     */
     public function __construct(
         public float $amount,
         public string $token,
@@ -47,7 +53,7 @@ readonly class WalletTokenBalance
     {
         return new self(
             amount: (float) $data['amount'],
-            token: $data['token'],
+            token: $data['symbol'],
             address: $data['address']
         );
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Transfers;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\BaseTracking;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\CurrencyType;
@@ -213,20 +214,20 @@ readonly class Transfer
         public TransactionStatus $status,
         public string $transferQuoteId,
         public string $walletId,
-        public StablecoinToken $senderToken,
+        public StablecoinToken|string $senderToken,
         public float $senderAmount,
         public float $receiverAmount,
-        public StablecoinToken $customerToken,
-        public Network $customerNetwork,
+        public StablecoinToken|string $customerToken,
+        public Network|string $customerNetwork,
         public string $customerWalletAddress,
         public string $customerId,
         public ?string $address,
-        public Network $network,
+        public Network|string $network,
         public TransferTrackingTransactionMonitoring $trackingTransactionMonitoring,
         public TransferTrackingPaymaster $trackingPaymaster,
         public TransferTrackingBridgeSwap $trackingBridgeSwap,
         public TrackingComplete $trackingComplete,
-        public TrackingPartnerFee $trackingPartnerFee,
+        public ?TrackingPartnerFee $trackingPartnerFee,
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
         public ?string $imageUrl = null,
@@ -245,20 +246,20 @@ readonly class Transfer
             status: TransactionStatus::from($data['status']),
             transferQuoteId: $data['transfer_quote_id'],
             walletId: $data['wallet_id'],
-            senderToken: StablecoinToken::from($data['sender_token']),
+            senderToken: Decode::enum(StablecoinToken::class, $data['sender_token']),
             senderAmount: (float) $data['sender_amount'],
             receiverAmount: (float) $data['receiver_amount'],
-            customerToken: StablecoinToken::from($data['customer_token']),
-            customerNetwork: Network::from($data['customer_network']),
+            customerToken: Decode::enum(StablecoinToken::class, $data['customer_token']),
+            customerNetwork: Decode::enum(Network::class, $data['customer_network']),
             customerWalletAddress: $data['customer_wallet_address'],
             customerId: $data['customer_id'],
             address: $data['address'] ?? null,
-            network: Network::from($data['network']),
+            network: Decode::enum(Network::class, $data['network']),
             trackingTransactionMonitoring: TransferTrackingTransactionMonitoring::fromArray($data['tracking_transaction_monitoring']),
             trackingPaymaster: TransferTrackingPaymaster::fromArray($data['tracking_paymaster']),
             trackingBridgeSwap: TransferTrackingBridgeSwap::fromArray($data['tracking_bridge_swap']),
             trackingComplete: TrackingComplete::fromArray($data['tracking_complete']),
-            trackingPartnerFee: TrackingPartnerFee::fromArray($data['tracking_partner_fee']),
+            trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null,
             createdAt: isset($data['created_at'])
                 ? new DateTimeImmutable($data['created_at'])
                 : null,
@@ -271,6 +272,36 @@ readonly class Transfer
             legalName: $data['legal_name'] ?? null,
             partnerFeeAmount: isset($data['partner_fee_amount']) ? (float) $data['partner_fee_amount'] : null,
             externalId: $data['external_id'] ?? null
+        );
+    }
+}
+
+/**
+ * Response of POST /transfers (spec CreateTransferOut): the new transfer's id, status and
+ * tracking steps. Fetch the full Transfer with get() when you need amounts and parties.
+ */
+readonly class CreateTransferResponse
+{
+    public function __construct(
+        public string $id,
+        public TransactionStatus $status,
+        public TransferTrackingTransactionMonitoring $trackingTransactionMonitoring,
+        public TransferTrackingPaymaster $trackingPaymaster,
+        public TransferTrackingBridgeSwap $trackingBridgeSwap,
+        public TrackingComplete $trackingComplete,
+        public ?TrackingPartnerFee $trackingPartnerFee = null
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'],
+            status: TransactionStatus::from($data['status']),
+            trackingTransactionMonitoring: TransferTrackingTransactionMonitoring::fromArray($data['tracking_transaction_monitoring']),
+            trackingPaymaster: TransferTrackingPaymaster::fromArray($data['tracking_paymaster']),
+            trackingBridgeSwap: TransferTrackingBridgeSwap::fromArray($data['tracking_bridge_swap']),
+            trackingComplete: TrackingComplete::fromArray($data['tracking_complete']),
+            trackingPartnerFee: isset($data['tracking_partner_fee']) ? TrackingPartnerFee::fromArray($data['tracking_partner_fee']) : null
         );
     }
 }
@@ -339,7 +370,7 @@ class Transfers
      * Create a transfer
      *
      * @param CreateTransferInput $input
-     * @return BlindPayApiResponse<Transfer>
+     * @return BlindPayApiResponse<CreateTransferResponse>
      */
     public function create(CreateTransferInput $input): BlindPayApiResponse
     {
@@ -350,7 +381,7 @@ class Transfers
 
         if ($response->isSuccess() && is_array($response->data)) {
             return BlindPayApiResponse::success(
-                Transfer::fromArray($response->data)
+                CreateTransferResponse::fromArray($response->data)
             );
         }
 

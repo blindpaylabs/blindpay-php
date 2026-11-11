@@ -10,7 +10,7 @@ readonly class TrackingPartnerFee extends BaseTracking
 {
     public function __construct(
         string $step,
-        public string $transactionHash,
+        public ?string $transactionHash,
         ?DateTimeImmutable $completedAt
     ) {
         parent::__construct($step, $completedAt);
@@ -20,7 +20,7 @@ readonly class TrackingPartnerFee extends BaseTracking
     {
         return new self(
             step: $data['step'],
-            transactionHash: $data['transaction_hash'],
+            transactionHash: $data['transaction_hash'] ?? null,
             completedAt: isset($data['completed_at'])
                 ? new DateTimeImmutable($data['completed_at'])
                 : null

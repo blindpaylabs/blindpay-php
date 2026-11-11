@@ -17,4 +17,5 @@ enum Rail: string
     case PIX_SAFE = 'pix_safe';
     case TED = 'ted';
     case SEPA = 'sepa';
+    case FASTER_PAYMENTS = 'faster_payments';
 }

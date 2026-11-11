@@ -50,6 +50,20 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: "Guard: the merged code passes the test suite"
+        # Never tag (and so never publish to Packagist) a commit whose tests fail: auto-merge is
+        # not gated on status checks, which is how the broken v3.4.1 was released.
+        run: |
+          composer install --prefer-dist --no-progress --no-interaction
+          composer run test
+          php scripts/contract-check.php
+
       - name: Read the VERSION const src/BlindPay.php was merged with
         id: version
         run: |

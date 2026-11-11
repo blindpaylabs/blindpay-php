@@ -266,22 +266,37 @@ function phpFilesUnder(string $dir): array
 
 /**
  * Scan one PHP file and return per-class info:
- *  isEnum, enumCases: [{name, value, line}], ctor: {startLine?, closeParenLine?, lastParamLine?, params:[{name,line}]},
- *  fromArray: {startLine?, closeParenLine?, lastArgLine?, keys:[...]},
- *  toArray: {style: 'none'|'literal'|'conditional', literalCloseLine?, literalLastLine?,
+ *  isEnum, enumCases: [{name, value, line}], ctor: {params:[{name,line,type}], list?: <list anchor>},
+ *  fromArray: {args:[{name,line}], call?: <list anchor>, keys:[...]},
+ *  toArray: {style: 'none'|'literal'|'conditional', literal?: <list anchor>, literalLastLine?,
  *            conditionalReturnLine?, conditionalLastIfLine?, keys:[...]}
+ *
+ * A <list anchor> (see scanListAnchor()) locates the END of the last element of a delimited list:
+ * the constructor parameter list, the `new self(...)` argument list in fromArray, and the array
+ * literal returned by toArray. Insertions splice after that element's last line, never after the
+ * line its name starts on: an element can span several lines (e.g. a multi-line ternary), and
+ * splicing after its first line is what corrupted PayinTrackingPayment::fromArray in v3.4.1.
  */
 function scanClassesDetailed(string $path): array
 {
     $source = file_get_contents($path);
-    $tokens = token_get_all($source);
-    $tokens = array_values(array_filter($tokens, function ($t) {
-        if (! is_array($t)) {
-            return true;
+    // Keep the start and end line of every significant token. token_get_all() gives no line for
+    // single-character tokens such as `,` `)` `]`, and the anchors need them.
+    $tokens = [];
+    $startLines = [];
+    $endLines = [];
+    $cursorLine = 1;
+    foreach (token_get_all($source) as $t) {
+        $text = is_array($t) ? $t[1] : $t;
+        $start = is_array($t) ? $t[2] : $cursorLine;
+        $cursorLine = $start + substr_count($text, "\n");
+        if (is_array($t) && in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+            continue;
         }
-
-        return ! in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true);
-    }));
+        $tokens[] = $t;
+        $startLines[] = $start;
+        $endLines[] = $cursorLine;
+    }
 
     $classes = [];
     $braceDepth = 0;
@@ -293,6 +308,7 @@ function scanClassesDetailed(string $path): array
     $awaitingCtorParen = false;
     $inCtorParams = false;
     $ctorParenDepth = 0;
+    $ctorOpenIdx = null;
 
     $count = count($tokens);
     $line = 1;
@@ -344,6 +360,7 @@ function scanClassesDetailed(string $path): array
         if (! is_array($t) && $text === '(' && $awaitingCtorParen && ! $inCtorParams) {
             $inCtorParams = true;
             $ctorParenDepth = 1;
+            $ctorOpenIdx = $i;
             $awaitingCtorParen = false;
             if ($currentClass !== null && isset($classes[$currentClass])) {
                 $classes[$currentClass]['ctor'] ??= ['params' => []];
@@ -358,6 +375,10 @@ function scanClassesDetailed(string $path): array
                 $ctorParenDepth--;
                 if ($ctorParenDepth === 0) {
                     $inCtorParams = false;
+                    if ($currentClass !== null && isset($classes[$currentClass]) && $ctorOpenIdx !== null) {
+                        $classes[$currentClass]['ctor']['list'] = scanListAnchor($tokens, $startLines, $endLines, $ctorOpenIdx);
+                    }
+                    $ctorOpenIdx = null;
                 }
             } elseif ($ctorParenDepth === 1 && is_array($t) && in_array($id, [T_PUBLIC, T_PROTECTED, T_PRIVATE], true)
                 && $currentClass !== null && isset($classes[$currentClass])) {
@@ -455,6 +476,13 @@ function scanClassesDetailed(string $path): array
 
         // fromArray: $data['key'] read anywhere in the body
         if ($currentFunction === 'fromArray' && $currentClass !== null && isset($classes[$currentClass])) {
+            // the `new self(` / `new static(` argument list -- the first one in the body is the one we extend
+            if (is_array($t) && $id === T_NEW && ! isset($classes[$currentClass]['fromArray']['call'])
+                && isset($tokens[$i + 1], $tokens[$i + 2]) && $tokens[$i + 2] === '('
+                && is_array($tokens[$i + 1]) && in_array(strtolower($tokens[$i + 1][1]), ['self', 'static'], true)
+            ) {
+                $classes[$currentClass]['fromArray']['call'] = scanListAnchor($tokens, $startLines, $endLines, $i + 2);
+            }
             if (is_array($t) && $id === T_VARIABLE
                 && isset($tokens[$i + 1], $tokens[$i + 2], $tokens[$i + 3])
                 && $tokens[$i + 1] === '['
@@ -476,6 +504,16 @@ function scanClassesDetailed(string $path): array
         // toArray: two possible styles.
         if ($currentFunction === 'toArray' && $currentClass !== null && isset($classes[$currentClass])) {
             $ta = &$classes[$currentClass]['toArray'];
+
+            // the keyed array literal the method builds -- `return [`, `$data = [`, or wrapped as in
+            // `return array_filter([` -- is the first `[` whose first element is `'key' =>`
+            if (! is_array($t) && $text === '[' && ! isset($ta['literal'])
+                && isset($tokens[$i + 1], $tokens[$i + 2])
+                && is_array($tokens[$i + 1]) && $tokens[$i + 1][0] === T_CONSTANT_ENCAPSED_STRING
+                && is_array($tokens[$i + 2]) && $tokens[$i + 2][0] === T_DOUBLE_ARROW
+            ) {
+                $ta['literal'] = scanListAnchor($tokens, $startLines, $endLines, $i);
+            }
 
             // style "literal": 'key' => value inside an array literal
             if (is_array($t) && $id === T_CONSTANT_ENCAPSED_STRING
@@ -522,6 +560,85 @@ function scanClassesDetailed(string $path): array
     }
 
     return $classes;
+}
+
+/**
+ * Given the index of an opening `(` or `[`, walk to its matching closer and describe the list's
+ * last element: {closeLine, lastStartLine, lastEndLine, lastTail, trailingComma, empty}.
+ * lastTail is the final source line of the element's last token, used to refuse a splice when
+ * something (e.g. a trailing comment) follows the element on its last line.
+ */
+function scanListAnchor(array $tokens, array $startLines, array $endLines, int $openIdx): array
+{
+    $openers = ['(' => true, '[' => true, '{' => true];
+    $closers = [')' => true, ']' => true, '}' => true];
+    $depth = 0;
+    $elementStartIdx = $openIdx + 1;
+    $count = count($tokens);
+    for ($j = $openIdx; $j < $count; $j++) {
+        $tok = $tokens[$j];
+        $isOpener = is_array($tok)
+            ? in_array($tok[0], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true)
+            : isset($openers[$tok]);
+        if ($isOpener) {
+            $depth++;
+
+            continue;
+        }
+        if (! is_array($tok) && isset($closers[$tok])) {
+            $depth--;
+            if ($depth === 0) {
+                $lastIdx = $j - 1;
+                $trailingComma = $lastIdx > $openIdx && $tokens[$lastIdx] === ',';
+                $lastText = is_array($tokens[$lastIdx]) ? $tokens[$lastIdx][1] : $tokens[$lastIdx];
+                $tailLines = explode("\n", $lastText);
+
+                return [
+                    'closeLine' => $startLines[$j],
+                    'lastStartLine' => $startLines[min($elementStartIdx, $lastIdx)],
+                    'lastEndLine' => $endLines[$lastIdx],
+                    'lastTail' => rtrim(end($tailLines)),
+                    'trailingComma' => $trailingComma,
+                    'empty' => $lastIdx === $openIdx,
+                ];
+            }
+
+            continue;
+        }
+        // a top-level comma that is not the trailing one starts a new element
+        if ($depth === 1 && $tok === ',' && isset($tokens[$j + 1]) && ! (! is_array($tokens[$j + 1]) && isset($closers[$tokens[$j + 1]]))) {
+            $elementStartIdx = $j + 1;
+        }
+    }
+
+    throw new RuntimeException("api-sync: unbalanced delimiter at token {$openIdx}");
+}
+
+/**
+ * Append $content as a new last element of the list described by $anchor (see scanListAnchor()),
+ * on its own line right after the current last element ends, with the indentation of the line
+ * that element starts on. Keeps the file's trailing-comma convention. Refuses (throws) rather than
+ * guessing when the layout makes a line splice unsafe, so a bad sync fails loudly in CI instead of
+ * shipping code that parses but is wrong.
+ */
+function spliceListElement(array &$lines, array $anchor, string $content, string $context): void
+{
+    if ($anchor['empty']) {
+        throw new RuntimeException("api-sync: cannot insert into empty {$context}");
+    }
+    if ($anchor['closeLine'] <= $anchor['lastEndLine']) {
+        throw new RuntimeException("api-sync: cannot insert into {$context}: its closing delimiter shares a line with the last element");
+    }
+    $lastIdx = $anchor['lastEndLine'] - 1;
+    $lastLine = rtrim($lines[$lastIdx]);
+    if ($anchor['lastTail'] === '' || ! str_ends_with($lastLine, $anchor['lastTail'])) {
+        throw new RuntimeException("api-sync: cannot insert into {$context}: unexpected text after its last element on line {$anchor['lastEndLine']}");
+    }
+    $indent = detectIndent($lines[$anchor['lastStartLine'] - 1]);
+    if (! $anchor['trailingComma']) {
+        $lines[$lastIdx] = $lastLine.',';
+    }
+    array_splice($lines, $lastIdx + 1, 0, [$indent.$content.($anchor['trailingComma'] ? ',' : '')]);
 }
 
 /** name => {file, isEnum, enumCases, ctor, fromArray, toArray} across src/Resources and src/Types. */
@@ -599,23 +716,43 @@ function specTypeCategory(array $propSchema): array
 }
 
 /**
- * Normalize a PHP promoted-property type declaration (e.g. "?string", "Network", "?array")
- * into {category, nullable}. A bare class/enum name normalizes to 'object'.
+ * Normalize a PHP promoted-property type declaration (e.g. "?string", "Network", "?array",
+ * "Network|string|null") into {category, nullable}. A bare class/enum name normalizes to 'object'.
+ * The open-enum union `SomeEnum|string` (a known wire value decodes to the enum case, an unknown
+ * one is kept as its raw string; see Internal\Decode::enum()) normalizes to 'string', which
+ * accepts every value of a spec enum or plain string. Any other union is 'ambiguous'.
  */
 function phpTypeCategory(?string $phpType): array
 {
     if ($phpType === null || $phpType === '') {
         return ['category' => null, 'nullable' => null, 'className' => null];
     }
-    $nullable = str_starts_with($phpType, '?');
-    $base = ltrim($phpType, '?');
-    if (str_contains($base, '|')) {
+    $parts = explode('|', ltrim($phpType, '?'));
+    $nullable = str_starts_with($phpType, '?') || in_array('null', $parts, true);
+    $parts = array_values(array_diff($parts, ['null']));
+    if (count($parts) === 2 && in_array('string', $parts, true)) {
+        return ['category' => 'string', 'nullable' => $nullable, 'className' => null];
+    }
+    if (count($parts) !== 1) {
         return ['category' => 'ambiguous', 'nullable' => $nullable, 'className' => null];
     }
+    $base = $parts[0];
     $scalarMap = ['string' => 'string', 'int' => 'integer', 'float' => 'number', 'bool' => 'boolean', 'array' => 'array'];
     $category = $scalarMap[$base] ?? 'object';
 
     return ['category' => $category, 'nullable' => $nullable, 'className' => $category === 'object' ? $base : null];
+}
+
+/**
+ * The enum/class symbol a promoted-property type names: "?Network" and the open-enum unions
+ * "Network|string" / "Network|string|null" all give "Network". Any other type is returned with
+ * only a leading `?` stripped.
+ */
+function openEnumSymbol(string $phpType): string
+{
+    $parts = array_values(array_diff(explode('|', ltrim($phpType, '?')), ['string', 'null']));
+
+    return count($parts) === 1 ? $parts[0] : ltrim($phpType, '?');
 }
 
 /**
@@ -864,7 +1001,7 @@ function computeEnumCoverageGaps(array $map, array $spec, array $reachable, arra
                 if ($phpType === null) {
                     continue; // not modeled via a promoted ctor property -- presence gaps are handled elsewhere
                 }
-                if (isset($enumClassSet[ltrim($phpType, '?')])) {
+                if (isset($enumClassSet[openEnumSymbol($phpType)])) {
                     continue; // resolves to a mapped enum symbol
                 }
                 $label = $schemaName.($schemaPath !== null ? ".{$schemaPath}" : '');
@@ -1957,36 +2094,25 @@ function applyFieldInsertion(string $root, string $file, string $className, stri
     $classes = scanClassesDetailed($path);
     $info = $classes[$className];
 
-    // 1) constructor promoted property -- always last param, so it is always syntactically safe.
-    // Preserve the file's own convention: if the previous last param had no trailing comma, the
-    // new (now-last) line gets none either, and the previous line gains one since it's no longer last.
-    if ($info['ctor'] !== null && ! empty($info['ctor']['params'])) {
-        $lastParam = end($info['ctor']['params']);
-        $lastLine = $lastParam['line'];
-        $indent = detectIndent($lines[$lastLine - 1]);
-        $hadTrailingComma = str_ends_with(rtrim($lines[$lastLine - 1]), ',');
-        if (! $hadTrailingComma) {
-            $lines[$lastLine - 1] = rtrim($lines[$lastLine - 1]).',';
-        }
-        $newLine = "{$indent}public ?{$phpType} \${$camel} = null".($hadTrailingComma ? ',' : '');
-        array_splice($lines, $lastLine, 0, [$newLine]);
-        file_put_contents($path, implode("\n", $lines)."\n");
-        $lines = file($path, FILE_IGNORE_NEW_LINES);
-        $classes = scanClassesDetailed($path);
-        $info = $classes[$className];
+    // 1) constructor promoted property -- appended after the LAST parameter (promoted or not), so
+    // it is always syntactically safe and never lands before a later parameter.
+    if ($info['ctor'] === null || empty($info['ctor']['params']) || ! isset($info['ctor']['list'])) {
+        throw new RuntimeException("api-sync: cannot insert '{$field}' into {$className}: no constructor with promoted properties found");
     }
+    spliceListElement($lines, $info['ctor']['list'], "public ?{$phpType} \${$camel} = null", "{$className}::__construct parameters");
+    file_put_contents($path, implode("\n", $lines)."\n");
+    $lines = file($path, FILE_IGNORE_NEW_LINES);
+    $classes = scanClassesDetailed($path);
+    $info = $classes[$className];
 
-    // 2) fromArray line -- only if the method exists. Same trailing-comma convention as above.
-    if ($info['fromArray'] !== null && ! empty($info['fromArray']['args'])) {
-        $lastArg = end($info['fromArray']['args']);
-        $lastLine = $lastArg['line'];
-        $indent = detectIndent($lines[$lastLine - 1]);
-        $hadTrailingComma = str_ends_with(rtrim($lines[$lastLine - 1]), ',');
-        if (! $hadTrailingComma) {
-            $lines[$lastLine - 1] = rtrim($lines[$lastLine - 1]).',';
+    // 2) fromArray argument -- appended after the end of the last `new self(...)` argument
+    // expression, which may span several lines. A fromArray we cannot anchor is a hard failure:
+    // silently skipping it would leave a constructor property that is never populated.
+    if ($info['fromArray'] !== null) {
+        if (! isset($info['fromArray']['call'])) {
+            throw new RuntimeException("api-sync: cannot insert '{$field}' into {$className}::fromArray: no `new self(...)` call found");
         }
-        $newLine = "{$indent}{$camel}: \$data['{$field}'] ?? null".($hadTrailingComma ? ',' : '');
-        array_splice($lines, $lastLine, 0, [$newLine]);
+        spliceListElement($lines, $info['fromArray']['call'], "{$camel}: \$data['{$field}'] ?? null", "{$className}::fromArray new self(...) arguments");
         file_put_contents($path, implode("\n", $lines)."\n");
         $lines = file($path, FILE_IGNORE_NEW_LINES);
         $classes = scanClassesDetailed($path);
@@ -1995,15 +2121,14 @@ function applyFieldInsertion(string $root, string $file, string $className, stri
 
     // 3) toArray line -- only if the method exists, honoring the class's own style.
     $ta = $info['toArray'];
-    if ($ta['style'] === 'literal' && isset($ta['literalLastLine'])) {
-        $lastLine = $ta['literalLastLine'];
-        $indent = detectIndent($lines[$lastLine - 1]);
-        if (! str_ends_with(rtrim($lines[$lastLine - 1]), ',')) {
-            $lines[$lastLine - 1] = rtrim($lines[$lastLine - 1]).',';
-        }
-        array_splice($lines, $lastLine, 0, ["{$indent}'{$field}' => \$this->{$camel},"]);
+    if (($ta['style'] === 'literal' && ! isset($ta['literal']))
+        || ($ta['style'] === 'conditional' && ! isset($ta['conditionalReturnLine']))) {
+        throw new RuntimeException("api-sync: cannot insert '{$field}' into {$className}::toArray: unrecognised layout");
+    }
+    if ($ta['style'] === 'literal') {
+        spliceListElement($lines, $ta['literal'], "'{$field}' => \$this->{$camel}", "{$className}::toArray array literal");
         file_put_contents($path, implode("\n", $lines)."\n");
-    } elseif ($ta['style'] === 'conditional' && isset($ta['conditionalReturnLine'])) {
+    } elseif ($ta['style'] === 'conditional') {
         $returnLine = $ta['conditionalReturnLine'];
         $indent = detectIndent($lines[$returnLine - 1]);
         $block = [

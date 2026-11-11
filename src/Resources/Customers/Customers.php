@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Customers;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\AccountPurpose;
 use BlindPay\SDK\Types\AmlStatus;
@@ -17,6 +18,7 @@ use BlindPay\SDK\Types\PaginationMetadata;
 use BlindPay\SDK\Types\PaginationParams;
 use BlindPay\SDK\Types\SourceOfWealth;
 use DateTimeImmutable;
+use ReflectionClass;
 
 enum ProofOfAddressDocType: string
 {
@@ -113,6 +115,18 @@ enum OwnerTaxType: string
 
 readonly class Owner
 {
+    /**
+     * Required when you build an Owner for customer creation (the constructor takes a string).
+     * Null only on an Owner decoded from a response that omits it.
+     */
+    public ?string $taxId;
+
+    /**
+     * Required when you build an Owner for customer creation (the constructor takes a string).
+     * Null only on an Owner decoded from a response that omits it.
+     */
+    public ?string $idDocFrontFile;
+
     public function __construct(
         public string $id,
         public string $instanceId,
@@ -120,7 +134,7 @@ readonly class Owner
         public string $firstName,
         public string $lastName,
         public string $dateOfBirth,
-        public string $taxId,
+        string $taxId,
         public string $addressLine1,
         public ?string $addressLine2,
         public string $city,
@@ -129,43 +143,57 @@ readonly class Owner
         public string $postalCode,
         public Country $idDocCountry,
         public IdentificationDocument $idDocType,
-        public string $idDocFrontFile,
+        string $idDocFrontFile,
         public ?string $idDocBackFile,
-        public ProofOfAddressDocType $proofOfAddressDocType,
-        public string $proofOfAddressDocFile,
+        public ?ProofOfAddressDocType $proofOfAddressDocType,
+        public ?string $proofOfAddressDocFile,
         public ?int $ownershipPercentage = null,
         public ?string $title = null,
         public ?OwnerTaxType $taxType = null,
         public ?string $customerId = null
-    ) {}
+    ) {
+        $this->taxId = $taxId;
+        $this->idDocFrontFile = $idDocFrontFile;
+    }
 
+    /**
+     * Owner is both the customer-create input and part of the customer response. A response may
+     * omit tax_id and id_doc_front_file, which the constructor requires, so decoding sets the
+     * properties directly instead of going through it.
+     */
     public static function fromArray(array $data): self
     {
-        return new self(
-            id: $data['id'],
-            instanceId: $data['instance_id'],
-            role: OwnerRole::from($data['role']),
-            firstName: $data['first_name'],
-            lastName: $data['last_name'],
-            dateOfBirth: $data['date_of_birth'],
-            taxId: $data['tax_id'],
-            addressLine1: $data['address_line_1'],
-            addressLine2: $data['address_line_2'] ?? null,
-            city: $data['city'],
-            stateProvinceRegion: $data['state_province_region'],
-            country: Country::from($data['country']),
-            postalCode: $data['postal_code'],
-            idDocCountry: Country::from($data['id_doc_country']),
-            idDocType: IdentificationDocument::from($data['id_doc_type']),
-            idDocFrontFile: $data['id_doc_front_file'],
-            idDocBackFile: $data['id_doc_back_file'] ?? null,
-            proofOfAddressDocType: ProofOfAddressDocType::from($data['proof_of_address_doc_type']),
-            proofOfAddressDocFile: $data['proof_of_address_doc_file'],
-            ownershipPercentage: isset($data['ownership_percentage']) ? (int) $data['ownership_percentage'] : null,
-            title: $data['title'] ?? null,
-            taxType: isset($data['tax_type']) ? OwnerTaxType::from($data['tax_type']) : null,
-            customerId: $data['customer_id'] ?? null
-        );
+        $owner = (new ReflectionClass(self::class))->newInstanceWithoutConstructor();
+        $properties = [
+            'id' => $data['id'],
+            'instanceId' => $data['instance_id'],
+            'role' => OwnerRole::from($data['role']),
+            'firstName' => $data['first_name'],
+            'lastName' => $data['last_name'],
+            'dateOfBirth' => $data['date_of_birth'],
+            'taxId' => $data['tax_id'] ?? null,
+            'addressLine1' => $data['address_line_1'],
+            'addressLine2' => $data['address_line_2'] ?? null,
+            'city' => $data['city'],
+            'stateProvinceRegion' => $data['state_province_region'],
+            'country' => Country::from($data['country']),
+            'postalCode' => $data['postal_code'],
+            'idDocCountry' => Country::from($data['id_doc_country']),
+            'idDocType' => IdentificationDocument::from($data['id_doc_type']),
+            'idDocFrontFile' => $data['id_doc_front_file'] ?? null,
+            'idDocBackFile' => $data['id_doc_back_file'] ?? null,
+            'proofOfAddressDocType' => isset($data['proof_of_address_doc_type']) ? ProofOfAddressDocType::from($data['proof_of_address_doc_type']) : null,
+            'proofOfAddressDocFile' => $data['proof_of_address_doc_file'] ?? null,
+            'ownershipPercentage' => isset($data['ownership_percentage']) ? (int) $data['ownership_percentage'] : null,
+            'title' => $data['title'] ?? null,
+            'taxType' => isset($data['tax_type']) ? OwnerTaxType::from($data['tax_type']) : null,
+            'customerId' => $data['customer_id'] ?? null,
+        ];
+        foreach ($properties as $property => $value) {
+            $owner->{$property} = $value;
+        }
+
+        return $owner;
     }
 
     public function toArray(): array
@@ -187,7 +215,7 @@ readonly class Owner
             'id_doc_type' => $this->idDocType->value,
             'id_doc_front_file' => $this->idDocFrontFile,
             'id_doc_back_file' => $this->idDocBackFile,
-            'proof_of_address_doc_type' => $this->proofOfAddressDocType->value,
+            'proof_of_address_doc_type' => $this->proofOfAddressDocType?->value,
             'proof_of_address_doc_file' => $this->proofOfAddressDocFile,
         ];
 
@@ -295,27 +323,27 @@ abstract readonly class BaseCustomer
      */
     public function __construct(
         public string $id,
-        public AccountClass $type,
-        public KycType $kycType,
+        public AccountClass|string $type,
+        public KycType|string $kycType,
         public string $kycStatus,
         public ?array $kycWarnings,
         public string $email,
-        public string $taxId,
-        public string $addressLine1,
+        public ?string $taxId,
+        public ?string $addressLine1,
         public ?string $addressLine2,
-        public string $city,
-        public string $stateProvinceRegion,
+        public ?string $city,
+        public ?string $stateProvinceRegion,
         public Country $country,
-        public string $postalCode,
+        public ?string $postalCode,
         public ?string $ipAddress,
         public ?string $imageUrl,
         public ?string $phoneNumber,
-        public ProofOfAddressDocType $proofOfAddressDocType,
-        public string $proofOfAddressDocFile,
+        public ?ProofOfAddressDocType $proofOfAddressDocType,
+        public ?string $proofOfAddressDocFile,
         public string $instanceId,
         public ?string $tosId,
-        public DateTimeImmutable $createdAt,
-        public DateTimeImmutable $updatedAt,
+        public ?DateTimeImmutable $createdAt,
+        public ?DateTimeImmutable $updatedAt,
         public Limit $limit,
         public ?array $fraudWarnings = null,
         public ?bool $isFbo = null,
@@ -334,30 +362,30 @@ readonly class IndividualWithStandardKYC extends BaseCustomer
         string $kycStatus,
         ?array $kycWarnings,
         string $email,
-        string $taxId,
-        string $addressLine1,
+        ?string $taxId,
+        ?string $addressLine1,
         ?string $addressLine2,
-        string $city,
-        string $stateProvinceRegion,
+        ?string $city,
+        ?string $stateProvinceRegion,
         Country $country,
-        string $postalCode,
+        ?string $postalCode,
         ?string $ipAddress,
         ?string $imageUrl,
         ?string $phoneNumber,
-        ProofOfAddressDocType $proofOfAddressDocType,
-        string $proofOfAddressDocFile,
+        ?ProofOfAddressDocType $proofOfAddressDocType,
+        ?string $proofOfAddressDocFile,
         string $instanceId,
         ?string $tosId,
-        DateTimeImmutable $createdAt,
-        DateTimeImmutable $updatedAt,
+        ?DateTimeImmutable $createdAt,
+        ?DateTimeImmutable $updatedAt,
         Limit $limit,
-        public string $firstName,
-        public string $lastName,
-        public string $dateOfBirth,
-        public Country $idDocCountry,
-        public IdentificationDocument $idDocType,
-        public string $idDocFrontFile,
-        public string $idDocBackFile,
+        public ?string $firstName,
+        public ?string $lastName,
+        public ?string $dateOfBirth,
+        public ?Country $idDocCountry,
+        public ?IdentificationDocument $idDocType,
+        public ?string $idDocFrontFile,
+        public ?string $idDocBackFile,
         public ?string $aipriseValidationKey,
         ?array $fraudWarnings = null,
         ?bool $isFbo = null,
@@ -368,12 +396,14 @@ readonly class IndividualWithStandardKYC extends BaseCustomer
         ?bool $isTosAccepted = null,
         public ?string $externalId = null,
         public ?string $selfieFile = null,
-        public ?string $occupation = null
+        public ?string $occupation = null,
+        AccountClass|string|null $type = null,
+        KycType|string|null $kycType = null
     ) {
         parent::__construct(
             $id,
-            AccountClass::INDIVIDUAL,
-            KycType::STANDARD,
+            $type ?? AccountClass::INDIVIDUAL,
+            $kycType ?? KycType::STANDARD,
             $kycStatus,
             $kycWarnings,
             $email,
@@ -414,30 +444,30 @@ readonly class IndividualWithStandardKYC extends BaseCustomer
                 $data['kyc_warnings']
             ) : null,
             email: $data['email'],
-            taxId: $data['tax_id'],
-            addressLine1: $data['address_line_1'],
+            taxId: $data['tax_id'] ?? null,
+            addressLine1: $data['address_line_1'] ?? null,
             addressLine2: $data['address_line_2'] ?? null,
-            city: $data['city'],
-            stateProvinceRegion: $data['state_province_region'],
+            city: $data['city'] ?? null,
+            stateProvinceRegion: $data['state_province_region'] ?? null,
             country: Country::from($data['country']),
-            postalCode: $data['postal_code'],
+            postalCode: $data['postal_code'] ?? null,
             ipAddress: $data['ip_address'] ?? null,
             imageUrl: $data['image_url'] ?? null,
             phoneNumber: $data['phone_number'] ?? null,
-            proofOfAddressDocType: ProofOfAddressDocType::from($data['proof_of_address_doc_type']),
-            proofOfAddressDocFile: $data['proof_of_address_doc_file'],
+            proofOfAddressDocType: isset($data['proof_of_address_doc_type']) ? ProofOfAddressDocType::from($data['proof_of_address_doc_type']) : null,
+            proofOfAddressDocFile: $data['proof_of_address_doc_file'] ?? null,
             instanceId: $data['instance_id'],
             tosId: $data['tos_id'] ?? null,
-            createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at']),
+            createdAt: isset($data['created_at']) ? new DateTimeImmutable($data['created_at']) : null,
+            updatedAt: isset($data['updated_at']) ? new DateTimeImmutable($data['updated_at']) : null,
             limit: Limit::fromArray($data['limit']),
-            firstName: $data['first_name'],
-            lastName: $data['last_name'],
-            dateOfBirth: $data['date_of_birth'],
-            idDocCountry: Country::from($data['id_doc_country']),
-            idDocType: IdentificationDocument::from($data['id_doc_type']),
-            idDocFrontFile: $data['id_doc_front_file'],
-            idDocBackFile: $data['id_doc_back_file'],
+            firstName: $data['first_name'] ?? null,
+            lastName: $data['last_name'] ?? null,
+            dateOfBirth: $data['date_of_birth'] ?? null,
+            idDocCountry: isset($data['id_doc_country']) ? Country::from($data['id_doc_country']) : null,
+            idDocType: isset($data['id_doc_type']) ? IdentificationDocument::from($data['id_doc_type']) : null,
+            idDocFrontFile: $data['id_doc_front_file'] ?? null,
+            idDocBackFile: $data['id_doc_back_file'] ?? null,
             aipriseValidationKey: $data['aiprise_validation_key'] ?? null,
             fraudWarnings: isset($data['fraud_warnings']) ? array_map(
                 fn ($w) => FraudWarning::fromArray($w),
@@ -451,7 +481,9 @@ readonly class IndividualWithStandardKYC extends BaseCustomer
             isTosAccepted: $data['is_tos_accepted'] ?? null,
             externalId: $data['external_id'] ?? null,
             selfieFile: $data['selfie_file'] ?? null,
-            occupation: $data['occupation'] ?? null
+            occupation: $data['occupation'] ?? null,
+            type: Decode::enum(AccountClass::class, $data['type'] ?? null),
+            kycType: Decode::enum(KycType::class, $data['kyc_type'] ?? null)
         );
     }
 }
@@ -463,35 +495,35 @@ readonly class IndividualWithEnhancedKYC extends BaseCustomer
         string $kycStatus,
         ?array $kycWarnings,
         string $email,
-        string $taxId,
-        string $addressLine1,
+        ?string $taxId,
+        ?string $addressLine1,
         ?string $addressLine2,
-        string $city,
-        string $stateProvinceRegion,
+        ?string $city,
+        ?string $stateProvinceRegion,
         Country $country,
-        string $postalCode,
+        ?string $postalCode,
         ?string $ipAddress,
         ?string $imageUrl,
         ?string $phoneNumber,
-        ProofOfAddressDocType $proofOfAddressDocType,
-        string $proofOfAddressDocFile,
+        ?ProofOfAddressDocType $proofOfAddressDocType,
+        ?string $proofOfAddressDocFile,
         string $instanceId,
         ?string $tosId,
-        DateTimeImmutable $createdAt,
-        DateTimeImmutable $updatedAt,
+        ?DateTimeImmutable $createdAt,
+        ?DateTimeImmutable $updatedAt,
         Limit $limit,
-        public string $firstName,
-        public string $lastName,
-        public string $dateOfBirth,
-        public Country $idDocCountry,
-        public IdentificationDocument $idDocType,
-        public string $idDocFrontFile,
+        public ?string $firstName,
+        public ?string $lastName,
+        public ?string $dateOfBirth,
+        public ?Country $idDocCountry,
+        public ?IdentificationDocument $idDocType,
+        public ?string $idDocFrontFile,
         public ?string $idDocBackFile,
         public ?string $aipriseValidationKey,
-        public string $sourceOfFundsDocType,
-        public string $sourceOfFundsDocFile,
-        public string $individualHoldingDocFrontFile,
-        public PurposeOfTransactions $purposeOfTransactions,
+        public ?string $sourceOfFundsDocType,
+        public ?string $sourceOfFundsDocFile,
+        public ?string $individualHoldingDocFrontFile,
+        public ?PurposeOfTransactions $purposeOfTransactions,
         public ?string $purposeOfTransactionsExplanation,
         ?array $fraudWarnings = null,
         ?bool $isFbo = null,
@@ -502,12 +534,14 @@ readonly class IndividualWithEnhancedKYC extends BaseCustomer
         ?bool $isTosAccepted = null,
         public ?string $externalId = null,
         public ?string $selfieFile = null,
-        public ?string $occupation = null
+        public ?string $occupation = null,
+        AccountClass|string|null $type = null,
+        KycType|string|null $kycType = null
     ) {
         parent::__construct(
             $id,
-            AccountClass::INDIVIDUAL,
-            KycType::ENHANCED,
+            $type ?? AccountClass::INDIVIDUAL,
+            $kycType ?? KycType::ENHANCED,
             $kycStatus,
             $kycWarnings,
             $email,
@@ -548,35 +582,35 @@ readonly class IndividualWithEnhancedKYC extends BaseCustomer
                 $data['kyc_warnings']
             ) : null,
             email: $data['email'],
-            taxId: $data['tax_id'],
-            addressLine1: $data['address_line_1'],
+            taxId: $data['tax_id'] ?? null,
+            addressLine1: $data['address_line_1'] ?? null,
             addressLine2: $data['address_line_2'] ?? null,
-            city: $data['city'],
-            stateProvinceRegion: $data['state_province_region'],
+            city: $data['city'] ?? null,
+            stateProvinceRegion: $data['state_province_region'] ?? null,
             country: Country::from($data['country']),
-            postalCode: $data['postal_code'],
+            postalCode: $data['postal_code'] ?? null,
             ipAddress: $data['ip_address'] ?? null,
             imageUrl: $data['image_url'] ?? null,
             phoneNumber: $data['phone_number'] ?? null,
-            proofOfAddressDocType: ProofOfAddressDocType::from($data['proof_of_address_doc_type']),
-            proofOfAddressDocFile: $data['proof_of_address_doc_file'],
+            proofOfAddressDocType: isset($data['proof_of_address_doc_type']) ? ProofOfAddressDocType::from($data['proof_of_address_doc_type']) : null,
+            proofOfAddressDocFile: $data['proof_of_address_doc_file'] ?? null,
             instanceId: $data['instance_id'],
             tosId: $data['tos_id'] ?? null,
-            createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at']),
+            createdAt: isset($data['created_at']) ? new DateTimeImmutable($data['created_at']) : null,
+            updatedAt: isset($data['updated_at']) ? new DateTimeImmutable($data['updated_at']) : null,
             limit: Limit::fromArray($data['limit']),
-            firstName: $data['first_name'],
-            lastName: $data['last_name'],
-            dateOfBirth: $data['date_of_birth'],
-            idDocCountry: Country::from($data['id_doc_country']),
-            idDocType: IdentificationDocument::from($data['id_doc_type']),
-            idDocFrontFile: $data['id_doc_front_file'],
+            firstName: $data['first_name'] ?? null,
+            lastName: $data['last_name'] ?? null,
+            dateOfBirth: $data['date_of_birth'] ?? null,
+            idDocCountry: isset($data['id_doc_country']) ? Country::from($data['id_doc_country']) : null,
+            idDocType: isset($data['id_doc_type']) ? IdentificationDocument::from($data['id_doc_type']) : null,
+            idDocFrontFile: $data['id_doc_front_file'] ?? null,
             idDocBackFile: $data['id_doc_back_file'] ?? null,
             aipriseValidationKey: $data['aiprise_validation_key'] ?? null,
-            sourceOfFundsDocType: $data['source_of_funds_doc_type'],
-            sourceOfFundsDocFile: $data['source_of_funds_doc_file'],
-            individualHoldingDocFrontFile: $data['individual_holding_doc_front_file'],
-            purposeOfTransactions: PurposeOfTransactions::from($data['purpose_of_transactions']),
+            sourceOfFundsDocType: $data['source_of_funds_doc_type'] ?? null,
+            sourceOfFundsDocFile: $data['source_of_funds_doc_file'] ?? null,
+            individualHoldingDocFrontFile: $data['individual_holding_doc_front_file'] ?? null,
+            purposeOfTransactions: isset($data['purpose_of_transactions']) ? PurposeOfTransactions::from($data['purpose_of_transactions']) : null,
             purposeOfTransactionsExplanation: $data['purpose_of_transactions_explanation'] ?? null,
             fraudWarnings: isset($data['fraud_warnings']) ? array_map(
                 fn ($w) => FraudWarning::fromArray($w),
@@ -590,7 +624,9 @@ readonly class IndividualWithEnhancedKYC extends BaseCustomer
             isTosAccepted: $data['is_tos_accepted'] ?? null,
             externalId: $data['external_id'] ?? null,
             selfieFile: $data['selfie_file'] ?? null,
-            occupation: $data['occupation'] ?? null
+            occupation: $data['occupation'] ?? null,
+            type: Decode::enum(AccountClass::class, $data['type'] ?? null),
+            kycType: Decode::enum(KycType::class, $data['kyc_type'] ?? null)
         );
     }
 }
@@ -605,30 +641,30 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
         string $kycStatus,
         ?array $kycWarnings,
         string $email,
-        string $taxId,
-        string $addressLine1,
+        ?string $taxId,
+        ?string $addressLine1,
         ?string $addressLine2,
-        string $city,
-        string $stateProvinceRegion,
+        ?string $city,
+        ?string $stateProvinceRegion,
         Country $country,
-        string $postalCode,
+        ?string $postalCode,
         ?string $ipAddress,
         ?string $imageUrl,
         ?string $phoneNumber,
-        ProofOfAddressDocType $proofOfAddressDocType,
-        string $proofOfAddressDocFile,
+        ?ProofOfAddressDocType $proofOfAddressDocType,
+        ?string $proofOfAddressDocFile,
         string $instanceId,
         ?string $tosId,
-        DateTimeImmutable $createdAt,
-        DateTimeImmutable $updatedAt,
+        ?DateTimeImmutable $createdAt,
+        ?DateTimeImmutable $updatedAt,
         Limit $limit,
-        public string $legalName,
+        public ?string $legalName,
         public ?string $alternateName,
-        public string $formationDate,
+        public ?string $formationDate,
         public ?string $website,
         public array $owners,
-        public string $incorporationDocFile,
-        public string $proofOfOwnershipDocFile,
+        public ?string $incorporationDocFile,
+        public ?string $proofOfOwnershipDocFile,
         public ?string $externalId,
         public ?string $aipriseValidationKey,
         ?array $fraudWarnings = null,
@@ -640,15 +676,17 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
         ?bool $isTosAccepted = null,
         public ?BusinessType $businessType = null,
         public ?string $businessDescription = null,
-        public ?BusinessIndustry $businessIndustry = null,
+        public BusinessIndustry|string|null $businessIndustry = null,
         public ?EstimatedAnnualRevenue $estimatedAnnualRevenue = null,
-        public ?SourceOfWealth $sourceOfWealth = null,
-        public ?bool $publiclyTraded = null
+        public SourceOfWealth|string|null $sourceOfWealth = null,
+        public ?bool $publiclyTraded = null,
+        AccountClass|string|null $type = null,
+        KycType|string|null $kycType = null
     ) {
         parent::__construct(
             $id,
-            AccountClass::BUSINESS,
-            KycType::STANDARD,
+            $type ?? AccountClass::BUSINESS,
+            $kycType ?? KycType::STANDARD,
             $kycStatus,
             $kycWarnings,
             $email,
@@ -689,30 +727,30 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
                 $data['kyc_warnings']
             ) : null,
             email: $data['email'],
-            taxId: $data['tax_id'],
-            addressLine1: $data['address_line_1'],
+            taxId: $data['tax_id'] ?? null,
+            addressLine1: $data['address_line_1'] ?? null,
             addressLine2: $data['address_line_2'] ?? null,
-            city: $data['city'],
-            stateProvinceRegion: $data['state_province_region'],
+            city: $data['city'] ?? null,
+            stateProvinceRegion: $data['state_province_region'] ?? null,
             country: Country::from($data['country']),
-            postalCode: $data['postal_code'],
+            postalCode: $data['postal_code'] ?? null,
             ipAddress: $data['ip_address'] ?? null,
             imageUrl: $data['image_url'] ?? null,
             phoneNumber: $data['phone_number'] ?? null,
-            proofOfAddressDocType: ProofOfAddressDocType::from($data['proof_of_address_doc_type']),
-            proofOfAddressDocFile: $data['proof_of_address_doc_file'],
+            proofOfAddressDocType: isset($data['proof_of_address_doc_type']) ? ProofOfAddressDocType::from($data['proof_of_address_doc_type']) : null,
+            proofOfAddressDocFile: $data['proof_of_address_doc_file'] ?? null,
             instanceId: $data['instance_id'],
             tosId: $data['tos_id'] ?? null,
-            createdAt: new DateTimeImmutable($data['created_at']),
-            updatedAt: new DateTimeImmutable($data['updated_at']),
+            createdAt: isset($data['created_at']) ? new DateTimeImmutable($data['created_at']) : null,
+            updatedAt: isset($data['updated_at']) ? new DateTimeImmutable($data['updated_at']) : null,
             limit: Limit::fromArray($data['limit']),
-            legalName: $data['legal_name'],
+            legalName: $data['legal_name'] ?? null,
             alternateName: $data['alternate_name'] ?? null,
-            formationDate: $data['formation_date'],
+            formationDate: $data['formation_date'] ?? null,
             website: $data['website'] ?? null,
-            owners: array_map(fn ($o) => Owner::fromArray($o), $data['owners']),
-            incorporationDocFile: $data['incorporation_doc_file'],
-            proofOfOwnershipDocFile: $data['proof_of_ownership_doc_file'],
+            owners: array_map(fn ($o) => Owner::fromArray($o), $data['owners'] ?? []),
+            incorporationDocFile: $data['incorporation_doc_file'] ?? null,
+            proofOfOwnershipDocFile: $data['proof_of_ownership_doc_file'] ?? null,
             externalId: $data['external_id'] ?? null,
             aipriseValidationKey: $data['aiprise_validation_key'] ?? null,
             fraudWarnings: isset($data['fraud_warnings']) ? array_map(
@@ -727,10 +765,12 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
             isTosAccepted: $data['is_tos_accepted'] ?? null,
             businessType: isset($data['business_type']) ? BusinessType::from($data['business_type']) : null,
             businessDescription: $data['business_description'] ?? null,
-            businessIndustry: isset($data['business_industry']) ? BusinessIndustry::from($data['business_industry']) : null,
+            businessIndustry: Decode::enum(BusinessIndustry::class, $data['business_industry'] ?? null),
             estimatedAnnualRevenue: isset($data['estimated_annual_revenue']) ? EstimatedAnnualRevenue::from($data['estimated_annual_revenue']) : null,
-            sourceOfWealth: isset($data['source_of_wealth']) ? SourceOfWealth::from($data['source_of_wealth']) : null,
-            publiclyTraded: $data['publicly_traded'] ?? null
+            sourceOfWealth: Decode::enum(SourceOfWealth::class, $data['source_of_wealth'] ?? null),
+            publiclyTraded: $data['publicly_traded'] ?? null,
+            type: Decode::enum(AccountClass::class, $data['type'] ?? null),
+            kycType: Decode::enum(KycType::class, $data['kyc_type'] ?? null)
         );
     }
 }
@@ -1331,9 +1371,11 @@ class Customers
     ) {}
 
     /**
-     * Maps API data to the appropriate customer class
-     *
-     * @throws \InvalidArgumentException
+     * Pick the customer class by shape: business customers (any kyc_type, including enhanced)
+     * decode as BusinessWithStandardKYB, individual enhanced-KYC customers as
+     * IndividualWithEnhancedKYC, and every other individual (standard, light, or a type this SDK
+     * version does not know yet) as IndividualWithStandardKYC. The wire `type` and `kyc_type`
+     * are kept on the object, so check `$customer->kycType`, not the class, for the KYC level.
      */
     private function mapCustomer(array $data): IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB
     {
@@ -1341,10 +1383,9 @@ class Customers
         $kycType = $data['kyc_type'] ?? null;
 
         return match (true) {
-            $type === 'individual' && $kycType === 'standard' => IndividualWithStandardKYC::fromArray($data),
-            $type === 'individual' && $kycType === 'enhanced' => IndividualWithEnhancedKYC::fromArray($data),
-            $type === 'business' && $kycType === 'standard' => BusinessWithStandardKYB::fromArray($data),
-            default => throw new \InvalidArgumentException("Unknown customer type: {$type}/{$kycType}")
+            $type === 'business' => BusinessWithStandardKYB::fromArray($data),
+            $kycType === 'enhanced' => IndividualWithEnhancedKYC::fromArray($data),
+            default => IndividualWithStandardKYC::fromArray($data),
         };
     }
 
