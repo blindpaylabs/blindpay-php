@@ -15,4 +15,7 @@ enum PaymentMethod: string
     case INTERNATIONAL_SWIFT = 'international_swift';
     case RTP = 'rtp';
     case TED = 'ted';
+    case ACH_PULL = 'ach_pull';
+    case CARD = 'card';
+    case BRE_B = 'bre_b';
 }

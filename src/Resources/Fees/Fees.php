@@ -52,7 +52,9 @@ readonly class FeesResponse
         public ?FeeOptions $arbitrum,
         public ?FeeOptions $stellar,
         public ?FeeOptions $solana,
-        public ?FeeOptions $ted = null
+        public ?FeeOptions $ted = null,
+        public ?FeeOptions $sepa = null,
+        public ?FeeOptions $fasterPayments = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -74,7 +76,9 @@ readonly class FeesResponse
             arbitrum: FeeOptions::fromArray($data['arbitrum'] ?? null),
             stellar: FeeOptions::fromArray($data['stellar'] ?? null),
             solana: FeeOptions::fromArray($data['solana'] ?? null),
-            ted: FeeOptions::fromArray($data['ted'] ?? null)
+            ted: FeeOptions::fromArray($data['ted'] ?? null),
+            sepa: FeeOptions::fromArray($data['sepa'] ?? null),
+            fasterPayments: FeeOptions::fromArray($data['faster_payments'] ?? null),
         );
     }
 }

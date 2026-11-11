@@ -1286,7 +1286,8 @@ readonly class LimitIncreaseRequest
         public ?DateTimeImmutable $updatedAt,
         public ?int $approvedPerTransaction = null,
         public ?int $approvedDaily = null,
-        public ?int $approvedMonthly = null
+        public ?int $approvedMonthly = null,
+        public ?array $supportingDocuments = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -1308,7 +1309,8 @@ readonly class LimitIncreaseRequest
                 : null,
             approvedPerTransaction: isset($data['approved_per_transaction']) ? (int) $data['approved_per_transaction'] : null,
             approvedDaily: isset($data['approved_daily']) ? (int) $data['approved_daily'] : null,
-            approvedMonthly: isset($data['approved_monthly']) ? (int) $data['approved_monthly'] : null
+            approvedMonthly: isset($data['approved_monthly']) ? (int) $data['approved_monthly'] : null,
+            supportingDocuments: $data['supporting_documents'] ?? null,
         );
     }
 }

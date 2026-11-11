@@ -14,7 +14,14 @@ readonly class PayoutTrackingPayment extends BaseTracking
         public ?string $providerTransactionId = null,
         public ?string $providerStatus = null,
         public ?string $estimatedTimeOfArrival = null,
-        ?DateTimeImmutable $completedAt = null
+        ?DateTimeImmutable $completedAt = null,
+        public ?int $returnedAmount = null,
+        public ?string $refundReviewReason = null,
+        public ?string $refundReviewDetectedAt = null,
+        public ?string $refundReviewActionedAt = null,
+        public ?string $reviewSource = null,
+        public ?array $reviewSources = null,
+        public ?array $reviewContext = null,
     ) {
         parent::__construct($step, $completedAt);
     }
@@ -29,7 +36,14 @@ readonly class PayoutTrackingPayment extends BaseTracking
             estimatedTimeOfArrival: $data['estimated_time_of_arrival'] ?? null,
             completedAt: isset($data['completed_at'])
                 ? new DateTimeImmutable($data['completed_at'])
-                : null
+                : null,
+            returnedAmount: isset($data['returned_amount']) ? (int) $data['returned_amount'] : null,
+            refundReviewReason: $data['refund_review_reason'] ?? null,
+            refundReviewDetectedAt: $data['refund_review_detected_at'] ?? null,
+            refundReviewActionedAt: $data['refund_review_actioned_at'] ?? null,
+            reviewSource: $data['review_source'] ?? null,
+            reviewSources: $data['review_sources'] ?? null,
+            reviewContext: $data['review_context'] ?? null,
         );
     }
 

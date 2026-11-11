@@ -191,7 +191,9 @@ readonly class CreateTransferQuoteResponse
         public ?float $expiresAt = null,
         public ?float $commercialQuotation = null,
         public ?float $blindpayQuotation = null,
-        public ?float $partnerFeeAmount = null
+        public ?float $partnerFeeAmount = null,
+        public ?int $partnerPercentageFee = null,
+        public ?int $partnerFlatFee = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -204,7 +206,9 @@ readonly class CreateTransferQuoteResponse
             expiresAt: isset($data['expires_at']) ? (float) $data['expires_at'] : null,
             commercialQuotation: isset($data['commercial_quotation']) ? (float) $data['commercial_quotation'] : null,
             blindpayQuotation: isset($data['blindpay_quotation']) ? (float) $data['blindpay_quotation'] : null,
-            partnerFeeAmount: isset($data['partner_fee_amount']) ? (float) $data['partner_fee_amount'] : null
+            partnerFeeAmount: isset($data['partner_fee_amount']) ? (float) $data['partner_fee_amount'] : null,
+            partnerPercentageFee: isset($data['partner_percentage_fee']) ? (int) $data['partner_percentage_fee'] : null,
+            partnerFlatFee: isset($data['partner_flat_fee']) ? (int) $data['partner_flat_fee'] : null,
         );
     }
 }

@@ -142,7 +142,9 @@ readonly class WalletTokenBalance
     public function __construct(
         public float $amount,
         public string $token,
-        public string $address
+        public string $address,
+        public ?float $earningAmount = null,
+        public ?float $totalAmount = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -150,7 +152,9 @@ readonly class WalletTokenBalance
         return new self(
             amount: (float) $data['amount'],
             token: $data['symbol'],
-            address: $data['address']
+            address: $data['address'],
+            earningAmount: isset($data['earning_amount']) ? (float) $data['earning_amount'] : null,
+            totalAmount: isset($data['total_amount']) ? (float) $data['total_amount'] : null,
         );
     }
 }
@@ -160,7 +164,9 @@ readonly class CustodialWalletBalanceResponse
     public function __construct(
         public ?WalletTokenBalance $usdc,
         public ?WalletTokenBalance $usdt,
-        public ?WalletTokenBalance $usdb
+        public ?WalletTokenBalance $usdb,
+        public ?WalletTokenBalance $eurc = null,
+        public ?WalletTokenBalance $eurb = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -168,7 +174,9 @@ readonly class CustodialWalletBalanceResponse
         return new self(
             usdc: isset($data['USDC']) ? WalletTokenBalance::fromArray($data['USDC']) : null,
             usdt: isset($data['USDT']) ? WalletTokenBalance::fromArray($data['USDT']) : null,
-            usdb: isset($data['USDB']) ? WalletTokenBalance::fromArray($data['USDB']) : null
+            usdb: isset($data['USDB']) ? WalletTokenBalance::fromArray($data['USDB']) : null,
+            eurc: isset($data['EURC']) ? WalletTokenBalance::fromArray($data['EURC']) : null,
+            eurb: isset($data['EURB']) ? WalletTokenBalance::fromArray($data['EURB']) : null,
         );
     }
 }
