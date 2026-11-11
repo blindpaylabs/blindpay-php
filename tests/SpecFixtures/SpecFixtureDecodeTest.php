@@ -12,7 +12,9 @@ use BlindPay\SDK\Resources\CustodialWallets\CreateCustodialWalletInput;
 use BlindPay\SDK\Resources\CustodialWallets\DeleteCustodialWalletInput;
 use BlindPay\SDK\Resources\CustodialWallets\GetCustodialWalletInput;
 use BlindPay\SDK\Resources\Customers\CreateIndividualWithStandardKYCInput;
+use BlindPay\SDK\Resources\Customers\Customers;
 use BlindPay\SDK\Resources\Customers\IdentificationDocument;
+use BlindPay\SDK\Resources\Customers\KycType;
 use BlindPay\SDK\Resources\Customers\LimitIncreaseRequestSupportingDocumentType;
 use BlindPay\SDK\Resources\Customers\ListCustomersInput;
 use BlindPay\SDK\Resources\Customers\ProofOfAddressDocType;
@@ -54,6 +56,9 @@ use BlindPay\SDK\Resources\Wallets\MintUsdbStellarInput;
 use BlindPay\SDK\Resources\Wallets\PrepareSolanaDelegationTransactionInput;
 use BlindPay\SDK\Resources\Webhooks\CreateWebhookEndpointInput;
 use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
+use BlindPay\SDK\Resources\Webhooks\Webhooks;
+use BlindPay\SDK\Types\AccountClass;
+use BlindPay\SDK\Types\BankingPartner;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Currency;
@@ -93,12 +98,24 @@ final class SpecFixtureDecodeTest extends TestCase
     private const VARIANTS = ['full', 'required_only', 'nullables_null', 'unknown_enum'];
 
     /**
+     * v3 decodes only these enums open (Decode::enum), because the API already returns values
+     * older SDK versions lacked; every other enum stays closed until v4. The `unknown_enum`
+     * variant is therefore narrowed: a field keeps the unknown value only where its `full` value
+     * belongs to one of these enums (plus the customer `type` / `kyc_type` discriminators).
+     *
+     * @var list<class-string<\BackedEnum>>
+     */
+    private const OPEN_ENUMS = [
+        Network::class, StablecoinToken::class, Currency::class, Rail::class,
+        BankingPartner::class, WebhookEvents::class, KycType::class,
+    ];
+
+    /**
      * Operations whose SDK types do not decode every variant yet, with the reason. This list may
-     * only shrink: pending_operations_still_fail fails when an entry starts passing, so remove it.
+     * only shrink: it_keeps_pending_operations_failing fails when an entry starts passing, so remove it.
      */
     private const PENDING = [
-        'GET /v1/instances/{id}/members' => 'InstanceMember.created_at nullable, role enum closed (audit 4.14)',
-        'GET /v1/instances/{instance_id}/customers/{customer_id}/limit-increase' => 'LimitIncreaseRequestStatus closed (audit 4.6)',
+        'GET /v1/instances/{id}/members' => 'InstanceMember.created_at nullable (audit 4.14)',
         'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => 'per-rail create responses: nullable fields read as required (audit 4.7)',
         'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets' => 'external_id nullable (audit 4.8)',
         'POST /v1/instances/{instance_id}/quotes' => 'expires_at nullable (audit 4.2)',
@@ -276,13 +293,47 @@ final class SpecFixtureDecodeTest extends TestCase
     {
         $fixture = json_decode((string) file_get_contents(self::FIXTURE_DIR.'/'.self::index()['operations'][$operation]), true, flags: JSON_THROW_ON_ERROR);
         $out = [];
-        foreach ($fixture['responses']['200']['variants'] as $name => $body) {
-            if (in_array(explode('.', $name)[0], self::VARIANTS, true)) {
-                $out[$name] = $body;
+        $variants = $fixture['responses']['200']['variants'];
+        foreach ($variants as $name => $body) {
+            if (! in_array(explode('.', $name)[0], self::VARIANTS, true)) {
+                continue;
             }
+            $out[$name] = str_starts_with($name, 'unknown_enum')
+                ? self::narrowUnknownEnums($variants[str_replace('unknown_enum', 'full', $name)], $body, str_contains($operation, '/customers'))
+                : $body;
         }
 
         return $out;
+    }
+
+    /** Keep the unknown enum value only where `full` holds a value of an open enum (see OPEN_ENUMS). */
+    private static function narrowUnknownEnums(mixed $full, mixed $unknown, bool $customerOp, ?string $key = null): mixed
+    {
+        if (is_array($full) && is_array($unknown)) {
+            foreach ($unknown as $k => $v) {
+                if (array_key_exists($k, $full)) {
+                    $unknown[$k] = self::narrowUnknownEnums($full[$k], $v, $customerOp, is_string($k) ? $k : $key);
+                }
+            }
+
+            return $unknown;
+        }
+        if ($unknown === $full || ! is_string($full)) {
+            return $unknown;
+        }
+        if ($customerOp && ($key === 'kyc_type' || ($key === 'type' && AccountClass::tryFrom($full) !== null))) {
+            return $unknown;
+        }
+        // WebhookEvents and KycType are declared inside their resource files; load those first.
+        class_exists(Webhooks::class);
+        class_exists(Customers::class);
+        foreach (self::OPEN_ENUMS as $enum) {
+            if ($enum::tryFrom($full) !== null) {
+                return $unknown;
+            }
+        }
+
+        return $full;
     }
 
     /** @return array<string, array{string, string}> */
@@ -303,7 +354,7 @@ final class SpecFixtureDecodeTest extends TestCase
 
     #[Test]
     #[DataProvider('cases')]
-    public function every_spec_variant_decodes(string $operation, string $variant): void
+    public function it_decodes_every_spec_variant(string $operation, string $variant): void
     {
         $error = $this->decode($operation, self::variants($operation)[$variant]);
 
@@ -311,7 +362,7 @@ final class SpecFixtureDecodeTest extends TestCase
     }
 
     #[Test]
-    public function every_spec_operation_is_mapped_pending_or_not_implemented(): void
+    public function it_maps_every_spec_operation_or_lists_it_as_pending_or_not_implemented(): void
     {
         $known = [...array_keys(self::calls()), ...self::NOT_IMPLEMENTED];
         $missing = array_diff(array_keys(self::index()['operations']), $known);
@@ -321,7 +372,7 @@ final class SpecFixtureDecodeTest extends TestCase
     }
 
     #[Test]
-    public function pending_operations_still_fail(): void
+    public function it_keeps_pending_operations_failing_so_the_list_only_shrinks(): void
     {
         foreach (array_keys(self::PENDING) as $operation) {
             $failures = 0;

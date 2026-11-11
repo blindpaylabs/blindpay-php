@@ -100,7 +100,7 @@ class CustomersTest extends TestCase
     }
 
     #[Test]
-    public function one_unusual_customer_no_longer_fails_the_whole_list_page(): void
+    public function it_no_longer_fails_the_whole_list_page_for_one_unusual_customer(): void
     {
         $this->mockResponse([
             'data' => [
