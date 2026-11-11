@@ -239,39 +239,6 @@ readonly class ListPayoutsResponse extends ListResponse
     }
 }
 
-/*
- * Export payouts input
- */
-readonly class ExportPayoutsInput
-{
-    public function __construct(
-        public ?int $limit = null,
-        public ?int $offset = null
-    ) {}
-
-    public function toArray(): array
-    {
-        $params = [];
-
-        if ($this->limit !== null) {
-            $params['limit'] = (string) $this->limit;
-        }
-
-        if ($this->offset !== null) {
-            $params['offset'] = (string) $this->offset;
-        }
-
-        return $params;
-    }
-
-    public function toQueryString(): string
-    {
-        $params = $this->toArray();
-
-        return Query::build($params);
-    }
-}
-
 readonly class AuthorizeStellarTokenInput
 {
     public function __construct(
@@ -526,27 +493,6 @@ class Payouts
     {
         return $this->client->get(Path::of('instances/%s/payouts', $this->instanceId).Query::build($query), $options)
             ->map(fn (array $data) => ListPayoutsResponse::fromArray($data));
-    }
-
-    /*
-     * Export payouts
-     *
-     * @param ExportPayoutsInput|null $params
-     * @return BlindPayApiResponse<Payout[]>
-     */
-    public function export(?ExportPayoutsInput $params = null, ?RequestOptions $options = null): BlindPayApiResponse
-    {
-        $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get(Path::of('instances/%s/export/payouts', $this->instanceId).$queryParams, $options);
-
-        return $response->map(function (array $data) {
-            $payouts = array_map(
-                fn (array $item) => Payout::fromArray($item),
-                $data
-            );
-
-            return $payouts;
-        });
     }
 
     /*

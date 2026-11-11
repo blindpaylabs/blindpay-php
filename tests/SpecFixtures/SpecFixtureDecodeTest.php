@@ -11,6 +11,7 @@ use BlindPay\SDK\Resources\BankAccounts\GetBankAccountInput;
 use BlindPay\SDK\Resources\CustodialWallets\CreateCustodialWalletInput;
 use BlindPay\SDK\Resources\CustodialWallets\DeleteCustodialWalletInput;
 use BlindPay\SDK\Resources\CustodialWallets\GetCustodialWalletInput;
+use BlindPay\SDK\Resources\CustodialWallets\GetWalletDepositsInput;
 use BlindPay\SDK\Resources\Customers\CreateIndividualWithStandardKYCInput;
 use BlindPay\SDK\Resources\Customers\Customers;
 use BlindPay\SDK\Resources\Customers\IdentificationDocument;
@@ -24,6 +25,9 @@ use BlindPay\SDK\Resources\Instances\UpdateInstanceInput;
 use BlindPay\SDK\Resources\Instances\UpdateMemberRoleInput;
 use BlindPay\SDK\Resources\Ownership\MigrateInstanceOwnershipIn;
 use BlindPay\SDK\Resources\PartnerFees\CreatePartnerFeeInput;
+use BlindPay\SDK\Resources\Payables\CreatePayableInput;
+use BlindPay\SDK\Resources\Payables\ListPayablesInput;
+use BlindPay\SDK\Resources\Payables\PayableStatus;
 use BlindPay\SDK\Resources\Payins\CreatePayinQuoteInput;
 use BlindPay\SDK\Resources\Payins\GetPayinFxRateInput;
 use BlindPay\SDK\Resources\Payins\ListPayinsInput;
@@ -40,7 +44,10 @@ use BlindPay\SDK\Resources\TermsOfService\InitiateInput;
 use BlindPay\SDK\Resources\Transfers\CreateTransferInput;
 use BlindPay\SDK\Resources\Transfers\CreateTransferQuoteInput;
 use BlindPay\SDK\Resources\Transfers\ListTransfersInput;
+use BlindPay\SDK\Resources\Upload\AnalyzeUploadInput;
+use BlindPay\SDK\Resources\Upload\UploadAnalyzeType;
 use BlindPay\SDK\Resources\Upload\UploadBucket;
+use BlindPay\SDK\Resources\Upload\UploadFile;
 use BlindPay\SDK\Resources\Upload\UploadInput;
 use BlindPay\SDK\Resources\VirtualAccounts\CreateVirtualAccountInput;
 use BlindPay\SDK\Resources\VirtualAccounts\UpdateVirtualAccountInput;
@@ -53,6 +60,8 @@ use BlindPay\SDK\Resources\Wallets\ListOfframpWalletsInput;
 use BlindPay\SDK\Resources\Wallets\MintUsdbSolanaInput;
 use BlindPay\SDK\Resources\Wallets\MintUsdbStellarInput;
 use BlindPay\SDK\Resources\Wallets\PrepareSolanaDelegationTransactionInput;
+use BlindPay\SDK\Resources\Wallets\SetSelfCustodyInput;
+use BlindPay\SDK\Resources\Wallets\UpdateOfframpWalletInput;
 use BlindPay\SDK\Resources\Webhooks\CreateWebhookEndpointInput;
 use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
 use BlindPay\SDK\Types\BlindPayApiResponse;
@@ -99,28 +108,6 @@ final class SpecFixtureDecodeTest extends TestCase
      */
     private const PENDING = [
         'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => 'the ten per-rail Create*Response types read their own rail fields as required. The API echoes those from the request, so live creates decode; only the spec\'s all-rail shape (every rail field nullable) fails. Not a crash fix, left for v4 (audit 4.7)',
-    ];
-
-    /** Operations the SDK has no method for yet (v4). */
-    private const NOT_IMPLEMENTED = [
-        'GET /v1/instances/{instance_id}/onboarding/business_details',
-        'GET /v1/instances/{instance_id}/onboarding/business_profile',
-        'GET /v1/instances/{instance_id}/onboarding/ownership_documents',
-        'GET /v1/instances/{id}',
-        'GET /v1/instances/{instance_id}/rfi',
-        'POST /v1/instances/{instance_id}/rfi',
-        'GET /v1/instances/{instance_id}/customers/{customer_id}/rfi',
-        'POST /v1/instances/{instance_id}/customers/{customer_id}/rfi',
-        'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/plaid',
-        'PATCH /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets/{id}',
-        'PUT /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets/{id}',
-        'GET /v1/instances/{instance_id}/customers/{customer_id}/wallets/{id}/deposits',
-        'POST /v1/instances/{instance_id}/payables',
-        'GET /v1/instances/{instance_id}/payables',
-        'GET /v1/instances/{instance_id}/payables/{id}',
-        'DELETE /v1/instances/{instance_id}/payables/{id}',
-        'POST /v1/upload/analyze',
-        'POST /v1/presign',
     ];
 
     /** @return array<string, Closure(BlindPay, ?RequestOptions): BlindPayApiResponse> */
@@ -242,8 +229,32 @@ final class SpecFixtureDecodeTest extends TestCase
             'GET /v1/instances/{instance_id}/partner-fees/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->get($id, $o),
             'DELETE /v1/instances/{instance_id}/partner-fees/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->delete($id, $o),
 
-            // Upload (JSON body today; multipart is a v4 change)
-            'POST /v1/upload' => fn (BlindPay $b, ?RequestOptions $o) => $b->upload->create(new UploadInput(UploadBucket::cases()[0], 'data'), $o),
+            // Upload
+            'POST /v1/upload' => fn (BlindPay $b, ?RequestOptions $o) => $b->upload->create(new UploadInput(UploadBucket::DOCUMENTS, new UploadFile('%PDF-1.4', 'doc.pdf', 'application/pdf')), $o),
+            'POST /v1/upload/analyze' => fn (BlindPay $b, ?RequestOptions $o) => $b->upload->analyze(new AnalyzeUploadInput(new UploadFile('%PDF-1.4', 'doc.pdf', 'application/pdf'), UploadAnalyzeType::PROOF_OF_ADDRESS, ['full_name' => 'Jane Doe']), $o),
+            'POST /v1/presign' => fn (BlindPay $b, ?RequestOptions $o) => $b->upload->presign('https://example.com/doc.pdf', $o),
+
+            // Payables
+            'POST /v1/instances/{instance_id}/payables' => fn (BlindPay $b, ?RequestOptions $o) => $b->payables->create(new CreatePayableInput($c, Currency::BRL, boletoBarcode: '00190000090'), $o),
+            'GET /v1/instances/{instance_id}/payables' => fn (BlindPay $b, ?RequestOptions $o) => $b->payables->list(new ListPayablesInput(status: PayableStatus::DRAFT, limit: 10), $o),
+            'GET /v1/instances/{instance_id}/payables/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payables->get($id, $o),
+            'DELETE /v1/instances/{instance_id}/payables/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payables->delete($id, $o),
+
+            // Instance, onboarding and RFIs
+            'GET /v1/instances/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->get($o),
+            'GET /v1/instances/{instance_id}/onboarding/business_details' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->onboarding->getBusinessDetails($o),
+            'GET /v1/instances/{instance_id}/onboarding/business_profile' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->onboarding->getBusinessProfile($o),
+            'GET /v1/instances/{instance_id}/onboarding/ownership_documents' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->onboarding->getOwnershipDocuments($o),
+            'GET /v1/instances/{instance_id}/rfi' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->rfi->get($o),
+            'POST /v1/instances/{instance_id}/rfi' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->rfi->submit(['company_website' => 'https://example.com'], $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/rfi' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->rfi->get($c, $o),
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/rfi' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->rfi->submit($c, ['occupation' => 'engineer'], $o),
+
+            // Wallet extras
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/plaid' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->createPlaidLink($c, 'https://example.com/done', $o),
+            'PATCH /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->setSelfCustody(new SetSelfCustodyInput($c, $id, true), $o),
+            'PUT /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->offramp->update(new UpdateOfframpWalletInput($c, $id, $id, null), $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/wallets/{id}/deposits' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->custodial->getDeposits(new GetWalletDepositsInput($c, $id, limit: 5), $o),
 
             // Available
             'GET /v1/available/bank-details' => fn (BlindPay $b, ?RequestOptions $o) => $b->available->getBankDetails(Rail::PIX, $o),
@@ -309,7 +320,7 @@ final class SpecFixtureDecodeTest extends TestCase
     #[Test]
     public function it_maps_every_spec_operation_or_lists_it_as_pending_or_not_implemented(): void
     {
-        $known = [...array_keys(self::calls()), ...self::NOT_IMPLEMENTED];
+        $known = array_keys(self::calls());
         $missing = array_diff(array_keys(self::index()['operations']), $known);
 
         $this->assertSame([], array_values($missing));

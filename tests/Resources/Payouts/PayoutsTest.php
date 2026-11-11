@@ -189,27 +189,6 @@ class PayoutsTest extends TestCase
     }
 
     #[Test]
-    public function it_exports_payouts(): void
-    {
-        $mockedExportPayouts = [
-            $this->getPayoutMockData(),
-        ];
-
-        $this->mockResponse($mockedExportPayouts);
-
-        $response = $this->blindpay->payouts->export();
-
-        $this->assertTrue($response->isSuccess());
-        $this->assertNull($response->error);
-        $this->assertIsArray($response->data);
-        $this->assertCount(1, $response->data);
-        $this->assertEquals('pa_000000000000', $response->data[0]->id);
-        $this->assertEquals('re_000000000000', $response->data[0]->customerId);
-        $this->assertEquals('processing', $response->data[0]->status->value);
-        $this->assertEquals('0x123...890', $response->data[0]->senderWalletAddress);
-    }
-
-    #[Test]
     public function it_gets_payout_tracking_information(): void
     {
         $mockedPayoutTrack = $this->getPayoutMockData();

@@ -13,12 +13,16 @@ use BlindPay\SDK\Resources\CustodialWallets\CustodialWallets;
 use BlindPay\SDK\Resources\Customers\CustomersWrapper;
 use BlindPay\SDK\Resources\Fees\Fees;
 use BlindPay\SDK\Resources\Instances\InstancesWrapper;
+use BlindPay\SDK\Resources\Instances\Onboarding;
 use BlindPay\SDK\Resources\Ownership\Ownership;
 use BlindPay\SDK\Resources\PartnerFees\PartnerFees;
+use BlindPay\SDK\Resources\Payables\Payables;
 use BlindPay\SDK\Resources\Payins\PayinsWrapper;
 use BlindPay\SDK\Resources\Payins\Quotes as PayinQuotes;
 use BlindPay\SDK\Resources\Payouts\Payouts;
 use BlindPay\SDK\Resources\Quotes\Quotes;
+use BlindPay\SDK\Resources\Rfi\CustomerRfis;
+use BlindPay\SDK\Resources\Rfi\InstanceRfis;
 use BlindPay\SDK\Resources\TermsOfService\TermsOfService;
 use BlindPay\SDK\Resources\Transfers\Transfers;
 use BlindPay\SDK\Resources\Upload\Upload;
@@ -79,6 +83,8 @@ class BlindPay implements ApiClientInterface
 
     public readonly Upload $upload;
 
+    public readonly Payables $payables;
+
     /**
      * @param  string  $apiKey  your API key (sent as `Authorization: Bearer ...`)
      * @param  string  $instanceId  your instance ID (`in_...`)
@@ -135,7 +141,8 @@ class BlindPay implements ApiClientInterface
         $this->transfers = new Transfers($this->instanceId, $this);
         $this->fees = new Fees($this->instanceId, $this);
         $this->ownership = new Ownership($this->instanceId, $this);
-        $this->upload = new Upload($this);
+        $this->upload = new Upload($this->instanceId, $this);
+        $this->payables = new Payables($this->instanceId, $this);
 
         $this->initializeInstances();
         $this->initializePayins();
@@ -150,6 +157,8 @@ class BlindPay implements ApiClientInterface
             $this,
             new Webhooks($this->instanceId, $this),
             new TermsOfService($this->instanceId, $this),
+            new Onboarding($this->instanceId, $this),
+            new InstanceRfis($this->instanceId, $this),
         );
     }
 
@@ -160,7 +169,12 @@ class BlindPay implements ApiClientInterface
 
     private function initializeCustomers(): void
     {
-        $this->customers = new CustomersWrapper($this->instanceId, $this, new BankAccounts($this->instanceId, $this));
+        $this->customers = new CustomersWrapper(
+            $this->instanceId,
+            $this,
+            new BankAccounts($this->instanceId, $this),
+            new CustomerRfis($this->instanceId, $this),
+        );
     }
 
     private function initializeWallets(): void

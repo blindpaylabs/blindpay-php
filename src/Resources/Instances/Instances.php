@@ -23,6 +23,47 @@ enum InstanceMemberRole: string
     case VIEWER = 'viewer';
 }
 
+enum InstanceType: string
+{
+    case PRODUCTION = 'production';
+    case DEVELOPMENT = 'development';
+}
+
+enum OnboardingStep: string
+{
+    case INITIAL = 'initial';
+    case BUSINESS_DETAILS = 'business_details';
+    case BUSINESS_PROFILE = 'business_profile';
+    case DOCUMENTS = 'documents';
+    case APPLICANT = 'applicant';
+    case COMPLETED = 'completed';
+    case BLOCKED = 'blocked';
+}
+
+/**
+ * Your instance. On a `development` instance settlement is simulated with the test token USDB and
+ * no real money moves.
+ */
+readonly class Instance
+{
+    public function __construct(
+        public string $id,
+        public string $name,
+        public InstanceType|string $type,
+        public OnboardingStep|string $onboardingStep,
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'],
+            name: $data['name'],
+            type: Decode::enum(InstanceType::class, $data['type']),
+            onboardingStep: Decode::enum(OnboardingStep::class, $data['onboarding_step']),
+        );
+    }
+}
+
 readonly class InstanceMember
 {
     public function __construct(
@@ -60,7 +101,7 @@ readonly class InstanceMember
             'last_name' => $this->lastName,
             'image_url' => $this->imageUrl,
             'created_at' => $this->createdAt?->format(\DateTimeInterface::ATOM),
-            'role' => $this->role->value,
+            'role' => Decode::wire($this->role),
         ];
     }
 }
@@ -110,6 +151,17 @@ class Instances
         private readonly string $instanceId,
         private readonly ApiClientInterface $client
     ) {}
+
+    /**
+     * Your instance (always the client's).
+     *
+     * @return BlindPayApiResponse<Instance>
+     */
+    public function get(?RequestOptions $options = null): BlindPayApiResponse
+    {
+        return $this->client->get(Path::of('instances/%s', $this->instanceId), $options)
+            ->map(fn (array $data) => Instance::fromArray($data));
+    }
 
     /*
      * Get all members of the instance

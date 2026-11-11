@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Tests\Resources;
 
 use BlindPay\SDK\BlindPay;
-use BlindPay\SDK\Resources\Payins\ExportPayinsInput;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TransactionStatus;
@@ -222,27 +221,6 @@ class PayinsTest extends TestCase
         $this->assertEquals('0x123...890', $response->data->trackingTransaction->transactionHash);
         $this->assertEquals('on_hold', $response->data->trackingPayment->step);
         $this->assertEquals('blockchain', $response->data->trackingPayment->providerName);
-    }
-
-    #[Test]
-    public function it_exports_payins(): void
-    {
-        $mockedExportPayins = [$this->getPayinMockData()];
-
-        $this->mockResponse($mockedExportPayins);
-
-        $input = new ExportPayinsInput(
-            status: TransactionStatus::PROCESSING
-        );
-
-        $response = $this->blindpay->payins->export($input);
-
-        $this->assertTrue($response->isSuccess());
-        $this->assertNull($response->error);
-        $this->assertIsArray($response->data);
-        $this->assertCount(1, $response->data);
-        $this->assertEquals('re_000000000000', $response->data[0]->id);
-        $this->assertEquals(TransactionStatus::PROCESSING, $response->data[0]->status);
     }
 
     #[Test]

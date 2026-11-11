@@ -21,7 +21,9 @@ readonly class BlockchainWallet
         public ?bool $isAccountAbstraction,
         public string $customerId,
         public ?string $address = null,
-        public ?string $signatureTxHash = null
+        public ?string $signatureTxHash = null,
+        /** null until set; a Brazilian customer's wallet must declare it (see setSelfCustody()) */
+        public ?bool $isSelfCustody = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -33,7 +35,8 @@ readonly class BlockchainWallet
             isAccountAbstraction: $data['is_account_abstraction'] ?? null,
             customerId: $data['customer_id'],
             address: $data['address'] ?? null,
-            signatureTxHash: $data['signature_tx_hash'] ?? null
+            signatureTxHash: $data['signature_tx_hash'] ?? null,
+            isSelfCustody: $data['is_self_custody'] ?? null,
         );
     }
 }
@@ -58,17 +61,24 @@ readonly class CreateBlockchainWalletWithAddressInput
         public string $customerId,
         public string $name,
         public Network $network,
-        public string $address
+        public string $address,
+        /** whether the customer holds the wallet's keys; required for Brazilian customers */
+        public ?bool $isSelfCustody = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'name' => $this->name,
             'network' => $this->network->value,
             'address' => $this->address,
             'is_account_abstraction' => true,
         ];
+        if ($this->isSelfCustody !== null) {
+            $data['is_self_custody'] = $this->isSelfCustody;
+        }
+
+        return $data;
     }
 }
 
@@ -78,17 +88,38 @@ readonly class CreateBlockchainWalletWithHashInput
         public string $customerId,
         public string $name,
         public Network $network,
-        public string $signatureTxHash
+        public string $signatureTxHash,
+        /** whether the customer holds the wallet's keys; required for Brazilian customers */
+        public ?bool $isSelfCustody = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'name' => $this->name,
             'network' => $this->network->value,
             'signature_tx_hash' => $this->signatureTxHash,
             'is_account_abstraction' => false,
         ];
+        if ($this->isSelfCustody !== null) {
+            $data['is_self_custody'] = $this->isSelfCustody;
+        }
+
+        return $data;
+    }
+}
+
+readonly class SetSelfCustodyInput
+{
+    public function __construct(
+        public string $customerId,
+        public string $id,
+        public bool $isSelfCustody,
+    ) {}
+
+    public function toArray(): array
+    {
+        return ['is_self_custody' => $this->isSelfCustody];
     }
 }
 
@@ -409,5 +440,24 @@ class BlockchainWallets
         );
 
         return $response->map(fn (array $data) => PrepareSolanaDelegationTransactionResponse::fromArray($data));
+    }
+
+    /**
+     * Declare whether the customer holds the wallet's keys. It can be set once, while the wallet's
+     * value is still null; a second call fails with 409 WALLETS_SELF_CUSTODY_ALREADY_SET.
+     *
+     * @return BlindPayApiResponse<BlockchainWallet>
+     */
+    public function setSelfCustody(SetSelfCustodyInput $input, ?RequestOptions $options = null): BlindPayApiResponse
+    {
+        if ($input->id === '') {
+            return BlindPayApiResponse::error(ErrorResponse::validation('Blockchain wallet ID cannot be empty'));
+        }
+
+        return $this->client->patch(
+            Path::of('instances/%s/customers/%s/blockchain-wallets/%s', $this->instanceId, $input->customerId, $input->id),
+            $input->toArray(),
+            $options
+        )->map(fn (array $data) => BlockchainWallet::fromArray($data));
     }
 }

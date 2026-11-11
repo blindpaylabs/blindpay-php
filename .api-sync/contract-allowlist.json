@@ -258,6 +258,144 @@
       "field": "last_attempt_status",
       "reason": "PayableOut is in the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
       "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "WalletDeposit",
+      "field": "token_amount",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "WalletDeposit",
+      "field": "sender_address",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "Instance",
+      "field": "onboarding_step",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "OnboardingBusinessDetails",
+      "field": "trading_names",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "OnboardingBusinessDetails",
+      "field": "entity_type",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "OnboardingBusinessDetails",
+      "field": "state_of_incorporation",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "OnboardingBusinessProfile",
+      "field": "scenario",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "OnboardingBusinessProfile",
+      "field": "scenario_description",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "OnboardingBusinessProfile",
+      "field": "has_kyc_screening",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "OnboardingBusinessProfile",
+      "field": "is_regulated",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "OnboardingBusinessProfile",
+      "field": "top_volume_by_country",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "OnboardingBusinessProfile",
+      "field": "estimated_volume_per_month",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayableInput",
+      "field": "note",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayableInput",
+      "field": "discount",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayableInput",
+      "field": "taxes",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayableInput",
+      "field": "boleto_barcode",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayableInput",
+      "field": "pix_qrcode",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayableInput",
+      "field": "document_file",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayableInput",
+      "field": "due_date",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayableInput",
+      "field": "scheduled_at",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreatePayableInput",
+      "field": "bank_account",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "BlockchainWallet",
+      "field": "is_self_custody",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "SetSelfCustodyInput",
+      "field": "is_self_custody",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
     }
   ]
 }

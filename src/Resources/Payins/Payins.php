@@ -343,39 +343,6 @@ readonly class ListPayinsResponse extends ListResponse
     }
 }
 
-readonly class ExportPayinsInput
-{
-    public function __construct(
-        public TransactionStatus $status,
-        public ?int $limit = null,
-        public ?int $offset = null
-    ) {}
-
-    public function toArray(): array
-    {
-        $params = [
-            'status' => $this->status->value,
-        ];
-
-        if ($this->limit !== null) {
-            $params['limit'] = (string) $this->limit;
-        }
-
-        if ($this->offset !== null) {
-            $params['offset'] = (string) $this->offset;
-        }
-
-        return $params;
-    }
-
-    public function toQueryString(): string
-    {
-        $params = $this->toArray();
-
-        return Query::build($params);
-    }
-}
-
 readonly class CreateEvmPayinResponse
 {
     public function __construct(
@@ -489,27 +456,6 @@ class Payins
         $response = $this->client->get(Path::of('e/payins/%s', $payinId), $options);
 
         return $response->map(fn (array $data) => Payin::fromArray($data));
-    }
-
-    /*
-     * Export payins by status
-     *
-     * @param ExportPayinsInput $params Export parameters
-     * @return BlindPayApiResponse<Payin[]>
-     */
-    public function export(ExportPayinsInput $params, ?RequestOptions $options = null): BlindPayApiResponse
-    {
-        $queryParams = $params->toQueryString();
-        $response = $this->client->get(Path::of('instances/%s/export/payins', $this->instanceId).$queryParams, $options);
-
-        return $response->map(function (array $data) {
-            $payins = array_map(
-                fn (array $item) => Payin::fromArray($item),
-                $data
-            );
-
-            return $payins;
-        });
     }
 
     /*

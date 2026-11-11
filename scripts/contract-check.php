@@ -58,8 +58,8 @@ foreach ($allowlistRaw['entries'] ?? [] as $entry) {
 }
 
 /**
- * Recursively collect every key that appears as an OpenAPI "properties" map key,
- * anywhere in the document.
+ * Recursively collect every key that appears as an OpenAPI "properties" map key, or as the name
+ * of a query parameter (list filters are written by toArray() too), anywhere in the document.
  */
 function collectSpecProperties(mixed $node, array &$out): void
 {
@@ -68,6 +68,9 @@ function collectSpecProperties(mixed $node, array &$out): void
             foreach ($node['properties'] as $key => $_) {
                 $out[$key] = true;
             }
+        }
+        if (($node['in'] ?? null) === 'query' && is_string($node['name'] ?? null)) {
+            $out[$node['name']] = true;
         }
         foreach ($node as $value) {
             collectSpecProperties($value, $out);

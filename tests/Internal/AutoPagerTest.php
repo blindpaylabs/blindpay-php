@@ -8,6 +8,7 @@ use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\BlindPayApiException;
 use BlindPay\SDK\Internal\BlindPayException;
 use BlindPay\SDK\Internal\Query;
+use BlindPay\SDK\Resources\CustodialWallets\GetWalletDepositsInput;
 use BlindPay\SDK\Resources\Customers\ListCustomersInput;
 use BlindPay\SDK\Resources\Payins\ListPayinsInput;
 use BlindPay\SDK\Resources\Payouts\ListPayoutsInput;
@@ -141,18 +142,23 @@ final class AutoPagerTest extends TestCase
     {
         $blindpay = $this->client();
         $empty = new Response(200, [], json_encode(['data' => [], 'pagination' => ['has_more' => false, 'next_page' => null, 'prev_page' => null]]));
-        $this->mock->append($empty, clone $empty, clone $empty, clone $empty);
+        $this->mock->append($empty, clone $empty, clone $empty, clone $empty, clone $empty, clone $empty);
 
         iterator_to_array($blindpay->payins->listAutoPaging(new ListPayinsInput));
         iterator_to_array($blindpay->customers->listAutoPaging(new ListCustomersInput));
         iterator_to_array($blindpay->transfers->listAutoPaging(new ListTransfersInput));
         iterator_to_array($blindpay->payouts->listAutoPaging());
+        iterator_to_array($blindpay->payables->listAutoPaging());
+        iterator_to_array($blindpay->wallets->custodial->getDepositsAutoPaging(new GetWalletDepositsInput('cu_1', 'wa_1')));
 
         $this->assertSame(
-            ['/v1/instances/in_000000000000/payins', '/v1/instances/in_000000000000/customers', '/v1/instances/in_000000000000/transfers', '/v1/instances/in_000000000000/payouts'],
+            [
+                '/v1/instances/in_000000000000/payins', '/v1/instances/in_000000000000/customers', '/v1/instances/in_000000000000/transfers',
+                '/v1/instances/in_000000000000/payouts', '/v1/instances/in_000000000000/payables', '/v1/instances/in_000000000000/customers/cu_1/wallets/wa_1/deposits',
+            ],
             array_map(fn (array $t) => $t['request']->getUri()->getPath(), $this->history),
         );
-        $this->assertSame(array_fill(0, 4, 'limit=100'), $this->queries());
+        $this->assertSame(array_fill(0, 6, 'limit=100'), $this->queries());
     }
 
     #[Test]

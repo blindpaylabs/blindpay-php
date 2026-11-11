@@ -192,6 +192,19 @@ readonly class ListBankAccountsResponse
     }
 }
 
+readonly class PlaidLinkResponse
+{
+    public function __construct(
+        /** open it in the customer's browser to link a US bank account through Plaid */
+        public string $url,
+    ) {}
+
+    public static function fromArray(array $data): self
+    {
+        return new self(url: $data['url']);
+    }
+}
+
 readonly class GetBankAccountInput
 {
     public function __construct(
@@ -1269,6 +1282,25 @@ class BankAccounts
         );
 
         return $response->map(fn (array $data) => CreateSepaResponse::fromArray($data));
+    }
+
+    /**
+     * Start a Plaid Link session to add a customer's US bank account; send the customer to the
+     * returned URL. Plaid sends them back to $redirectUrl when given.
+     *
+     * @return BlindPayApiResponse<PlaidLinkResponse>
+     */
+    public function createPlaidLink(string $customerId, ?string $redirectUrl = null, ?RequestOptions $options = null): BlindPayApiResponse
+    {
+        if ($customerId === '') {
+            return BlindPayApiResponse::error(ErrorResponse::validation('Customer ID cannot be empty'));
+        }
+
+        return $this->client->post(
+            Path::of('instances/%s/customers/%s/bank-accounts/plaid', $this->instanceId, $customerId),
+            $redirectUrl === null ? [] : ['redirect_url' => $redirectUrl],
+            $options
+        )->map(fn (array $data) => PlaidLinkResponse::fromArray($data));
     }
 }
 
