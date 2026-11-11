@@ -26,6 +26,7 @@ blindpay-php/
       ApiClientInterface.php # get, post, put, patch, delete, postMultipart (each takes ?RequestOptions)
       Transport.php          # Guzzle client: headers, idempotency keys, timeout, retries, response/error decoding
       RetryPolicy.php        # The retry decision table and backoff (pure functions)
+      ErrorGuard.php         # Runs a decoder with PHP warnings raised as exceptions (map(), WebhookEvent)
       AutoPager.php          # AutoPager::iterate(): the cursor-list generator behind every listAutoPaging()
       Path.php               # Path::of('instances/%s/...', $id): percent-encodes path segments
       Query.php              # Query::build($params): the one query-string helper
@@ -115,8 +116,9 @@ blindpay-php/
 2. **Paths** are built with `Internal\Path::of('instances/%s/customers/%s', $this->instanceId, $customerId)`, never string interpolation: it percent-encodes each segment, so an ID cannot change the route.
 3. **Query strings** are built with `Internal\Query::build([...])`, which drops null and empty values and RFC 3986-encodes the rest. Never `http_build_query` or hand-concatenation.
 4. **Decoding** is `return $this->client->get(...)->map(fn (array $data) => X::fromArray($data));`. `map()` turns any decode failure (TypeError, ValueError, undefined key) into an `ErrorType::DECODE` error and passes errors through untouched. Never branch on `isSuccess()` and decode by hand. A call with no response body (a 204 `DELETE`) returns the client result as is, without `map()`.
-5. **Client-side validation** returns `BlindPayApiResponse::error(ErrorResponse::validation('Customer ID cannot be empty'))`. Check IDs with `empty()` before building the path. Do **not** validate things the API validates (enum-like values, "exactly one of" inputs, `limit` ranges): the server answers 400, and the SDK must keep working when its rules change.
-6. Methods never throw for API, network or decoding failures. Only `getDataOrFail()` and the auto-paging generators throw (`BlindPayApiException`).
+5. **Client-side validation** returns `BlindPayApiResponse::error(ErrorResponse::validation('Customer ID cannot be empty'))`. Check IDs with `=== ''` before building the path (not `empty()`, which also rejects `'0'`; the api-sync generator emits the same check). Do **not** validate things the API validates (enum-like values, "exactly one of" inputs, `limit` ranges): the server answers 400, and the SDK must keep working when its rules change.
+6. Retries live in `Internal\Transport::send()`, an explicit loop driven by `RetryPolicy`, not in Guzzle's `Middleware::retry`. The loop has to generate the idempotency key once per call before attempt 0, serialise the body once, tell "a status line arrived, then the transfer failed" apart from "no response", sleep through an injectable `sleep` (tests never really sleep), and put the key and the `retryable` flag on the final `ErrorResponse`; the middleware's decider/delay callbacks see none of that state. Callers can still push their own middleware through the `handler` stack.
+7. Methods never throw for API, network or decoding failures. Only `getDataOrFail()` and the auto-paging generators throw (`BlindPayApiException`).
 
 ### fromArray Pattern (response/data types)
 
@@ -320,7 +322,7 @@ class Invoices
      */
     public function get(string $invoiceId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($invoiceId)) {
+        if ($invoiceId === '') {
             return BlindPayApiResponse::error(ErrorResponse::validation('Invoice ID cannot be empty'));
         }
 
@@ -402,7 +404,7 @@ public function newMethod(NewMethodInput $input, ?RequestOptions $options = null
 For methods accepting an entity ID as a string parameter, validate before making the request:
 
 ```php
-if (empty($entityId)) {
+if ($entityId === '') {
     return BlindPayApiResponse::error(ErrorResponse::validation('Entity ID cannot be empty'));
 }
 ```

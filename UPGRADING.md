@@ -175,7 +175,21 @@ new CreateQuoteInput(
 );
 ```
 
-Related: the payout inputs (`CreateEvmPayoutInput`, `CreateSolanaPayoutInput`, `CreateStellarPayoutInput`, `AuthorizeStellarTokenInput`) now take `walletId` as an alternative to `senderWalletAddress` (exactly one; the API checks it), so `senderWalletAddress` is nullable and `walletId` is the third argument. `new CreateEvmPayoutInput($quoteId, $address)` still works. `CreateSolanaPayoutInput` and `CreateStellarPayoutInput` also gained `signedTransaction`.
+Related: the payout inputs now take `walletId` as an alternative to `senderWalletAddress` (exactly one; the API checks it), so `senderWalletAddress` is optional. Existing positional calls keep their meaning:
+
+| Input | 3.x arguments | 4.0 arguments |
+|---|---|---|
+| `CreateEvmPayoutInput`, `AuthorizeStellarTokenInput` | `quoteId, senderWalletAddress` | `quoteId, ?senderWalletAddress, ?walletId` |
+| `CreateStellarPayoutInput` | `quoteId, senderWalletAddress, ?signedTransaction` | `quoteId, ?senderWalletAddress, ?signedTransaction, ?walletId` |
+| `CreateSolanaPayoutInput` | `quoteId, senderWalletAddress` | `quoteId, ?senderWalletAddress, ?signedTransaction, ?walletId` (`signedTransaction` is new) |
+
+```php
+// 3.x and 4.0: unchanged
+new CreateStellarPayoutInput($quoteId, $senderAddress, $signedXdr);
+
+// 4.0: pay from a managed wallet instead
+new CreateEvmPayoutInput($quoteId, walletId: 'wa_000000000000');
+```
 
 ## 8. Bank account creates return `BankAccountListItem`
 
@@ -209,8 +223,8 @@ Update any type hint, `instanceof` or `@var` that named the old classes. `BankAc
 | `Wallets\CreateOfframpWalletInput` | `externalId` is nullable (still positional, third). New `partnerFeeId`. | `externalId: string` | `externalId: ?string` |
 | `BankAccounts::list()` | Takes optional filters and options. | `list($customerId)` | `list($customerId, ?ListBankAccountsInput $params = null, ?RequestOptions $options = null)` |
 | `Payins::getTrack()` | Takes the public checkout token. | `getTrack($id)` | `getTrack($id, ?string $checkoutToken = null, ?RequestOptions $options = null)` |
-| `ListPayoutsInput`, `ListPayinsInput`, `ListTransfersInput` | Every filter the API declares is now an optional argument (`customerName`, `bankAccountId`, `country`, `paymentMethod`, `network`, `token`, `walletId`, ...). | | Existing named and leading positional arguments are unchanged. |
-| `Payins\CreatePayinQuoteInput`, `Transfers\CreateTransferQuoteInput` | Payin quotes take the full payment-method enum and `fundingBankAccountId`; transfer quotes take `partnerPercentageFee` (basis points) and `partnerFlatFee` (cents). | | Additive (new optional arguments). |
+| `ListPayoutsInput`, `ListPayinsInput`, `ListTransfersInput` | Every filter the API declares is now an optional argument (`customerName`, `bankAccountId`, `country`, `paymentMethod`, `network`, `token`, `walletId`, ...). | `new ListPayoutsInput(customerId: $id, limit: 50)` | `new ListPayoutsInput(customerId: $id, limit: 50, status: TransactionStatus::COMPLETED)` (the 3.x call is unchanged). Existing named and leading positional arguments are unchanged. |
+| `Payins\CreatePayinQuoteInput`, `Transfers\CreateTransferQuoteInput` | Payin quotes take the full payment-method enum and `fundingBankAccountId`; transfer quotes take `partnerPercentageFee` (basis points) and `partnerFlatFee` (cents). | `new CreateTransferQuoteInput($walletId, ...)` | `new CreateTransferQuoteInput($walletId, ..., partnerFlatFee: 50)`: additive, the 3.x call is unchanged. |
 
 `BankAccounts::list()`, `Payins::getTrack()`, the trailing `?RequestOptions` and the nullable `externalId` only affect you if you subclass or mock these classes; callers are source compatible.
 
@@ -236,7 +250,26 @@ $blindpay->upload->create(new UploadInput(
 ## 11. Removed methods and types
 
 - `payouts->export()` and `payins->export()`, with `ExportPayoutsInput` and `ExportPayinsInput`. They called routes that do not exist and always failed. To walk every row, use `payouts->listAutoPaging()` / `payins->listAutoPaging()`.
-- The ten per-rail bank account `Create*Response` classes and `BankAccounts\SpeiProtocol::SPEI` / `::STP` (section 8).
+- The ten per-rail bank account `Create*Response` classes (section 8).
+- `BankAccounts\SpeiProtocol::SPEI` and `::STP`: the API never accepted them (`spei_protocol` is `clabe`, `debitcard` or `phonenum`):
+
+```php
+// 3.x (rejected by the API)
+new CreateSpeiInput($customerId, $beneficiary, 'Main', $clabe, $institutionCode, SpeiProtocol::SPEI);
+
+// 4.0
+new CreateSpeiInput($customerId, $beneficiary, 'Main', $clabe, $institutionCode, SpeiProtocol::CLABE);
+```
+
+- `ListCustomersResponse::fromArray()`: list responses are built by `ListResponse::decode()` (`ListCustomersResponse::decode($body, Customers::customerFromArray(...))`); `customers->list()` returns the decoded page, so you never need to call either:
+
+```php
+// 3.x
+$page = ListCustomersResponse::fromArray($json);
+
+// 4.0
+$page = ListCustomersResponse::decode($json, Customers::customerFromArray(...));
+```
 - `BankingPartner::SSB`: the API no longer has this banking partner. A response that still carried `ssb` decodes as the string `'ssb'` (open enums).
 - `Payin::$BankDetails` and `CreateEvmPayinResponse::$BankDetails` are renamed `$blindpayBankDetails` (the wire key is `blindpay_bank_details`):
 

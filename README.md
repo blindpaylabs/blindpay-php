@@ -311,6 +311,7 @@ KYC and KYB fields take the URL of an uploaded file. Uploads are `multipart/form
 
 ```php
 use BlindPay\SDK\Resources\Upload\AnalyzeUploadInput;
+use BlindPay\SDK\Resources\Upload\PresignInput;
 use BlindPay\SDK\Resources\Upload\UploadAnalyzeType;
 use BlindPay\SDK\Resources\Upload\UploadBucket;
 use BlindPay\SDK\Resources\Upload\UploadFile;
@@ -329,7 +330,7 @@ $analysis = $blindpay->upload->analyze(new AnalyzeUploadInput(
 ));
 
 // A short-lived signed URL to read an uploaded file
-$signed = $blindpay->upload->presign($uploaded->data->fileUrl);
+$signed = $blindpay->upload->presign(new PresignInput($uploaded->data->fileUrl));
 ```
 
 Uploads authenticate against your instance ID and need a completed onboarding. They carry no idempotency key and are retried only when nothing was sent.
