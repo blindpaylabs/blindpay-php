@@ -66,7 +66,7 @@ class TermsOfService
         InitiateInput $input,
         ?RequestOptions $options = null
     ): BlindPayApiResponse {
-        if (empty($input->idempotencyKey)) {
+        if ($input->idempotencyKey === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Idempotency key cannot be empty')
             );

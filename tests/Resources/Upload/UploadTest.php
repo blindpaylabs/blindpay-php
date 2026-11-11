@@ -6,6 +6,7 @@ namespace BlindPay\SDK\Tests\Resources;
 
 use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\Resources\Upload\AnalyzeUploadInput;
+use BlindPay\SDK\Resources\Upload\PresignInput;
 use BlindPay\SDK\Resources\Upload\UploadAnalyzeType;
 use BlindPay\SDK\Resources\Upload\UploadBucket;
 use BlindPay\SDK\Resources\Upload\UploadFile;
@@ -126,7 +127,7 @@ class UploadTest extends TestCase
     {
         $this->mockHandler->append(new Response(200, [], json_encode(['file_url' => 'https://signed', 'expires_at' => '2026-01-01T00:00:00Z'])));
 
-        $response = $this->blindpay->upload->presign('https://files.blindpay.com/doc.pdf');
+        $response = $this->blindpay->upload->presign(new PresignInput('https://files.blindpay.com/doc.pdf'));
 
         $this->assertSame('https://signed', $response->data->fileUrl);
         $request = $this->request();

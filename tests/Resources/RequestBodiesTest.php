@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Tests\Resources;
 
 use BlindPay\SDK\BlindPay;
+use BlindPay\SDK\Resources\BankAccounts\CreatePixInput;
+use BlindPay\SDK\Resources\BankAccounts\CreatePlaidLinkInput;
 use BlindPay\SDK\Resources\Customers\CreateCustomerInput;
 use BlindPay\SDK\Resources\Customers\KycType;
 use BlindPay\SDK\Resources\Payables\CreatePayableInput;
 use BlindPay\SDK\Resources\Payables\PayableLineItem;
 use BlindPay\SDK\Resources\Payables\PayableParty;
+use BlindPay\SDK\Resources\Payouts\CreateStellarPayoutInput;
+use BlindPay\SDK\Resources\Rfi\SubmitRfiInput;
 use BlindPay\SDK\Resources\Wallets\SetSelfCustodyInput;
 use BlindPay\SDK\Resources\Wallets\UpdateOfframpWalletInput;
 use BlindPay\SDK\Types\AccountClass;
@@ -55,8 +59,8 @@ final class RequestBodiesTest extends TestCase
     {
         $answers = ['occupation' => 'engineer', 'proof' => 'https://files.blindpay.com/p.pdf'];
 
-        $this->assertSame($answers, $this->send(fn (BlindPay $b) => $b->customers->rfi->submit('cu_1', $answers)));
-        $this->assertSame($answers, $this->send(fn (BlindPay $b) => $b->instances->rfi->submit($answers)));
+        $this->assertSame($answers, $this->send(fn (BlindPay $b) => $b->customers->rfi->submit('cu_1', new SubmitRfiInput($answers))));
+        $this->assertSame($answers, $this->send(fn (BlindPay $b) => $b->instances->rfi->submit(new SubmitRfiInput($answers))));
     }
 
     #[Test]
@@ -74,8 +78,8 @@ final class RequestBodiesTest extends TestCase
     #[Test]
     public function it_sends_the_plaid_redirect_url_only_when_given(): void
     {
-        $this->assertSame(['redirect_url' => 'https://x'], $this->send(fn (BlindPay $b) => $b->customers->bankAccounts->createPlaidLink('cu_1', 'https://x'), ['url' => 'https://plaid']));
-        $this->assertSame([], $this->send(fn (BlindPay $b) => $b->customers->bankAccounts->createPlaidLink('cu_1'), ['url' => 'https://plaid']));
+        $this->assertSame(['redirect_url' => 'https://x'], $this->send(fn (BlindPay $b) => $b->customers->bankAccounts->createPlaidLink(new CreatePlaidLinkInput('cu_1', 'https://x')), ['url' => 'https://plaid']));
+        $this->assertSame([], $this->send(fn (BlindPay $b) => $b->customers->bankAccounts->createPlaidLink(new CreatePlaidLinkInput('cu_1')), ['url' => 'https://plaid']));
     }
 
     #[Test]
@@ -90,6 +94,27 @@ final class RequestBodiesTest extends TestCase
         )), ['id' => 'cu_000000000000']);
 
         $this->assertSame(['type' => 'individual', 'kyc_type' => 'light', 'email' => 'jane@example.com', 'country' => 'BR', 'first_name' => 'Jane', 'tax_id' => '00000000000'], $body);
+    }
+
+    #[Test]
+    public function it_keeps_the_3x_positional_meaning_of_the_stellar_payout_input(): void
+    {
+        $body = $this->send(fn (BlindPay $b) => $b->payouts->createStellar(new CreateStellarPayoutInput('qu_1', 'GABC', 'AAAA-signed-xdr')), ['id' => 'po_1']);
+
+        $this->assertSame(['quote_id' => 'qu_1', 'sender_wallet_address' => 'GABC', 'signed_transaction' => 'AAAA-signed-xdr'], $body);
+    }
+
+    #[Test]
+    public function it_rejects_an_empty_customer_id_or_swift_code_without_sending(): void
+    {
+        $this->history = [];
+        $stack = HandlerStack::create(new MockHandler);
+        $stack->push(Middleware::history($this->history));
+        $blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000', handler: $stack);
+
+        $this->assertTrue($blindpay->customers->bankAccounts->createPix(new CreatePixInput('', 'PIX', 'key@example.com'))->isError());
+        $this->assertTrue($blindpay->available->getSwiftCodeBankDetails('')->isError());
+        $this->assertSame([], $this->history);
     }
 
     #[Test]

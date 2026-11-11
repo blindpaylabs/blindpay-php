@@ -203,7 +203,7 @@ class OfframpWallets
      */
     public function get(GetOfframpWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->id)) {
+        if ($input->id === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Offramp wallet ID cannot be empty')
             );

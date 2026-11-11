@@ -8,6 +8,7 @@ use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Internal\Query;
 use BlindPay\SDK\Types\BlindPayApiResponse;
+use BlindPay\SDK\Types\ErrorResponse;
 use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\RequestOptions;
 
@@ -185,6 +186,10 @@ class Available
      */
     public function getSwiftCodeBankDetails(string $swift, ?RequestOptions $options = null): BlindPayApiResponse
     {
+        if ($swift === '') {
+            return BlindPayApiResponse::error(ErrorResponse::validation('SWIFT code cannot be empty'));
+        }
+
         $response = $this->client->get(Path::of('available/swift/%s', $swift), $options);
 
         return $response->map(function (array $data) {

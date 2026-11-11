@@ -147,6 +147,23 @@ readonly class Rfi
     }
 }
 
+/** Answers to an open RFI: a flat map from each RfiField `key` to its answer. */
+readonly class SubmitRfiInput
+{
+    /**
+     * @param  array<string, mixed>  $answers  file fields take an uploaded file URL
+     */
+    public function __construct(
+        public array $answers,
+    ) {}
+
+    /** @return array<string, mixed> the whole JSON body (the answers are not wrapped) */
+    public function toArray(): array
+    {
+        return $this->answers;
+    }
+}
+
 /** The result of an RFI submission. `reason` is set when `success` is false. */
 readonly class SubmitRfiResponse
 {
@@ -184,15 +201,13 @@ class InstanceRfis
     }
 
     /**
-     * Answer the open RFI. $response is sent as the whole JSON body: a flat map from each
-     * RfiField `key` to its answer (file fields take an uploaded file URL).
+     * Answer the open RFI. The answers are sent as the whole JSON body.
      *
-     * @param  array<string, mixed>  $response
      * @return BlindPayApiResponse<SubmitRfiResponse>
      */
-    public function submit(array $response, ?RequestOptions $options = null): BlindPayApiResponse
+    public function submit(SubmitRfiInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        return $this->client->post(Path::of('instances/%s/rfi', $this->instanceId), $response, $options)
+        return $this->client->post(Path::of('instances/%s/rfi', $this->instanceId), $input->toArray(), $options)
             ->map(fn (array $data) => SubmitRfiResponse::fromArray($data));
     }
 }
@@ -221,19 +236,17 @@ class CustomerRfis
     }
 
     /**
-     * Answer the customer's open RFI. $response is sent as the whole JSON body: a flat map from
-     * each RfiField `key` to its answer (file fields take an uploaded file URL).
+     * Answer the customer's open RFI. The answers are sent as the whole JSON body.
      *
-     * @param  array<string, mixed>  $response
      * @return BlindPayApiResponse<SubmitRfiResponse>
      */
-    public function submit(string $customerId, array $response, ?RequestOptions $options = null): BlindPayApiResponse
+    public function submit(string $customerId, SubmitRfiInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if ($customerId === '') {
             return BlindPayApiResponse::error(ErrorResponse::validation('Customer ID cannot be empty'));
         }
 
-        return $this->client->post(Path::of('instances/%s/customers/%s/rfi', $this->instanceId, $customerId), $response, $options)
+        return $this->client->post(Path::of('instances/%s/customers/%s/rfi', $this->instanceId, $customerId), $input->toArray(), $options)
             ->map(fn (array $data) => SubmitRfiResponse::fromArray($data));
     }
 }

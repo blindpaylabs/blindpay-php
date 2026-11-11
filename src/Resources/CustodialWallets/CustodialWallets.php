@@ -230,7 +230,7 @@ class CustodialWallets
         string $customerId,
         ?RequestOptions $options = null
     ): BlindPayApiResponse {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );
@@ -258,7 +258,7 @@ class CustodialWallets
      */
     public function get(GetCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->id)) {
+        if ($input->id === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Wallet ID cannot be empty')
             );
@@ -295,7 +295,7 @@ class CustodialWallets
      */
     public function getBalance(GetCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->id)) {
+        if ($input->id === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Wallet ID cannot be empty')
             );
@@ -316,7 +316,7 @@ class CustodialWallets
      */
     public function delete(DeleteCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->id)) {
+        if ($input->id === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Wallet ID cannot be empty')
             );

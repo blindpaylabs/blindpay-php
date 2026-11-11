@@ -342,9 +342,9 @@ readonly class CreateStellarPayoutInput
     public function __construct(
         public string $quoteId,
         public ?string $senderWalletAddress = null,
-        public ?string $walletId = null,
         /** the signed transaction, for the second step of a self-signed payout */
         public ?string $signedTransaction = null,
+        public ?string $walletId = null,
     ) {}
 
     public function toArray(): array
@@ -477,9 +477,9 @@ readonly class CreateSolanaPayoutInput
     public function __construct(
         public string $quoteId,
         public ?string $senderWalletAddress = null,
-        public ?string $walletId = null,
         /** the signed transaction, for the second step of a self-signed payout */
         public ?string $signedTransaction = null,
+        public ?string $walletId = null,
     ) {}
 
     public function toArray(): array
@@ -627,7 +627,7 @@ class Payouts
      */
     public function get(string $payoutId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($payoutId)) {
+        if ($payoutId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Payout ID cannot be empty')
             );
@@ -641,11 +641,14 @@ class Payouts
     /**
      * Get payout tracking
      *
+     * Public tracking endpoint for BlindPay's web and iOS apps: a server-side call gets 401 in
+     * production. Use get() instead.
+     *
      * @return BlindPayApiResponse<Payout>
      */
     public function getTrack(string $payoutId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($payoutId)) {
+        if ($payoutId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Payout ID cannot be empty')
             );
@@ -727,7 +730,7 @@ class Payouts
      */
     public function submitDocuments(SubmitPayoutDocumentsInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->payoutId)) {
+        if ($input->payoutId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Payout ID cannot be empty')
             );

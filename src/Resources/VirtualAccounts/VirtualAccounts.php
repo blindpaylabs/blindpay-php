@@ -363,7 +363,7 @@ class VirtualAccounts
      */
     public function update(UpdateVirtualAccountInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->virtualAccountId)) {
+        if ($input->virtualAccountId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Virtual Account ID cannot be empty')
             );
@@ -383,13 +383,13 @@ class VirtualAccounts
      */
     public function get(string $customerId, string $virtualAccountId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );
         }
 
-        if (empty($virtualAccountId)) {
+        if ($virtualAccountId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Virtual Account ID cannot be empty')
             );
@@ -410,7 +410,7 @@ class VirtualAccounts
      */
     public function list(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );

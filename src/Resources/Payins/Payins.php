@@ -461,7 +461,7 @@ class Payins
      */
     public function get(string $payinId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($payinId)) {
+        if ($payinId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Payin ID cannot be empty')
             );
@@ -476,11 +476,13 @@ class Payins
      * Get payin tracking information
      *
      * @param  string  $payinId  The payin ID to track
+     *                           Public tracking endpoint for BlindPay's web and iOS apps: a server-side call gets 401 in
+     *                           production. Use get() instead.
      * @return BlindPayApiResponse<Payin>
      */
     public function getTrack(string $payinId, ?string $checkoutToken = null, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($payinId)) {
+        if ($payinId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Payin ID cannot be empty')
             );
@@ -499,7 +501,7 @@ class Payins
      */
     public function createEvm(string $payinQuoteId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($payinQuoteId)) {
+        if ($payinQuoteId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Payin quote ID cannot be empty')
             );

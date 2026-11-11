@@ -458,7 +458,7 @@ class Transfers
      */
     public function get(string $transferId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($transferId)) {
+        if ($transferId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Transfer ID cannot be empty')
             );
@@ -472,11 +472,14 @@ class Transfers
     /**
      * Get transfer tracking (public endpoint)
      *
+     * Public tracking endpoint for BlindPay's web and iOS apps: a server-side call gets 401 in
+     * production. Use get() instead.
+     *
      * @return BlindPayApiResponse<Transfer>
      */
     public function getTrack(string $transferId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($transferId)) {
+        if ($transferId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Transfer ID cannot be empty')
             );

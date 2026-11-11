@@ -268,7 +268,7 @@ class BlockchainWallets
         string $customerId,
         ?RequestOptions $options = null
     ): BlindPayApiResponse {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );
@@ -328,7 +328,7 @@ class BlockchainWallets
      */
     public function getMessage(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );
@@ -349,7 +349,7 @@ class BlockchainWallets
      */
     public function get(GetBlockchainWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->id)) {
+        if ($input->id === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Blockchain wallet ID cannot be empty')
             );
@@ -370,7 +370,7 @@ class BlockchainWallets
      */
     public function delete(DeleteBlockchainWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->id)) {
+        if ($input->id === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Blockchain wallet ID cannot be empty')
             );
@@ -390,7 +390,7 @@ class BlockchainWallets
      */
     public function createAssetTrustline(string $address, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($address)) {
+        if ($address === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Address cannot be empty')
             );

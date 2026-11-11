@@ -170,6 +170,19 @@ readonly class AnalyzeUploadResponse
     }
 }
 
+readonly class PresignInput
+{
+    public function __construct(
+        /** the URL of a file you uploaded */
+        public string $fileUrl,
+    ) {}
+
+    public function toArray(): array
+    {
+        return ['file_url' => $this->fileUrl];
+    }
+}
+
 readonly class PresignResponse
 {
     public function __construct(
@@ -233,13 +246,13 @@ class Upload
      *
      * @return BlindPayApiResponse<PresignResponse>
      */
-    public function presign(string $fileUrl, ?RequestOptions $options = null): BlindPayApiResponse
+    public function presign(PresignInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if ($fileUrl === '') {
+        if ($input->fileUrl === '') {
             return BlindPayApiResponse::error(ErrorResponse::validation('File URL cannot be empty'));
         }
 
-        return $this->client->post('presign'.Query::build(['instance_id' => $this->instanceId]), ['file_url' => $fileUrl], $options)
+        return $this->client->post('presign'.Query::build(['instance_id' => $this->instanceId]), $input->toArray(), $options)
             ->map(fn (array $data) => PresignResponse::fromArray($data));
     }
 }

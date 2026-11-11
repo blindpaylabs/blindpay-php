@@ -276,6 +276,22 @@ readonly class ListBankAccountsResponse
     }
 }
 
+readonly class CreatePlaidLinkInput
+{
+    /**
+     * @param  string|null  $redirectUrl  where Plaid sends the customer back once the account is linked
+     */
+    public function __construct(
+        public string $customerId,
+        public ?string $redirectUrl = null,
+    ) {}
+
+    public function toArray(): array
+    {
+        return array_filter(['redirect_url' => $this->redirectUrl], static fn ($value) => $value !== null);
+    }
+}
+
 readonly class PlaidLinkResponse
 {
     public function __construct(
@@ -791,7 +807,7 @@ class BankAccounts
         ?ListBankAccountsInput $params = null,
         ?RequestOptions $options = null
     ): BlindPayApiResponse {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );
@@ -812,7 +828,7 @@ class BankAccounts
      */
     public function get(GetBankAccountInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->customerId) || empty($input->id)) {
+        if ($input->customerId === '' || $input->id === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID and ID cannot be empty')
             );
@@ -833,7 +849,7 @@ class BankAccounts
      */
     public function delete(DeleteBankAccountInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->customerId) || empty($input->id)) {
+        if ($input->customerId === '' || $input->id === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID and ID cannot be empty')
             );
@@ -853,13 +869,7 @@ class BankAccounts
      */
     public function createPix(CreatePixInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        );
-
-        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -869,13 +879,7 @@ class BankAccounts
      */
     public function createArgentinaTransfers(CreateArgentinaTransfersInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        );
-
-        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -885,13 +889,7 @@ class BankAccounts
      */
     public function createSpei(CreateSpeiInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        );
-
-        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -901,13 +899,7 @@ class BankAccounts
      */
     public function createColombiaAch(CreateColombiaAchInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        );
-
-        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -917,13 +909,7 @@ class BankAccounts
      */
     public function createAch(CreateAchInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        );
-
-        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -933,13 +919,7 @@ class BankAccounts
      */
     public function createWire(CreateWireInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        );
-
-        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -949,13 +929,7 @@ class BankAccounts
      */
     public function createInternationalSwift(CreateInternationalSwiftInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        );
-
-        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -965,13 +939,7 @@ class BankAccounts
      */
     public function createRtp(CreateRtpInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        );
-
-        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -981,13 +949,7 @@ class BankAccounts
      */
     public function createPixSafe(CreatePixSafeInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        );
-
-        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -997,13 +959,7 @@ class BankAccounts
      */
     public function createSepa(CreateSepaInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $response = $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        );
-
-        return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -1011,11 +967,7 @@ class BankAccounts
      */
     public function createTed(CreateTedInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        return $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        )->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
@@ -1023,30 +975,42 @@ class BankAccounts
      */
     public function createFasterPayments(CreateFasterPaymentsInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        return $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $input->customerId),
-            $input->toArray(),
-            $options
-        )->map(fn (array $data) => BankAccountListItem::fromArray($data));
+        return $this->createAccount($input->customerId, $input->toArray(), $options);
     }
 
     /**
      * Start a Plaid Link session to add a customer's US bank account; send the customer to the
-     * returned URL. Plaid sends them back to $redirectUrl when given.
+     * returned URL.
      *
      * @return BlindPayApiResponse<PlaidLinkResponse>
      */
-    public function createPlaidLink(string $customerId, ?string $redirectUrl = null, ?RequestOptions $options = null): BlindPayApiResponse
+    public function createPlaidLink(CreatePlaidLinkInput $input, ?RequestOptions $options = null): BlindPayApiResponse
+    {
+        if ($input->customerId === '') {
+            return BlindPayApiResponse::error(ErrorResponse::validation('Customer ID cannot be empty'));
+        }
+
+        return $this->client->post(
+            Path::of('instances/%s/customers/%s/bank-accounts/plaid', $this->instanceId, $input->customerId),
+            $input->toArray(),
+            $options
+        )->map(fn (array $data) => PlaidLinkResponse::fromArray($data));
+    }
+
+    /**
+     * POST one bank account (every rail shares the route and the response type).
+     *
+     * @param  array<string, mixed>  $body
+     * @return BlindPayApiResponse<BankAccountListItem>
+     */
+    private function createAccount(string $customerId, array $body, ?RequestOptions $options): BlindPayApiResponse
     {
         if ($customerId === '') {
             return BlindPayApiResponse::error(ErrorResponse::validation('Customer ID cannot be empty'));
         }
 
-        return $this->client->post(
-            Path::of('instances/%s/customers/%s/bank-accounts/plaid', $this->instanceId, $customerId),
-            $redirectUrl === null ? [] : ['redirect_url' => $redirectUrl],
-            $options
-        )->map(fn (array $data) => PlaidLinkResponse::fromArray($data));
+        return $this->client->post(Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $customerId), $body, $options)
+            ->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 }
 

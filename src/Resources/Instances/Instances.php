@@ -222,7 +222,7 @@ class Instances
      */
     public function deleteMember(string $memberId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($memberId)) {
+        if ($memberId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Member ID cannot be empty')
             );
@@ -238,7 +238,7 @@ class Instances
      */
     public function updateMemberRole(UpdateMemberRoleInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->memberId)) {
+        if ($input->memberId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Member ID cannot be empty')
             );

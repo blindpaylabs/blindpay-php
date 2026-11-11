@@ -6,6 +6,7 @@ namespace BlindPay\SDK\Tests\SpecFixtures;
 
 use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\Resources\BankAccounts\CreatePixInput;
+use BlindPay\SDK\Resources\BankAccounts\CreatePlaidLinkInput;
 use BlindPay\SDK\Resources\BankAccounts\DeleteBankAccountInput;
 use BlindPay\SDK\Resources\BankAccounts\GetBankAccountInput;
 use BlindPay\SDK\Resources\BankAccounts\ListBankAccountsInput;
@@ -41,11 +42,13 @@ use BlindPay\SDK\Resources\Payouts\ListPayoutsInput;
 use BlindPay\SDK\Resources\Payouts\SubmitPayoutDocumentsInput;
 use BlindPay\SDK\Resources\Quotes\CreateQuoteInput;
 use BlindPay\SDK\Resources\Quotes\GetFxRateInput;
+use BlindPay\SDK\Resources\Rfi\SubmitRfiInput;
 use BlindPay\SDK\Resources\TermsOfService\InitiateInput;
 use BlindPay\SDK\Resources\Transfers\CreateTransferInput;
 use BlindPay\SDK\Resources\Transfers\CreateTransferQuoteInput;
 use BlindPay\SDK\Resources\Transfers\ListTransfersInput;
 use BlindPay\SDK\Resources\Upload\AnalyzeUploadInput;
+use BlindPay\SDK\Resources\Upload\PresignInput;
 use BlindPay\SDK\Resources\Upload\UploadAnalyzeType;
 use BlindPay\SDK\Resources\Upload\UploadBucket;
 use BlindPay\SDK\Resources\Upload\UploadFile;
@@ -229,7 +232,7 @@ final class SpecFixtureDecodeTest extends TestCase
             // Upload
             'POST /v1/upload' => fn (BlindPay $b, ?RequestOptions $o) => $b->upload->create(new UploadInput(UploadBucket::DOCUMENTS, new UploadFile('%PDF-1.4', 'doc.pdf', 'application/pdf')), $o),
             'POST /v1/upload/analyze' => fn (BlindPay $b, ?RequestOptions $o) => $b->upload->analyze(new AnalyzeUploadInput(new UploadFile('%PDF-1.4', 'doc.pdf', 'application/pdf'), UploadAnalyzeType::PROOF_OF_ADDRESS, ['full_name' => 'Jane Doe']), $o),
-            'POST /v1/presign' => fn (BlindPay $b, ?RequestOptions $o) => $b->upload->presign('https://example.com/doc.pdf', $o),
+            'POST /v1/presign' => fn (BlindPay $b, ?RequestOptions $o) => $b->upload->presign(new PresignInput('https://example.com/doc.pdf'), $o),
 
             // Payables
             'POST /v1/instances/{instance_id}/payables' => fn (BlindPay $b, ?RequestOptions $o) => $b->payables->create(new CreatePayableInput($c, Currency::BRL, boletoBarcode: '00190000090'), $o),
@@ -243,12 +246,12 @@ final class SpecFixtureDecodeTest extends TestCase
             'GET /v1/instances/{instance_id}/onboarding/business_profile' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->onboarding->getBusinessProfile($o),
             'GET /v1/instances/{instance_id}/onboarding/ownership_documents' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->onboarding->getOwnershipDocuments($o),
             'GET /v1/instances/{instance_id}/rfi' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->rfi->get($o),
-            'POST /v1/instances/{instance_id}/rfi' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->rfi->submit(['company_website' => 'https://example.com'], $o),
+            'POST /v1/instances/{instance_id}/rfi' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->rfi->submit(new SubmitRfiInput(['company_website' => 'https://example.com']), $o),
             'GET /v1/instances/{instance_id}/customers/{customer_id}/rfi' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->rfi->get($c, $o),
-            'POST /v1/instances/{instance_id}/customers/{customer_id}/rfi' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->rfi->submit($c, ['occupation' => 'engineer'], $o),
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/rfi' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->rfi->submit($c, new SubmitRfiInput(['occupation' => 'engineer']), $o),
 
             // Wallet extras
-            'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/plaid' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->createPlaidLink($c, 'https://example.com/done', $o),
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/plaid' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->createPlaidLink(new CreatePlaidLinkInput($c, 'https://example.com/done'), $o),
             'PATCH /v1/instances/{instance_id}/customers/{customer_id}/blockchain-wallets/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->blockchain->setSelfCustody(new SetSelfCustodyInput($c, $id, true), $o),
             'PUT /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{bank_account_id}/offramp-wallets/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->offramp->update(new UpdateOfframpWalletInput($c, $id, $id, null), $o),
             'GET /v1/instances/{instance_id}/customers/{customer_id}/wallets/{id}/deposits' => fn (BlindPay $b, ?RequestOptions $o) => $b->wallets->custodial->getDeposits(new GetWalletDepositsInput($c, $id, limit: 5), $o),

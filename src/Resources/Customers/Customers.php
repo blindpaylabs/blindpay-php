@@ -1549,7 +1549,7 @@ class Customers
      */
     public function get(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );
@@ -1567,7 +1567,7 @@ class Customers
      */
     public function update(UpdateCustomerInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->customerId)) {
+        if ($input->customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );
@@ -1587,7 +1587,7 @@ class Customers
      */
     public function delete(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );
@@ -1603,7 +1603,7 @@ class Customers
      */
     public function getLimits(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );
@@ -1621,7 +1621,7 @@ class Customers
      */
     public function getLimitIncreaseRequests(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($customerId)) {
+        if ($customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );
@@ -1646,7 +1646,7 @@ class Customers
      */
     public function requestLimitIncrease(RequestLimitIncreaseInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($input->customerId)) {
+        if ($input->customerId === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('Customer ID cannot be empty')
             );

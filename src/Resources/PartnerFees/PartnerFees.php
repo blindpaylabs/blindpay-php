@@ -191,7 +191,7 @@ class PartnerFees
      */
     public function get(string $id, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($id)) {
+        if ($id === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('ID cannot be empty')
             );
@@ -209,7 +209,7 @@ class PartnerFees
      */
     public function delete(string $id, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        if (empty($id)) {
+        if ($id === '') {
             return BlindPayApiResponse::error(
                 ErrorResponse::validation('ID cannot be empty')
             );
