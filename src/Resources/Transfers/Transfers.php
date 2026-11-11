@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK\Resources\Transfers;
 
+use BlindPay\SDK\BlindPayApiException;
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\AutoPager;
 use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Internal\Path;
+use BlindPay\SDK\Internal\Query;
 use BlindPay\SDK\Types\BaseTracking;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\CurrencyType;
@@ -20,6 +23,7 @@ use BlindPay\SDK\Types\TrackingComplete;
 use BlindPay\SDK\Types\TrackingPartnerFee;
 use BlindPay\SDK\Types\TransactionStatus;
 use DateTimeImmutable;
+use Generator;
 
 readonly class TransferTrackingTransactionMonitoring extends BaseTracking
 {
@@ -384,10 +388,30 @@ class Transfers
      */
     public function list(?ListTransfersInput $params = null, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get(Path::of('instances/%s/transfers', $this->instanceId).$queryParams, $options);
+        return $this->listPage($params?->toArray() ?? [], $options);
+    }
 
-        return $response->map(fn (array $data) => ListTransfersResponse::fromArray($data));
+    /**
+     * Every transfer matching $params, fetched lazily page by page (`limit` 100 unless you set one),
+     * following `pagination.next_page` until `has_more` is false. Forward only: `endingBefore` is
+     * rejected. A failed page request throws BlindPayApiException (it carries the ErrorResponse).
+     *
+     *     foreach ($blindpay->transfers->listAutoPaging() as $transfer) { ... }
+     *
+     * @return Generator<int, Transfer>
+     *
+     * @throws BlindPayApiException
+     */
+    public function listAutoPaging(?ListTransfersInput $params = null, ?RequestOptions $options = null): Generator
+    {
+        return AutoPager::iterate($params?->toArray() ?? [], fn (array $query) => $this->listPage($query, $options));
+    }
+
+    /** @param array<string, string> $query */
+    private function listPage(array $query, ?RequestOptions $options): BlindPayApiResponse
+    {
+        return $this->client->get(Path::of('instances/%s/transfers', $this->instanceId).Query::build($query), $options)
+            ->map(fn (array $data) => ListTransfersResponse::fromArray($data));
     }
 
     /*

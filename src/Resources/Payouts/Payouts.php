@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK\Resources\Payouts;
 
+use BlindPay\SDK\BlindPayApiException;
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\AutoPager;
 use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Internal\Path;
+use BlindPay\SDK\Internal\Query;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\BlindPayApiResponse;
@@ -27,6 +30,7 @@ use BlindPay\SDK\Types\TrackingTransaction;
 use BlindPay\SDK\Types\TransactionDocumentType;
 use BlindPay\SDK\Types\TransactionStatus;
 use DateTimeImmutable;
+use Generator;
 
 enum SpeiProtocol: string
 {
@@ -264,7 +268,7 @@ readonly class ExportPayoutsInput
     {
         $params = $this->toArray();
 
-        return empty($params) ? '' : '?'.http_build_query($params);
+        return Query::build($params);
     }
 }
 
@@ -496,14 +500,32 @@ class Payouts
      * @param ListPayoutsInput|null $params
      * @return BlindPayApiResponse<ListPayoutsResponse>
      */
-    public function list(
-        ?ListPayoutsInput $params = null,
-        ?RequestOptions $options = null
-    ): BlindPayApiResponse {
-        $queryParams = $params ? $params->toQueryString() : '';
-        $response = $this->client->get(Path::of('instances/%s/payouts', $this->instanceId).$queryParams, $options);
+    public function list(?ListPayoutsInput $params = null, ?RequestOptions $options = null): BlindPayApiResponse
+    {
+        return $this->listPage($params?->toArray() ?? [], $options);
+    }
 
-        return $response->map(fn (array $data) => ListPayoutsResponse::fromArray($data));
+    /**
+     * Every payout matching $params, fetched lazily page by page (`limit` 100 unless you set one),
+     * following `pagination.next_page` until `has_more` is false. Forward only: `endingBefore` is
+     * rejected. A failed page request throws BlindPayApiException (it carries the ErrorResponse).
+     *
+     *     foreach ($blindpay->payouts->listAutoPaging() as $payout) { ... }
+     *
+     * @return Generator<int, Payout>
+     *
+     * @throws BlindPayApiException
+     */
+    public function listAutoPaging(?ListPayoutsInput $params = null, ?RequestOptions $options = null): Generator
+    {
+        return AutoPager::iterate($params?->toArray() ?? [], fn (array $query) => $this->listPage($query, $options));
+    }
+
+    /** @param array<string, string> $query */
+    private function listPage(array $query, ?RequestOptions $options): BlindPayApiResponse
+    {
+        return $this->client->get(Path::of('instances/%s/payouts', $this->instanceId).Query::build($query), $options)
+            ->map(fn (array $data) => ListPayoutsResponse::fromArray($data));
     }
 
     /*

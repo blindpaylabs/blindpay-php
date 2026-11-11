@@ -4,33 +4,28 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK\Types;
 
+use BlindPay\SDK\Internal\Query;
+
+/**
+ * Cursor pagination for list endpoints. Passing any of `limit`, `startingAfter` or `endingBefore`
+ * makes the API return `{data, pagination}` (see ListResponse); pass `pagination->nextPage` back as
+ * `startingAfter` for the next page, or use the resource's listAutoPaging() generator.
+ */
 readonly class PaginationParams
 {
+    /**
+     * @param  int|null  $limit  page size; the API accepts 10, 50, 100, 200, 500 or 1000 (wallet
+     *                           deposits: 5, 10, 50, 100, 200). Not validated client-side.
+     * @param  int|null  $offset  deprecated: ignored by the API; use $startingAfter
+     */
     public function __construct(
         public ?int $limit = null,
         public ?int $offset = null,
         public ?string $startingAfter = null,
         public ?string $endingBefore = null
-    ) {
-        if ($this->limit !== null) {
-            $validLimits = [10, 50, 100, 200, 500, 1000];
-            if (! in_array($this->limit, $validLimits, true)) {
-                throw new \InvalidArgumentException(
-                    'Invalid limit. Must be one of: '.implode(', ', $validLimits)
-                );
-            }
-        }
+    ) {}
 
-        if ($this->offset !== null) {
-            $validOffsets = [0, 10, 50, 100, 200, 500, 1000];
-            if (! in_array($this->offset, $validOffsets, true)) {
-                throw new \InvalidArgumentException(
-                    'Invalid offset. Must be one of: '.implode(', ', $validOffsets)
-                );
-            }
-        }
-    }
-
+    /** @return array<string, string> */
     public function toArray(): array
     {
         $params = [];
@@ -56,12 +51,6 @@ readonly class PaginationParams
 
     public function toQueryString(): string
     {
-        $params = $this->toArray();
-
-        if (empty($params)) {
-            return '';
-        }
-
-        return '?'.http_build_query($params);
+        return Query::build($this->toArray());
     }
 }

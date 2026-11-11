@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK\Resources\Customers;
 
+use BlindPay\SDK\BlindPayApiException;
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\AutoPager;
 use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Internal\Path;
+use BlindPay\SDK\Internal\Query;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\AccountPurpose;
 use BlindPay\SDK\Types\AmlStatus;
@@ -21,6 +24,7 @@ use BlindPay\SDK\Types\PaginationParams;
 use BlindPay\SDK\Types\RequestOptions;
 use BlindPay\SDK\Types\SourceOfWealth;
 use DateTimeImmutable;
+use Generator;
 use ReflectionClass;
 
 enum ProofOfAddressDocType: string
@@ -1386,14 +1390,32 @@ class Customers
      *
      * @return BlindPayApiResponse<ListCustomersResponse|array<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>>
      */
-    public function list(
-        ?ListCustomersInput $params = null,
-        ?RequestOptions $options = null
-    ): BlindPayApiResponse {
-        $queryString = $params?->toQueryString() ?? '';
-        $response = $this->client->get(Path::of('instances/%s/customers', $this->instanceId).$queryString, $options);
+    public function list(?ListCustomersInput $params = null, ?RequestOptions $options = null): BlindPayApiResponse
+    {
+        return $this->listPage($params?->toArray() ?? [], $options);
+    }
 
-        return $response->map(fn (array $data) => ListCustomersResponse::decode($data, $this->mapCustomer(...)));
+    /**
+     * Every customer matching $params, fetched lazily page by page (`limit` 100 unless you set one),
+     * following `pagination.next_page` until `has_more` is false. Forward only: `endingBefore` is
+     * rejected. A failed page request throws BlindPayApiException (it carries the ErrorResponse).
+     *
+     *     foreach ($blindpay->customers->listAutoPaging() as $customer) { ... }
+     *
+     * @return Generator<int, IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>
+     *
+     * @throws BlindPayApiException
+     */
+    public function listAutoPaging(?ListCustomersInput $params = null, ?RequestOptions $options = null): Generator
+    {
+        return AutoPager::iterate($params?->toArray() ?? [], fn (array $query) => $this->listPage($query, $options));
+    }
+
+    /** @param array<string, string> $query */
+    private function listPage(array $query, ?RequestOptions $options): BlindPayApiResponse
+    {
+        return $this->client->get(Path::of('instances/%s/customers', $this->instanceId).Query::build($query), $options)
+            ->map(fn (array $data) => ListCustomersResponse::decode($data, $this->mapCustomer(...)));
     }
 
     /*
