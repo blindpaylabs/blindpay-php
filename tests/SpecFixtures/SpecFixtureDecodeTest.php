@@ -14,7 +14,6 @@ use BlindPay\SDK\Resources\CustodialWallets\GetCustodialWalletInput;
 use BlindPay\SDK\Resources\Customers\CreateIndividualWithStandardKYCInput;
 use BlindPay\SDK\Resources\Customers\Customers;
 use BlindPay\SDK\Resources\Customers\IdentificationDocument;
-use BlindPay\SDK\Resources\Customers\KycType;
 use BlindPay\SDK\Resources\Customers\LimitIncreaseRequestSupportingDocumentType;
 use BlindPay\SDK\Resources\Customers\ListCustomersInput;
 use BlindPay\SDK\Resources\Customers\ProofOfAddressDocType;
@@ -56,9 +55,6 @@ use BlindPay\SDK\Resources\Wallets\MintUsdbStellarInput;
 use BlindPay\SDK\Resources\Wallets\PrepareSolanaDelegationTransactionInput;
 use BlindPay\SDK\Resources\Webhooks\CreateWebhookEndpointInput;
 use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
-use BlindPay\SDK\Resources\Webhooks\Webhooks;
-use BlindPay\SDK\Types\AccountClass;
-use BlindPay\SDK\Types\BankingPartner;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Currency;
@@ -66,7 +62,6 @@ use BlindPay\SDK\Types\CurrencyType;
 use BlindPay\SDK\Types\Network;
 use BlindPay\SDK\Types\Rail;
 use BlindPay\SDK\Types\RequestOptions;
-use BlindPay\SDK\Types\SourceOfWealth;
 use BlindPay\SDK\Types\StablecoinToken;
 use BlindPay\SDK\Types\TransactionDocumentType;
 use Closure;
@@ -97,19 +92,6 @@ final class SpecFixtureDecodeTest extends TestCase
      * several cent amounts are still typed float or int and are fixed in v4.
      */
     private const VARIANTS = ['full', 'required_only', 'nullables_null', 'unknown_enum'];
-
-    /**
-     * v3 decodes only these enums open (Decode::enum), because the API already returns values
-     * older SDK versions lacked; every other enum stays closed until v4. The `unknown_enum`
-     * variant is therefore narrowed: a field keeps the unknown value only where its `full` value
-     * belongs to one of these enums (plus the customer `type` / `kyc_type` discriminators).
-     *
-     * @var list<class-string<\BackedEnum>>
-     */
-    private const OPEN_ENUMS = [
-        Network::class, StablecoinToken::class, Currency::class, Rail::class,
-        BankingPartner::class, WebhookEvents::class, KycType::class, SourceOfWealth::class,
-    ];
 
     /**
      * Operations whose SDK types do not decode every variant yet, with the reason. This list may
@@ -293,42 +275,10 @@ final class SpecFixtureDecodeTest extends TestCase
             if (! in_array(explode('.', $name)[0], self::VARIANTS, true)) {
                 continue;
             }
-            $out[$name] = str_starts_with($name, 'unknown_enum')
-                ? self::narrowUnknownEnums($variants[str_replace('unknown_enum', 'full', $name)], $body, str_contains($operation, '/customers'))
-                : $body;
+            $out[$name] = $body;
         }
 
         return $out;
-    }
-
-    /** Keep the unknown enum value only where `full` holds a value of an open enum (see OPEN_ENUMS). */
-    private static function narrowUnknownEnums(mixed $full, mixed $unknown, bool $customerOp, ?string $key = null): mixed
-    {
-        if (is_array($full) && is_array($unknown)) {
-            foreach ($unknown as $k => $v) {
-                if (array_key_exists($k, $full)) {
-                    $unknown[$k] = self::narrowUnknownEnums($full[$k], $v, $customerOp, is_string($k) ? $k : $key);
-                }
-            }
-
-            return $unknown;
-        }
-        if ($unknown === $full || ! is_string($full)) {
-            return $unknown;
-        }
-        if ($customerOp && ($key === 'kyc_type' || ($key === 'type' && AccountClass::tryFrom($full) !== null))) {
-            return $unknown;
-        }
-        // WebhookEvents and KycType are declared inside their resource files; load those first.
-        class_exists(Webhooks::class);
-        class_exists(Customers::class);
-        foreach (self::OPEN_ENUMS as $enum) {
-            if ($enum::tryFrom($full) !== null) {
-                return $unknown;
-            }
-        }
-
-        return $full;
     }
 
     /** @return array<string, array{string, string}> */

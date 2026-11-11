@@ -134,10 +134,23 @@ readonly class Owner
      */
     public ?string $idDocFrontFile;
 
+    /** Enum-typed when you build an Owner; a decoded Owner keeps a value this SDK version does not know as the raw string. */
+    public OwnerRole|string $role;
+
+    public Country|string $country;
+
+    public Country|string $idDocCountry;
+
+    public IdentificationDocument|string $idDocType;
+
+    public ProofOfAddressDocType|string|null $proofOfAddressDocType;
+
+    public OwnerTaxType|string|null $taxType;
+
     public function __construct(
         public string $id,
         public string $instanceId,
-        public OwnerRole $role,
+        OwnerRole $role,
         public string $firstName,
         public string $lastName,
         public string $dateOfBirth,
@@ -146,21 +159,27 @@ readonly class Owner
         public ?string $addressLine2,
         public string $city,
         public string $stateProvinceRegion,
-        public Country $country,
+        Country $country,
         public string $postalCode,
-        public Country $idDocCountry,
-        public IdentificationDocument $idDocType,
+        Country $idDocCountry,
+        IdentificationDocument $idDocType,
         string $idDocFrontFile,
         public ?string $idDocBackFile,
-        public ?ProofOfAddressDocType $proofOfAddressDocType,
+        ?ProofOfAddressDocType $proofOfAddressDocType,
         public ?string $proofOfAddressDocFile,
         public ?int $ownershipPercentage = null,
         public ?string $title = null,
-        public ?OwnerTaxType $taxType = null,
+        ?OwnerTaxType $taxType = null,
         public ?string $customerId = null
     ) {
         $this->taxId = $taxId;
         $this->idDocFrontFile = $idDocFrontFile;
+        $this->role = $role;
+        $this->country = $country;
+        $this->idDocCountry = $idDocCountry;
+        $this->idDocType = $idDocType;
+        $this->proofOfAddressDocType = $proofOfAddressDocType;
+        $this->taxType = $taxType;
     }
 
     /**
@@ -174,7 +193,7 @@ readonly class Owner
         $properties = [
             'id' => $data['id'],
             'instanceId' => $data['instance_id'],
-            'role' => OwnerRole::from($data['role']),
+            'role' => Decode::enum(OwnerRole::class, $data['role']),
             'firstName' => $data['first_name'],
             'lastName' => $data['last_name'],
             'dateOfBirth' => $data['date_of_birth'],
@@ -183,17 +202,17 @@ readonly class Owner
             'addressLine2' => $data['address_line_2'] ?? null,
             'city' => $data['city'],
             'stateProvinceRegion' => $data['state_province_region'],
-            'country' => Country::from($data['country']),
+            'country' => Decode::enum(Country::class, $data['country']),
             'postalCode' => $data['postal_code'],
-            'idDocCountry' => Country::from($data['id_doc_country']),
-            'idDocType' => IdentificationDocument::from($data['id_doc_type']),
+            'idDocCountry' => Decode::enum(Country::class, $data['id_doc_country']),
+            'idDocType' => Decode::enum(IdentificationDocument::class, $data['id_doc_type']),
             'idDocFrontFile' => $data['id_doc_front_file'] ?? null,
             'idDocBackFile' => $data['id_doc_back_file'] ?? null,
-            'proofOfAddressDocType' => isset($data['proof_of_address_doc_type']) ? ProofOfAddressDocType::from($data['proof_of_address_doc_type']) : null,
+            'proofOfAddressDocType' => Decode::enum(ProofOfAddressDocType::class, $data['proof_of_address_doc_type'] ?? null),
             'proofOfAddressDocFile' => $data['proof_of_address_doc_file'] ?? null,
             'ownershipPercentage' => isset($data['ownership_percentage']) ? (int) $data['ownership_percentage'] : null,
             'title' => $data['title'] ?? null,
-            'taxType' => isset($data['tax_type']) ? OwnerTaxType::from($data['tax_type']) : null,
+            'taxType' => Decode::enum(OwnerTaxType::class, $data['tax_type'] ?? null),
             'customerId' => $data['customer_id'] ?? null,
         ];
         foreach ($properties as $property => $value) {
@@ -207,7 +226,7 @@ readonly class Owner
     {
         $data = [
             'id' => $this->id,
-            'role' => $this->role->value,
+            'role' => Decode::wire($this->role),
             'first_name' => $this->firstName,
             'last_name' => $this->lastName,
             'date_of_birth' => $this->dateOfBirth,
@@ -216,13 +235,13 @@ readonly class Owner
             'address_line_2' => $this->addressLine2,
             'city' => $this->city,
             'state_province_region' => $this->stateProvinceRegion,
-            'country' => $this->country->value,
+            'country' => Decode::wire($this->country),
             'postal_code' => $this->postalCode,
-            'id_doc_country' => $this->idDocCountry->value,
-            'id_doc_type' => $this->idDocType->value,
+            'id_doc_country' => Decode::wire($this->idDocCountry),
+            'id_doc_type' => Decode::wire($this->idDocType),
             'id_doc_front_file' => $this->idDocFrontFile,
             'id_doc_back_file' => $this->idDocBackFile,
-            'proof_of_address_doc_type' => $this->proofOfAddressDocType?->value,
+            'proof_of_address_doc_type' => Decode::wire($this->proofOfAddressDocType),
             'proof_of_address_doc_file' => $this->proofOfAddressDocFile,
         ];
 
@@ -235,7 +254,7 @@ readonly class Owner
         }
 
         if ($this->taxType !== null) {
-            $data['tax_type'] = $this->taxType->value;
+            $data['tax_type'] = Decode::wire($this->taxType);
         }
 
         return $data;
@@ -340,12 +359,12 @@ abstract readonly class BaseCustomer
         public ?string $addressLine2,
         public ?string $city,
         public ?string $stateProvinceRegion,
-        public Country $country,
+        public Country|string $country,
         public ?string $postalCode,
         public ?string $ipAddress,
         public ?string $imageUrl,
         public ?string $phoneNumber,
-        public ?ProofOfAddressDocType $proofOfAddressDocType,
+        public ProofOfAddressDocType|string|null $proofOfAddressDocType,
         public ?string $proofOfAddressDocFile,
         public string $instanceId,
         public ?string $tosId,
@@ -354,9 +373,9 @@ abstract readonly class BaseCustomer
         public Limit $limit,
         public ?array $fraudWarnings = null,
         public ?bool $isFbo = null,
-        public ?AccountPurpose $accountPurpose = null,
+        public AccountPurpose|string|null $accountPurpose = null,
         public ?string $accountPurposeOther = null,
-        public ?AmlStatus $amlStatus = null,
+        public AmlStatus|string|null $amlStatus = null,
         public ?AmlHits $amlHits = null,
         public ?bool $isTosAccepted = null
     ) {}
@@ -374,12 +393,12 @@ readonly class IndividualWithStandardKYC extends BaseCustomer
         ?string $addressLine2,
         ?string $city,
         ?string $stateProvinceRegion,
-        Country $country,
+        Country|string $country,
         ?string $postalCode,
         ?string $ipAddress,
         ?string $imageUrl,
         ?string $phoneNumber,
-        ?ProofOfAddressDocType $proofOfAddressDocType,
+        ProofOfAddressDocType|string|null $proofOfAddressDocType,
         ?string $proofOfAddressDocFile,
         string $instanceId,
         ?string $tosId,
@@ -389,16 +408,16 @@ readonly class IndividualWithStandardKYC extends BaseCustomer
         public ?string $firstName,
         public ?string $lastName,
         public ?string $dateOfBirth,
-        public ?Country $idDocCountry,
-        public ?IdentificationDocument $idDocType,
+        public Country|string|null $idDocCountry,
+        public IdentificationDocument|string|null $idDocType,
         public ?string $idDocFrontFile,
         public ?string $idDocBackFile,
         public ?string $aipriseValidationKey,
         ?array $fraudWarnings = null,
         ?bool $isFbo = null,
-        ?AccountPurpose $accountPurpose = null,
+        AccountPurpose|string|null $accountPurpose = null,
         ?string $accountPurposeOther = null,
-        ?AmlStatus $amlStatus = null,
+        AmlStatus|string|null $amlStatus = null,
         ?AmlHits $amlHits = null,
         ?bool $isTosAccepted = null,
         public ?string $externalId = null,
@@ -456,12 +475,12 @@ readonly class IndividualWithStandardKYC extends BaseCustomer
             addressLine2: $data['address_line_2'] ?? null,
             city: $data['city'] ?? null,
             stateProvinceRegion: $data['state_province_region'] ?? null,
-            country: Country::from($data['country']),
+            country: Decode::enum(Country::class, $data['country']),
             postalCode: $data['postal_code'] ?? null,
             ipAddress: $data['ip_address'] ?? null,
             imageUrl: $data['image_url'] ?? null,
             phoneNumber: $data['phone_number'] ?? null,
-            proofOfAddressDocType: isset($data['proof_of_address_doc_type']) ? ProofOfAddressDocType::from($data['proof_of_address_doc_type']) : null,
+            proofOfAddressDocType: Decode::enum(ProofOfAddressDocType::class, $data['proof_of_address_doc_type'] ?? null),
             proofOfAddressDocFile: $data['proof_of_address_doc_file'] ?? null,
             instanceId: $data['instance_id'],
             tosId: $data['tos_id'] ?? null,
@@ -471,8 +490,8 @@ readonly class IndividualWithStandardKYC extends BaseCustomer
             firstName: $data['first_name'] ?? null,
             lastName: $data['last_name'] ?? null,
             dateOfBirth: $data['date_of_birth'] ?? null,
-            idDocCountry: isset($data['id_doc_country']) ? Country::from($data['id_doc_country']) : null,
-            idDocType: isset($data['id_doc_type']) ? IdentificationDocument::from($data['id_doc_type']) : null,
+            idDocCountry: Decode::enum(Country::class, $data['id_doc_country'] ?? null),
+            idDocType: Decode::enum(IdentificationDocument::class, $data['id_doc_type'] ?? null),
             idDocFrontFile: $data['id_doc_front_file'] ?? null,
             idDocBackFile: $data['id_doc_back_file'] ?? null,
             aipriseValidationKey: $data['aiprise_validation_key'] ?? null,
@@ -481,9 +500,9 @@ readonly class IndividualWithStandardKYC extends BaseCustomer
                 $data['fraud_warnings']
             ) : null,
             isFbo: $data['is_fbo'] ?? null,
-            accountPurpose: isset($data['account_purpose']) ? AccountPurpose::from($data['account_purpose']) : null,
+            accountPurpose: Decode::enum(AccountPurpose::class, $data['account_purpose'] ?? null),
             accountPurposeOther: $data['account_purpose_other'] ?? null,
-            amlStatus: isset($data['aml_status']) ? AmlStatus::from($data['aml_status']) : null,
+            amlStatus: Decode::enum(AmlStatus::class, $data['aml_status'] ?? null),
             amlHits: isset($data['aml_hits']) ? AmlHits::fromArray($data['aml_hits']) : null,
             isTosAccepted: $data['is_tos_accepted'] ?? null,
             externalId: $data['external_id'] ?? null,
@@ -507,12 +526,12 @@ readonly class IndividualWithEnhancedKYC extends BaseCustomer
         ?string $addressLine2,
         ?string $city,
         ?string $stateProvinceRegion,
-        Country $country,
+        Country|string $country,
         ?string $postalCode,
         ?string $ipAddress,
         ?string $imageUrl,
         ?string $phoneNumber,
-        ?ProofOfAddressDocType $proofOfAddressDocType,
+        ProofOfAddressDocType|string|null $proofOfAddressDocType,
         ?string $proofOfAddressDocFile,
         string $instanceId,
         ?string $tosId,
@@ -522,21 +541,21 @@ readonly class IndividualWithEnhancedKYC extends BaseCustomer
         public ?string $firstName,
         public ?string $lastName,
         public ?string $dateOfBirth,
-        public ?Country $idDocCountry,
-        public ?IdentificationDocument $idDocType,
+        public Country|string|null $idDocCountry,
+        public IdentificationDocument|string|null $idDocType,
         public ?string $idDocFrontFile,
         public ?string $idDocBackFile,
         public ?string $aipriseValidationKey,
         public ?string $sourceOfFundsDocType,
         public ?string $sourceOfFundsDocFile,
         public ?string $individualHoldingDocFrontFile,
-        public ?PurposeOfTransactions $purposeOfTransactions,
+        public PurposeOfTransactions|string|null $purposeOfTransactions,
         public ?string $purposeOfTransactionsExplanation,
         ?array $fraudWarnings = null,
         ?bool $isFbo = null,
-        ?AccountPurpose $accountPurpose = null,
+        AccountPurpose|string|null $accountPurpose = null,
         ?string $accountPurposeOther = null,
-        ?AmlStatus $amlStatus = null,
+        AmlStatus|string|null $amlStatus = null,
         ?AmlHits $amlHits = null,
         ?bool $isTosAccepted = null,
         public ?string $externalId = null,
@@ -594,12 +613,12 @@ readonly class IndividualWithEnhancedKYC extends BaseCustomer
             addressLine2: $data['address_line_2'] ?? null,
             city: $data['city'] ?? null,
             stateProvinceRegion: $data['state_province_region'] ?? null,
-            country: Country::from($data['country']),
+            country: Decode::enum(Country::class, $data['country']),
             postalCode: $data['postal_code'] ?? null,
             ipAddress: $data['ip_address'] ?? null,
             imageUrl: $data['image_url'] ?? null,
             phoneNumber: $data['phone_number'] ?? null,
-            proofOfAddressDocType: isset($data['proof_of_address_doc_type']) ? ProofOfAddressDocType::from($data['proof_of_address_doc_type']) : null,
+            proofOfAddressDocType: Decode::enum(ProofOfAddressDocType::class, $data['proof_of_address_doc_type'] ?? null),
             proofOfAddressDocFile: $data['proof_of_address_doc_file'] ?? null,
             instanceId: $data['instance_id'],
             tosId: $data['tos_id'] ?? null,
@@ -609,24 +628,24 @@ readonly class IndividualWithEnhancedKYC extends BaseCustomer
             firstName: $data['first_name'] ?? null,
             lastName: $data['last_name'] ?? null,
             dateOfBirth: $data['date_of_birth'] ?? null,
-            idDocCountry: isset($data['id_doc_country']) ? Country::from($data['id_doc_country']) : null,
-            idDocType: isset($data['id_doc_type']) ? IdentificationDocument::from($data['id_doc_type']) : null,
+            idDocCountry: Decode::enum(Country::class, $data['id_doc_country'] ?? null),
+            idDocType: Decode::enum(IdentificationDocument::class, $data['id_doc_type'] ?? null),
             idDocFrontFile: $data['id_doc_front_file'] ?? null,
             idDocBackFile: $data['id_doc_back_file'] ?? null,
             aipriseValidationKey: $data['aiprise_validation_key'] ?? null,
             sourceOfFundsDocType: $data['source_of_funds_doc_type'] ?? null,
             sourceOfFundsDocFile: $data['source_of_funds_doc_file'] ?? null,
             individualHoldingDocFrontFile: $data['individual_holding_doc_front_file'] ?? null,
-            purposeOfTransactions: isset($data['purpose_of_transactions']) ? PurposeOfTransactions::from($data['purpose_of_transactions']) : null,
+            purposeOfTransactions: Decode::enum(PurposeOfTransactions::class, $data['purpose_of_transactions'] ?? null),
             purposeOfTransactionsExplanation: $data['purpose_of_transactions_explanation'] ?? null,
             fraudWarnings: isset($data['fraud_warnings']) ? array_map(
                 fn ($w) => FraudWarning::fromArray($w),
                 $data['fraud_warnings']
             ) : null,
             isFbo: $data['is_fbo'] ?? null,
-            accountPurpose: isset($data['account_purpose']) ? AccountPurpose::from($data['account_purpose']) : null,
+            accountPurpose: Decode::enum(AccountPurpose::class, $data['account_purpose'] ?? null),
             accountPurposeOther: $data['account_purpose_other'] ?? null,
-            amlStatus: isset($data['aml_status']) ? AmlStatus::from($data['aml_status']) : null,
+            amlStatus: Decode::enum(AmlStatus::class, $data['aml_status'] ?? null),
             amlHits: isset($data['aml_hits']) ? AmlHits::fromArray($data['aml_hits']) : null,
             isTosAccepted: $data['is_tos_accepted'] ?? null,
             externalId: $data['external_id'] ?? null,
@@ -653,12 +672,12 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
         ?string $addressLine2,
         ?string $city,
         ?string $stateProvinceRegion,
-        Country $country,
+        Country|string $country,
         ?string $postalCode,
         ?string $ipAddress,
         ?string $imageUrl,
         ?string $phoneNumber,
-        ?ProofOfAddressDocType $proofOfAddressDocType,
+        ProofOfAddressDocType|string|null $proofOfAddressDocType,
         ?string $proofOfAddressDocFile,
         string $instanceId,
         ?string $tosId,
@@ -676,15 +695,15 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
         public ?string $aipriseValidationKey,
         ?array $fraudWarnings = null,
         ?bool $isFbo = null,
-        ?AccountPurpose $accountPurpose = null,
+        AccountPurpose|string|null $accountPurpose = null,
         ?string $accountPurposeOther = null,
-        ?AmlStatus $amlStatus = null,
+        AmlStatus|string|null $amlStatus = null,
         ?AmlHits $amlHits = null,
         ?bool $isTosAccepted = null,
-        public ?BusinessType $businessType = null,
+        public BusinessType|string|null $businessType = null,
         public ?string $businessDescription = null,
         public BusinessIndustry|string|null $businessIndustry = null,
-        public ?EstimatedAnnualRevenue $estimatedAnnualRevenue = null,
+        public EstimatedAnnualRevenue|string|null $estimatedAnnualRevenue = null,
         public SourceOfWealth|string|null $sourceOfWealth = null,
         public ?bool $publiclyTraded = null,
         AccountClass|string|null $type = null,
@@ -739,12 +758,12 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
             addressLine2: $data['address_line_2'] ?? null,
             city: $data['city'] ?? null,
             stateProvinceRegion: $data['state_province_region'] ?? null,
-            country: Country::from($data['country']),
+            country: Decode::enum(Country::class, $data['country']),
             postalCode: $data['postal_code'] ?? null,
             ipAddress: $data['ip_address'] ?? null,
             imageUrl: $data['image_url'] ?? null,
             phoneNumber: $data['phone_number'] ?? null,
-            proofOfAddressDocType: isset($data['proof_of_address_doc_type']) ? ProofOfAddressDocType::from($data['proof_of_address_doc_type']) : null,
+            proofOfAddressDocType: Decode::enum(ProofOfAddressDocType::class, $data['proof_of_address_doc_type'] ?? null),
             proofOfAddressDocFile: $data['proof_of_address_doc_file'] ?? null,
             instanceId: $data['instance_id'],
             tosId: $data['tos_id'] ?? null,
@@ -765,15 +784,15 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
                 $data['fraud_warnings']
             ) : null,
             isFbo: $data['is_fbo'] ?? null,
-            accountPurpose: isset($data['account_purpose']) ? AccountPurpose::from($data['account_purpose']) : null,
+            accountPurpose: Decode::enum(AccountPurpose::class, $data['account_purpose'] ?? null),
             accountPurposeOther: $data['account_purpose_other'] ?? null,
-            amlStatus: isset($data['aml_status']) ? AmlStatus::from($data['aml_status']) : null,
+            amlStatus: Decode::enum(AmlStatus::class, $data['aml_status'] ?? null),
             amlHits: isset($data['aml_hits']) ? AmlHits::fromArray($data['aml_hits']) : null,
             isTosAccepted: $data['is_tos_accepted'] ?? null,
-            businessType: isset($data['business_type']) ? BusinessType::from($data['business_type']) : null,
+            businessType: Decode::enum(BusinessType::class, $data['business_type'] ?? null),
             businessDescription: $data['business_description'] ?? null,
             businessIndustry: Decode::enum(BusinessIndustry::class, $data['business_industry'] ?? null),
-            estimatedAnnualRevenue: isset($data['estimated_annual_revenue']) ? EstimatedAnnualRevenue::from($data['estimated_annual_revenue']) : null,
+            estimatedAnnualRevenue: Decode::enum(EstimatedAnnualRevenue::class, $data['estimated_annual_revenue'] ?? null),
             sourceOfWealth: Decode::enum(SourceOfWealth::class, $data['source_of_wealth'] ?? null),
             publiclyTraded: $data['publicly_traded'] ?? null,
             type: Decode::enum(AccountClass::class, $data['type'] ?? null),
@@ -1231,12 +1250,12 @@ readonly class LimitIncreaseRequest
     public function __construct(
         public string $id,
         public string $customerId,
-        public LimitIncreaseRequestStatus $status,
+        public LimitIncreaseRequestStatus|string $status,
         public ?float $daily,
         public ?float $monthly,
         public ?float $perTransaction,
         public ?string $supportingDocumentFile,
-        public ?LimitIncreaseRequestSupportingDocumentType $supportingDocumentType,
+        public LimitIncreaseRequestSupportingDocumentType|string|null $supportingDocumentType,
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
         public ?int $approvedPerTransaction = null,
@@ -1249,12 +1268,12 @@ readonly class LimitIncreaseRequest
         return new self(
             id: $data['id'],
             customerId: $data['customer_id'],
-            status: LimitIncreaseRequestStatus::from($data['status']),
+            status: Decode::enum(LimitIncreaseRequestStatus::class, $data['status']),
             daily: isset($data['daily']) ? (float) $data['daily'] : null,
             monthly: isset($data['monthly']) ? (float) $data['monthly'] : null,
             perTransaction: isset($data['per_transaction']) ? (float) $data['per_transaction'] : null,
             supportingDocumentFile: $data['supporting_document_file'] ?? null,
-            supportingDocumentType: isset($data['supporting_document_type']) ? LimitIncreaseRequestSupportingDocumentType::from($data['supporting_document_type']) : null,
+            supportingDocumentType: Decode::enum(LimitIncreaseRequestSupportingDocumentType::class, $data['supporting_document_type'] ?? null),
             createdAt: isset($data['created_at'])
                 ? new DateTimeImmutable($data['created_at'])
                 : null,
@@ -1373,7 +1392,7 @@ class Customers
      * version does not know yet) as IndividualWithStandardKYC. The wire `type` and `kyc_type`
      * are kept on the object, so check `$customer->kycType`, not the class, for the KYC level.
      */
-    private function mapCustomer(array $data): IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB
+    public static function customerFromArray(array $data): IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB
     {
         $type = $data['type'] ?? null;
         $kycType = $data['kyc_type'] ?? null;
@@ -1415,7 +1434,7 @@ class Customers
     private function listPage(array $query, ?RequestOptions $options): BlindPayApiResponse
     {
         return $this->client->get(Path::of('instances/%s/customers', $this->instanceId).Query::build($query), $options)
-            ->map(fn (array $data) => ListCustomersResponse::decode($data, $this->mapCustomer(...)));
+            ->map(fn (array $data) => ListCustomersResponse::decode($data, self::customerFromArray(...)));
     }
 
     /*
@@ -1485,7 +1504,7 @@ class Customers
 
         $response = $this->client->get(Path::of('instances/%s/customers/%s', $this->instanceId, $customerId), $options);
 
-        return $response->map(fn (array $data) => $this->mapCustomer($data));
+        return $response->map(fn (array $data) => self::customerFromArray($data));
     }
 
     /*

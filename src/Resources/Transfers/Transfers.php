@@ -218,7 +218,7 @@ readonly class Transfer
     public function __construct(
         public string $id,
         public string $instanceId,
-        public TransactionStatus $status,
+        public TransactionStatus|string $status,
         public string $transferQuoteId,
         public string $walletId,
         public StablecoinToken|string $senderToken,
@@ -250,7 +250,7 @@ readonly class Transfer
         return new self(
             id: $data['id'],
             instanceId: $data['instance_id'],
-            status: TransactionStatus::from($data['status']),
+            status: Decode::enum(TransactionStatus::class, $data['status']),
             transferQuoteId: $data['transfer_quote_id'],
             walletId: $data['wallet_id'],
             senderToken: Decode::enum(StablecoinToken::class, $data['sender_token']),
@@ -291,7 +291,7 @@ readonly class CreateTransferResponse
 {
     public function __construct(
         public string $id,
-        public TransactionStatus $status,
+        public TransactionStatus|string $status,
         public TransferTrackingTransactionMonitoring $trackingTransactionMonitoring,
         public TransferTrackingPaymaster $trackingPaymaster,
         public TransferTrackingBridgeSwap $trackingBridgeSwap,
@@ -303,7 +303,7 @@ readonly class CreateTransferResponse
     {
         return new self(
             id: $data['id'],
-            status: TransactionStatus::from($data['status']),
+            status: Decode::enum(TransactionStatus::class, $data['status']),
             trackingTransactionMonitoring: TransferTrackingTransactionMonitoring::fromArray($data['tracking_transaction_monitoring']),
             trackingPaymaster: TransferTrackingPaymaster::fromArray($data['tracking_paymaster']),
             trackingBridgeSwap: TransferTrackingBridgeSwap::fromArray($data['tracking_bridge_swap']),

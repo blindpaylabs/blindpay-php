@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Resources\Instances;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
+use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Internal\Path;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\ErrorResponse;
@@ -32,7 +33,7 @@ readonly class InstanceMember
         public string $lastName,
         public ?string $imageUrl,
         public ?DateTimeImmutable $createdAt,
-        public InstanceMemberRole $role
+        public InstanceMemberRole|string $role
     ) {}
 
     public static function fromArray(array $data): self
@@ -45,7 +46,7 @@ readonly class InstanceMember
             lastName: $data['last_name'],
             imageUrl: $data['image_url'] ?? null,
             createdAt: isset($data['created_at']) ? new DateTimeImmutable($data['created_at']) : null,
-            role: InstanceMemberRole::from($data['role'])
+            role: Decode::enum(InstanceMemberRole::class, $data['role'])
         );
     }
 

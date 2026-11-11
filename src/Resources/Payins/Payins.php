@@ -208,7 +208,7 @@ readonly class Payin
     public function __construct(
         public string $customerId,
         public string $id,
-        public TransactionStatus $status,
+        public TransactionStatus|string $status,
         public string $payinQuoteId,
         public string $instanceId,
         public ?DateTimeImmutable $createdAt,
@@ -247,7 +247,7 @@ readonly class Payin
         public ?string $psePaymentLink = null,
         public ?string $pseTaxId = null,
         public ?string $partnerFeeId = null,
-        public ?ManualExecutionStatus $manualExecutionStatus = null
+        public ManualExecutionStatus|string|null $manualExecutionStatus = null
     ) {}
 
     public static function fromArray(array $data): self
@@ -255,7 +255,7 @@ readonly class Payin
         return new self(
             customerId: $data['customer_id'],
             id: $data['id'],
-            status: TransactionStatus::from($data['status']),
+            status: Decode::enum(TransactionStatus::class, $data['status']),
             payinQuoteId: $data['payin_quote_id'],
             instanceId: $data['instance_id'],
             createdAt: isset($data['created_at'])
@@ -297,7 +297,7 @@ readonly class Payin
             psePaymentLink: $data['pse_payment_link'] ?? null,
             pseTaxId: $data['pse_tax_id'] ?? null,
             partnerFeeId: $data['partner_fee_id'] ?? null,
-            manualExecutionStatus: isset($data['manual_execution_status']) ? ManualExecutionStatus::from($data['manual_execution_status']) : null
+            manualExecutionStatus: Decode::enum(ManualExecutionStatus::class, $data['manual_execution_status'] ?? null)
         );
     }
 }
@@ -380,7 +380,7 @@ readonly class CreateEvmPayinResponse
 {
     public function __construct(
         public string $id,
-        public TransactionStatus $status,
+        public TransactionStatus|string $status,
         public ?string $customerId,
         public ?float $receiverAmount,
         public ?BankDetails $BankDetails,
@@ -397,7 +397,7 @@ readonly class CreateEvmPayinResponse
     {
         return new self(
             id: $data['id'],
-            status: TransactionStatus::from($data['status']),
+            status: Decode::enum(TransactionStatus::class, $data['status']),
             customerId: $data['customer_id'] ?? null,
             receiverAmount: isset($data['receiver_amount']) ? (float) $data['receiver_amount'] : null,
             BankDetails: isset($data['blindpay_bank_details']) ? BankDetails::fromArray($data['blindpay_bank_details']) : null,
