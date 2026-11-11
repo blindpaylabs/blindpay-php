@@ -5,8 +5,13 @@ on:
   
 jobs:
   tests:
-    name: Run tests
+    name: Run tests (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor (composer.json) and the newest PHP composer.lock supports.
+        php: ['8.2', '8.4']
     
     steps:
       - name: Checkout code
@@ -15,7 +20,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: ${{ matrix.php }}
           extensions: openssl, json
           coverage: none
           
@@ -35,5 +40,8 @@ jobs:
         
       - name: Run tests
         run: composer run test
+
+      - name: Static analysis (PHPStan level 6)
+        run: composer run analyse
 
 

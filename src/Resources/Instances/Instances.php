@@ -172,7 +172,7 @@ class Instances
             ->map(fn (array $data) => Instance::fromArray($data));
     }
 
-    /*
+    /**
      * Get all members of the instance
      *
      * @return BlindPayApiResponse<InstanceMember[]>
@@ -191,10 +191,9 @@ class Instances
         });
     }
 
-    /*
+    /**
      * Update instance details
      *
-     * @param UpdateInstanceInput $input
      * @return BlindPayApiResponse<null>
      */
     public function update(UpdateInstanceInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -206,7 +205,7 @@ class Instances
         );
     }
 
-    /*
+    /**
      * Delete the instance
      *
      * @return BlindPayApiResponse<null>
@@ -216,10 +215,9 @@ class Instances
         return $this->client->delete(Path::of('instances/%s', $this->instanceId), null, $options);
     }
 
-    /*
+    /**
      * Delete a member from the instance
      *
-     * @param string $memberId
      * @return BlindPayApiResponse<null>
      */
     public function deleteMember(string $memberId, ?RequestOptions $options = null): BlindPayApiResponse
@@ -233,10 +231,9 @@ class Instances
         return $this->client->delete(Path::of('instances/%s/members/%s', $this->instanceId, $memberId), null, $options);
     }
 
-    /*
+    /**
      * Update a member's role
      *
-     * @param UpdateMemberRoleInput $input
      * @return BlindPayApiResponse<null>
      */
     public function updateMemberRole(UpdateMemberRoleInput $input, ?RequestOptions $options = null): BlindPayApiResponse

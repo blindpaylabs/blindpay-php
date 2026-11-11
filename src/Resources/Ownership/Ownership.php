@@ -44,10 +44,9 @@ class Ownership
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * Migrate instance ownership to another user
      *
-     * @param MigrateInstanceOwnershipIn $input
      * @return BlindPayApiResponse<MigrateInstanceOwnershipResponse>
      */
     public function migrate(

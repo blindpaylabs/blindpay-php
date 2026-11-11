@@ -32,7 +32,7 @@ final class WebhookVerifier
      * `webhook-signature` aliases are accepted when the `svix-*` headers are absent.
      *
      * @param  string  $payload  the raw request body
-     * @param  array<string, string|string[]>  $headers
+     * @param  array<array-key, mixed>  $headers  header name => value (a string or a list of strings)
      * @param  string  $secret  the endpoint's signing secret (`whsec_...`)
      * @param  int  $tolerance  maximum allowed |now - timestamp|, in seconds
      * @param  int|null  $now  current Unix time; defaults to time() (override in tests)

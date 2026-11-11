@@ -498,10 +498,9 @@ class Payouts
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * List payouts
      *
-     * @param ListPayoutsInput|null $params
      * @return BlindPayApiResponse<ListPayoutsResponse>
      */
     public function list(?ListPayoutsInput $params = null, ?RequestOptions $options = null): BlindPayApiResponse
@@ -525,17 +524,19 @@ class Payouts
         return AutoPager::iterate($params?->toArray() ?? [], fn (array $query) => $this->listPage($query, $options));
     }
 
-    /** @param array<string, string> $query */
+    /**
+     * @param  array<string, string>  $query
+     * @return BlindPayApiResponse<ListPayoutsResponse>
+     */
     private function listPage(array $query, ?RequestOptions $options): BlindPayApiResponse
     {
         return $this->client->get(Path::of('instances/%s/payouts', $this->instanceId).Query::build($query), $options)
             ->map(fn (array $data) => ListPayoutsResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get a payout by ID
      *
-     * @param string $payoutId
      * @return BlindPayApiResponse<Payout>
      */
     public function get(string $payoutId, ?RequestOptions $options = null): BlindPayApiResponse
@@ -551,10 +552,9 @@ class Payouts
         return $response->map(fn (array $data) => Payout::fromArray($data));
     }
 
-    /*
+    /**
      * Get payout tracking
      *
-     * @param string $payoutId
      * @return BlindPayApiResponse<Payout>
      */
     public function getTrack(string $payoutId, ?RequestOptions $options = null): BlindPayApiResponse
@@ -570,10 +570,9 @@ class Payouts
         return $response->map(fn (array $data) => Payout::fromArray($data));
     }
 
-    /*
+    /**
      * Authorize Stellar token
      *
-     * @param AuthorizeStellarTokenInput $input
      * @return BlindPayApiResponse<AuthorizeStellarTokenResponse>
      */
     public function authorizeStellarToken(AuthorizeStellarTokenInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -587,10 +586,9 @@ class Payouts
         return $response->map(fn (array $data) => AuthorizeStellarTokenResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Create Stellar payout
      *
-     * @param CreateStellarPayoutInput $input
      * @return BlindPayApiResponse<CreateStellarPayoutResponse>
      */
     public function createStellar(CreateStellarPayoutInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -604,10 +602,9 @@ class Payouts
         return $response->map(fn (array $data) => CreateStellarPayoutResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Create EVM payout
      *
-     * @param CreateEvmPayoutInput $input
      * @return BlindPayApiResponse<CreateEvmPayoutResponse>
      */
     public function createEvm(CreateEvmPayoutInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -621,10 +618,9 @@ class Payouts
         return $response->map(fn (array $data) => CreateEvmPayoutResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Create Solana payout
      *
-     * @param CreateSolanaPayoutInput $input
      * @return BlindPayApiResponse<CreateSolanaPayoutResponse>
      */
     public function createSolana(CreateSolanaPayoutInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -638,10 +634,9 @@ class Payouts
         return $response->map(fn (array $data) => CreateSolanaPayoutResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Submit payout documents (required for SWIFT payouts)
      *
-     * @param SubmitPayoutDocumentsInput $input
      * @return BlindPayApiResponse<SubmitPayoutDocumentsResponse>
      */
     public function submitDocuments(SubmitPayoutDocumentsInput $input, ?RequestOptions $options = null): BlindPayApiResponse

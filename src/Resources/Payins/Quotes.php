@@ -197,10 +197,10 @@ class Quotes
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * Create a payin quote
      *
-     * @param CreatePayinQuoteInput $input The quote input parameters
+     * @param  CreatePayinQuoteInput  $input  The quote input parameters
      * @return BlindPayApiResponse<CreatePayinQuoteResponse>
      */
     public function create(
@@ -216,10 +216,10 @@ class Quotes
         return $response->map(fn (array $data) => CreatePayinQuoteResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get FX rate for payin conversion
      *
-     * @param GetPayinFxRateInput $input The FX rate request parameters
+     * @param  GetPayinFxRateInput  $input  The FX rate request parameters
      * @return BlindPayApiResponse<GetPayinFxRateResponse>
      */
     public function getFxRate(GetPayinFxRateInput $input, ?RequestOptions $options = null): BlindPayApiResponse

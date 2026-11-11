@@ -73,31 +73,37 @@ final class Transport implements ApiClientInterface
         $this->random = static fn (): float => mt_rand() / mt_getrandmax();
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function get(string $path, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->send('GET', $path, null, $options);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function post(string $path, array $body, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->send('POST', $path, $body, $options);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function put(string $path, array $body, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->send('PUT', $path, $body, $options);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function patch(string $path, array $body, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->send('PATCH', $path, $body, $options);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function delete(string $path, ?array $body = null, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->send('DELETE', $path, $body, $options);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function postMultipart(string $path, array $multipart, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->send('POST', $path, null, $options, $multipart);
@@ -107,6 +113,7 @@ final class Transport implements ApiClientInterface
      * @param  array<string, mixed>|null  $body  JSON body; serialised once and resent byte for byte
      * @param  list<array<string, mixed>>|null  $multipart  Guzzle multipart parts (never idempotent)
      */
+    /** @return BlindPayApiResponse<mixed> */
     private function send(string $method, string $path, ?array $body, ?RequestOptions $options, ?array $multipart = null): BlindPayApiResponse
     {
         $options ??= new RequestOptions;
@@ -190,6 +197,7 @@ final class Transport implements ApiClientInterface
         }
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     private function success(string $raw, int $status, ?string $requestId, ResponseInterface $response, ?string $key): BlindPayApiResponse
     {
         $replayed = strtolower($response->getHeaderLine('Idempotency-Replayed')) === 'true';

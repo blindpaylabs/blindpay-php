@@ -395,10 +395,10 @@ class Payins
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * List all payins with optional filters
      *
-     * @param ListPayinsInput|null $params Optional filters for listing payins
+     * @param  ListPayinsInput|null  $params  Optional filters for listing payins
      * @return BlindPayApiResponse<ListPayinsResponse>
      */
     public function list(?ListPayinsInput $params = null, ?RequestOptions $options = null): BlindPayApiResponse
@@ -422,17 +422,20 @@ class Payins
         return AutoPager::iterate($params?->toArray() ?? [], fn (array $query) => $this->listPage($query, $options));
     }
 
-    /** @param array<string, string> $query */
+    /**
+     * @param  array<string, string>  $query
+     * @return BlindPayApiResponse<ListPayinsResponse>
+     */
     private function listPage(array $query, ?RequestOptions $options): BlindPayApiResponse
     {
         return $this->client->get(Path::of('instances/%s/payins', $this->instanceId).Query::build($query), $options)
             ->map(fn (array $data) => ListPayinsResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get a specific payin by ID
      *
-     * @param string $payinId The payin ID
+     * @param  string  $payinId  The payin ID
      * @return BlindPayApiResponse<Payin>
      */
     public function get(string $payinId, ?RequestOptions $options = null): BlindPayApiResponse
@@ -448,10 +451,10 @@ class Payins
         return $response->map(fn (array $data) => Payin::fromArray($data));
     }
 
-    /*
+    /**
      * Get payin tracking information
      *
-     * @param string $payinId The payin ID to track
+     * @param  string  $payinId  The payin ID to track
      * @return BlindPayApiResponse<Payin>
      */
     public function getTrack(string $payinId, ?string $checkoutToken = null, ?RequestOptions $options = null): BlindPayApiResponse
@@ -467,10 +470,10 @@ class Payins
         return $response->map(fn (array $data) => Payin::fromArray($data));
     }
 
-    /*
+    /**
      * Create an EVM payin from a quote
      *
-     * @param string $payinQuoteId The payin quote ID
+     * @param  string  $payinQuoteId  The payin quote ID
      * @return BlindPayApiResponse<CreateEvmPayinResponse>
      */
     public function createEvm(string $payinQuoteId, ?RequestOptions $options = null): BlindPayApiResponse

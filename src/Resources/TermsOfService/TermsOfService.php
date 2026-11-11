@@ -57,10 +57,9 @@ class TermsOfService
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * Initiate Terms of Service acceptance flow
      *
-     * @param InitiateInput $input
      * @return BlindPayApiResponse<InitiateResponse>
      */
     public function initiate(

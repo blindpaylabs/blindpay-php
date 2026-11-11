@@ -52,8 +52,8 @@ readonly class CreateQuoteInput
 
 readonly class QuoteContract
 {
-    /*
-     * @param array<array<string, mixed>> $abi
+    /**
+     * @param  array<array<string, mixed>>  $abi
      */
     public function __construct(
         public array $abi,
@@ -230,10 +230,9 @@ class Quotes
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * Create a quote
      *
-     * @param CreateQuoteInput $input
      * @return BlindPayApiResponse<CreateQuoteResponse>
      */
     public function create(
@@ -249,10 +248,9 @@ class Quotes
         return $response->map(fn (array $data) => CreateQuoteResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get FX rate
      *
-     * @param GetFxRateInput $input
      * @return BlindPayApiResponse<GetFxRateResponse>
      */
     public function getFxRate(GetFxRateInput $input, ?RequestOptions $options = null): BlindPayApiResponse

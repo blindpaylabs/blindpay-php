@@ -1254,7 +1254,7 @@ readonly class UpdateCustomerInput
     }
 }
 
-/*
+/**
  * Get customer limits response
  */
 readonly class GetCustomerLimitsResponse
@@ -1445,7 +1445,7 @@ class Customers
         };
     }
 
-    /*
+    /**
      * List all customers
      *
      * @return BlindPayApiResponse<ListCustomersResponse|array<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>>
@@ -1471,7 +1471,10 @@ class Customers
         return AutoPager::iterate($params?->toArray() ?? [], fn (array $query) => $this->listPage($query, $options));
     }
 
-    /** @param array<string, string> $query */
+    /**
+     * @param  array<string, string>  $query
+     * @return BlindPayApiResponse<ListCustomersResponse>
+     */
     private function listPage(array $query, ?RequestOptions $options): BlindPayApiResponse
     {
         return $this->client->get(Path::of('instances/%s/customers', $this->instanceId).Query::build($query), $options)
@@ -1489,10 +1492,9 @@ class Customers
             ->map(fn (array $data) => CreateCustomerResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Create individual with standard KYC
      *
-     * @param CreateIndividualWithStandardKYCInput $data
      * @return BlindPayApiResponse<CreateCustomerResponse>
      */
     public function createIndividualWithStandardKYC(CreateIndividualWithStandardKYCInput $data, ?RequestOptions $options = null): BlindPayApiResponse
@@ -1506,10 +1508,9 @@ class Customers
         return $response->map(fn (array $data) => CreateCustomerResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Create individual with enhanced KYC
      *
-     * @param CreateIndividualWithEnhancedKYCInput $data
      * @return BlindPayApiResponse<CreateCustomerResponse>
      */
     public function createIndividualWithEnhancedKYC(CreateIndividualWithEnhancedKYCInput $data, ?RequestOptions $options = null): BlindPayApiResponse
@@ -1523,10 +1524,9 @@ class Customers
         return $response->map(fn (array $data) => CreateCustomerResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Create business with standard KYB
      *
-     * @param CreateBusinessWithStandardKYBInput $data
      * @return BlindPayApiResponse<CreateCustomerResponse>
      */
     public function createBusinessWithStandardKYB(CreateBusinessWithStandardKYBInput $data, ?RequestOptions $options = null): BlindPayApiResponse
@@ -1540,10 +1540,9 @@ class Customers
         return $response->map(fn (array $data) => CreateCustomerResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get a customer by ID
      *
-     * @param string $customerId
      * @return BlindPayApiResponse<IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB>
      */
     public function get(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
@@ -1559,10 +1558,9 @@ class Customers
         return $response->map(fn (array $data) => self::customerFromArray($data));
     }
 
-    /*
+    /**
      * Update a customer
      *
-     * @param UpdateCustomerInput $input
      * @return BlindPayApiResponse<null>
      */
     public function update(UpdateCustomerInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -1580,10 +1578,9 @@ class Customers
         );
     }
 
-    /*
+    /**
      * Delete a customer
      *
-     * @param string $customerId
      * @return BlindPayApiResponse<null>
      */
     public function delete(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
@@ -1597,10 +1594,9 @@ class Customers
         return $this->client->delete(Path::of('instances/%s/customers/%s', $this->instanceId, $customerId), null, $options);
     }
 
-    /*
+    /**
      * Get customer limits
      *
-     * @param string $customerId
      * @return BlindPayApiResponse<GetCustomerLimitsResponse>
      */
     public function getLimits(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
@@ -1616,10 +1612,9 @@ class Customers
         return $response->map(fn (array $data) => GetCustomerLimitsResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get limit increase requests
      *
-     * @param string $customerId
      * @return BlindPayApiResponse<LimitIncreaseRequest[]>
      */
     public function getLimitIncreaseRequests(string $customerId, ?RequestOptions $options = null): BlindPayApiResponse
@@ -1642,10 +1637,9 @@ class Customers
         });
     }
 
-    /*
+    /**
      * Request limit increase
      *
-     * @param RequestLimitIncreaseInput $input
      * @return BlindPayApiResponse<RequestLimitIncreaseResponse>
      */
     public function requestLimitIncrease(RequestLimitIncreaseInput $input, ?RequestOptions $options = null): BlindPayApiResponse

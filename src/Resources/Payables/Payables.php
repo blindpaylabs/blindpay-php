@@ -377,7 +377,10 @@ class Payables
             ->map(fn (array $data) => Payable::fromArray($data));
     }
 
-    /** @param array<string, string> $query */
+    /**
+     * @param  array<string, string>  $query
+     * @return BlindPayApiResponse<ListPayablesResponse>
+     */
     private function listPage(array $query, ?RequestOptions $options): BlindPayApiResponse
     {
         return $this->client->get(Path::of('instances/%s/payables', $this->instanceId).Query::build($query), $options)

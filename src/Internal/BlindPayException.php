@@ -6,17 +6,17 @@ namespace BlindPay\SDK\Internal;
 
 use Exception;
 
-/*
+/**
  * Base exception for BlindPay SDK errors
  */
 class BlindPayException extends Exception
 {
-    /*
+    /**
      * Error code for the exception
      */
     private ?string $errorCode;
 
-    /*
+    /**
      * Additional context data for the error
      */
     private array $context;

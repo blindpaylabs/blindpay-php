@@ -373,10 +373,9 @@ class Transfers
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * Create a transfer quote
      *
-     * @param CreateTransferQuoteInput $input
      * @return BlindPayApiResponse<CreateTransferQuoteResponse>
      */
     public function createQuote(
@@ -392,10 +391,9 @@ class Transfers
         return $response->map(fn (array $data) => CreateTransferQuoteResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Create a transfer
      *
-     * @param CreateTransferInput $input
      * @return BlindPayApiResponse<CreateTransferResponse>
      */
     public function create(CreateTransferInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -409,10 +407,9 @@ class Transfers
         return $response->map(fn (array $data) => CreateTransferResponse::fromArray($data));
     }
 
-    /*
+    /**
      * List transfers
      *
-     * @param ListTransfersInput|null $params
      * @return BlindPayApiResponse<ListTransfersResponse>
      */
     public function list(?ListTransfersInput $params = null, ?RequestOptions $options = null): BlindPayApiResponse
@@ -436,17 +433,19 @@ class Transfers
         return AutoPager::iterate($params?->toArray() ?? [], fn (array $query) => $this->listPage($query, $options));
     }
 
-    /** @param array<string, string> $query */
+    /**
+     * @param  array<string, string>  $query
+     * @return BlindPayApiResponse<ListTransfersResponse>
+     */
     private function listPage(array $query, ?RequestOptions $options): BlindPayApiResponse
     {
         return $this->client->get(Path::of('instances/%s/transfers', $this->instanceId).Query::build($query), $options)
             ->map(fn (array $data) => ListTransfersResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get a transfer by ID
      *
-     * @param string $transferId
      * @return BlindPayApiResponse<Transfer>
      */
     public function get(string $transferId, ?RequestOptions $options = null): BlindPayApiResponse
@@ -462,10 +461,9 @@ class Transfers
         return $response->map(fn (array $data) => Transfer::fromArray($data));
     }
 
-    /*
+    /**
      * Get transfer tracking (public endpoint)
      *
-     * @param string $transferId
      * @return BlindPayApiResponse<Transfer>
      */
     public function getTrack(string $transferId, ?RequestOptions $options = null): BlindPayApiResponse

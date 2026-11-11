@@ -144,14 +144,6 @@ class BlindPay implements ApiClientInterface
         $this->upload = new Upload($this->instanceId, $this);
         $this->payables = new Payables($this->instanceId, $this);
 
-        $this->initializeInstances();
-        $this->initializePayins();
-        $this->initializeCustomers();
-        $this->initializeWallets();
-    }
-
-    private function initializeInstances(): void
-    {
         $this->instances = new InstancesWrapper(
             $this->instanceId,
             $this,
@@ -160,25 +152,13 @@ class BlindPay implements ApiClientInterface
             new Onboarding($this->instanceId, $this),
             new InstanceRfis($this->instanceId, $this),
         );
-    }
-
-    private function initializePayins(): void
-    {
         $this->payins = new PayinsWrapper($this->instanceId, $this, new PayinQuotes($this->instanceId, $this));
-    }
-
-    private function initializeCustomers(): void
-    {
         $this->customers = new CustomersWrapper(
             $this->instanceId,
             $this,
             new BankAccounts($this->instanceId, $this),
             new CustomerRfis($this->instanceId, $this),
         );
-    }
-
-    private function initializeWallets(): void
-    {
         $blockchainResource = new BlockchainWallets($this->instanceId, $this);
         $offrampResource = new OfframpWallets($this->instanceId, $this);
         $custodialResource = new CustodialWallets($this->instanceId, $this);
@@ -186,31 +166,37 @@ class BlindPay implements ApiClientInterface
         $this->wallets = new WalletsWrapper($blockchainResource, $offrampResource, $custodialResource);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function get(string $path, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->transport->get($path, $options);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function post(string $path, array $body, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->transport->post($path, $body, $options);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function put(string $path, array $body, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->transport->put($path, $body, $options);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function patch(string $path, array $body, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->transport->patch($path, $body, $options);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function delete(string $path, ?array $body = null, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->transport->delete($path, $body, $options);
     }
 
+    /** @return BlindPayApiResponse<mixed> */
     public function postMultipart(string $path, array $multipart, ?RequestOptions $options = null): BlindPayApiResponse
     {
         return $this->transport->postMultipart($path, $multipart, $options);

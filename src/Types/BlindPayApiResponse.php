@@ -12,7 +12,7 @@ use Throwable;
  * The result of every resource method: either `data` (on success) or `error`. Resource methods
  * never throw for API, network or decoding failures; check isError().
  *
- * @template T
+ * @template-covariant T
  */
 readonly class BlindPayApiResponse
 {
@@ -45,7 +45,7 @@ readonly class BlindPayApiResponse
     }
 
     /**
-     * @return self<null>
+     * @return self<never>
      */
     public static function error(ErrorResponse $error): self
     {

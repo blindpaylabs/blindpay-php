@@ -48,8 +48,8 @@ readonly class RailInfo
 
 readonly class BankDetail
 {
-    /*
-     * @param BankDetailItem[] $items
+    /**
+     * @param  BankDetailItem[]  $items
      */
     public function __construct(
         public string $label,
@@ -135,10 +135,10 @@ class Available
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * Get bank details for a specific rail
      *
-     * @param Rail $rail The rail type to get bank details for
+     * @param  Rail  $rail  The rail type to get bank details for
      * @return BlindPayApiResponse<BankDetail[]>
      */
     public function getBankDetails(
@@ -157,7 +157,7 @@ class Available
         });
     }
 
-    /*
+    /**
      * Get all available rails
      *
      * @return BlindPayApiResponse<RailInfo[]>
@@ -176,10 +176,10 @@ class Available
         });
     }
 
-    /*
+    /**
      * Get bank details for a specific swift code
      *
-     * @param string $swift The swift code to get bank details for
+     * @param  string  $swift  The swift code to get bank details for
      * @return BlindPayApiResponse<SwiftCodeBankDetails[]>
      */
     public function getSwiftCodeBankDetails(string $swift, ?RequestOptions $options = null): BlindPayApiResponse
@@ -196,7 +196,7 @@ class Available
         });
     }
 
-    /*
+    /**
      * Get available NAICS business industry codes
      *
      * @return BlindPayApiResponse<NaicsCode[]>

@@ -207,10 +207,9 @@ class CustodialWallets
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * List custodial wallets for a customer
      *
-     * @param string $customerId
      * @return BlindPayApiResponse<CustodialWallet[]>
      */
     public function list(
@@ -238,10 +237,9 @@ class CustodialWallets
         });
     }
 
-    /*
+    /**
      * Get a custodial wallet
      *
-     * @param GetCustodialWalletInput $input
      * @return BlindPayApiResponse<CustodialWallet>
      */
     public function get(GetCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -260,10 +258,9 @@ class CustodialWallets
         return $response->map(fn (array $data) => CustodialWallet::fromArray($data));
     }
 
-    /*
+    /**
      * Create a custodial wallet
      *
-     * @param CreateCustodialWalletInput $input
      * @return BlindPayApiResponse<CustodialWallet>
      */
     public function create(CreateCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -277,10 +274,9 @@ class CustodialWallets
         return $response->map(fn (array $data) => CustodialWallet::fromArray($data));
     }
 
-    /*
+    /**
      * Get custodial wallet balance
      *
-     * @param GetCustodialWalletInput $input
      * @return BlindPayApiResponse<CustodialWalletBalanceResponse>
      */
     public function getBalance(GetCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -299,10 +295,9 @@ class CustodialWallets
         return $response->map(fn (array $data) => CustodialWalletBalanceResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Delete a custodial wallet
      *
-     * @param DeleteCustodialWalletInput $input
      * @return BlindPayApiResponse<null>
      */
     public function delete(DeleteCustodialWalletInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -347,7 +342,10 @@ class CustodialWallets
         return AutoPager::iterate($input->toArray(), fn (array $query) => $this->depositsPage($input, $query, $options));
     }
 
-    /** @param array<string, string> $query */
+    /**
+     * @param  array<string, string>  $query
+     * @return BlindPayApiResponse<ListWalletDepositsResponse>
+     */
     private function depositsPage(GetWalletDepositsInput $input, array $query, ?RequestOptions $options): BlindPayApiResponse
     {
         return $this->client->get(

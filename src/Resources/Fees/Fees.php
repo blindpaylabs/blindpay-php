@@ -86,7 +86,7 @@ class Fees
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * Get all instance fees
      *
      * @return BlindPayApiResponse<FeesResponse>

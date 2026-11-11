@@ -149,7 +149,7 @@ class PartnerFees
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * List all partner fees
      *
      * @return BlindPayApiResponse<PartnerFee[]>
@@ -168,10 +168,9 @@ class PartnerFees
         });
     }
 
-    /*
+    /**
      * Create a new partner fee
      *
-     * @param CreatePartnerFeeInput $input
      * @return BlindPayApiResponse<CreatePartnerFeeResponse>
      */
     public function create(CreatePartnerFeeInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -185,10 +184,9 @@ class PartnerFees
         return $response->map(fn (array $data) => CreatePartnerFeeResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get a partner fee by ID
      *
-     * @param string $id
      * @return BlindPayApiResponse<GetPartnerFeeResponse>
      */
     public function get(string $id, ?RequestOptions $options = null): BlindPayApiResponse
@@ -204,10 +202,9 @@ class PartnerFees
         return $response->map(fn (array $data) => GetPartnerFeeResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Delete a partner fee
      *
-     * @param string $id
      * @return BlindPayApiResponse<null>
      */
     public function delete(string $id, ?RequestOptions $options = null): BlindPayApiResponse

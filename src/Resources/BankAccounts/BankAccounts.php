@@ -25,7 +25,7 @@ enum ArgentinaTransfers: string
     case ALIAS = 'ALIAS';
 }
 
-/*
+/**
  * Colombia ACH document types
  */
 enum AchCopDocument: string
@@ -46,8 +46,8 @@ enum SpeiProtocol: string
 
 readonly class BankAccountListItem
 {
-    /*
-     * @param array<array{address: string, id: string, network: string, external_id: string}>|null $offrampWallets
+    /**
+     * @param  array<array{address: string, id: string, network: string, external_id: string}>|null  $offrampWallets
      */
     public function __construct(
         public string $id,
@@ -258,8 +258,8 @@ readonly class ListBankAccountsInput
 
 readonly class ListBankAccountsResponse
 {
-    /*
-     * @param BankAccountListItem[] $data
+    /**
+     * @param  BankAccountListItem[]  $data
      */
     public function __construct(
         public array $data
@@ -781,10 +781,9 @@ class BankAccounts
         private readonly ApiClientInterface $client
     ) {}
 
-    /*
+    /**
      * List bank accounts for a customer
      *
-     * @param string $customerId
      * @return BlindPayApiResponse<ListBankAccountsResponse>
      */
     public function list(
@@ -806,10 +805,9 @@ class BankAccounts
         return $response->map(fn (array $data) => ListBankAccountsResponse::fromArray($data));
     }
 
-    /*
+    /**
      * Get a specific bank account
      *
-     * @param GetBankAccountInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function get(GetBankAccountInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -828,10 +826,9 @@ class BankAccounts
         return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Delete a bank account
      *
-     * @param DeleteBankAccountInput $input
      * @return BlindPayApiResponse<null>
      */
     public function delete(DeleteBankAccountInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -849,10 +846,9 @@ class BankAccounts
         );
     }
 
-    /*
+    /**
      * Create a PIX bank account
      *
-     * @param CreatePixInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function createPix(CreatePixInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -866,10 +862,9 @@ class BankAccounts
         return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Create Argentina transfers bank account
      *
-     * @param CreateArgentinaTransfersInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function createArgentinaTransfers(CreateArgentinaTransfersInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -883,10 +878,9 @@ class BankAccounts
         return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Create SPEI bank account
      *
-     * @param CreateSpeiInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function createSpei(CreateSpeiInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -900,10 +894,9 @@ class BankAccounts
         return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Create Colombia ACH bank account
      *
-     * @param CreateColombiaAchInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function createColombiaAch(CreateColombiaAchInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -917,10 +910,9 @@ class BankAccounts
         return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Create ACH bank account
      *
-     * @param CreateAchInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function createAch(CreateAchInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -934,10 +926,9 @@ class BankAccounts
         return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Create Wire bank account
      *
-     * @param CreateWireInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function createWire(CreateWireInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -951,10 +942,9 @@ class BankAccounts
         return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Create International SWIFT bank account
      *
-     * @param CreateInternationalSwiftInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function createInternationalSwift(CreateInternationalSwiftInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -968,10 +958,9 @@ class BankAccounts
         return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Create RTP bank account
      *
-     * @param CreateRtpInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function createRtp(CreateRtpInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -985,10 +974,9 @@ class BankAccounts
         return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Create PIX Safe bank account
      *
-     * @param CreatePixSafeInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function createPixSafe(CreatePixSafeInput $input, ?RequestOptions $options = null): BlindPayApiResponse
@@ -1002,10 +990,9 @@ class BankAccounts
         return $response->map(fn (array $data) => BankAccountListItem::fromArray($data));
     }
 
-    /*
+    /**
      * Create SEPA bank account
      *
-     * @param CreateSepaInput $input
      * @return BlindPayApiResponse<BankAccountListItem>
      */
     public function createSepa(CreateSepaInput $input, ?RequestOptions $options = null): BlindPayApiResponse
