@@ -12,7 +12,9 @@ use Closure;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
 use JsonException;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
@@ -119,6 +121,11 @@ final class Transport implements ApiClientInterface
         $options ??= new RequestOptions;
         $timeout = $options->timeout ?? $this->timeout;
         $headers = $this->headers;
+        foreach (array_keys($options->headers) as $name) {
+            if (strcasecmp((string) $name, 'Idempotency-Key') === 0) {
+                return BlindPayApiResponse::error(ErrorResponse::validation('Pass the idempotency key as RequestOptions::$idempotencyKey, not as a header.'));
+            }
+        }
         foreach ($options->headers as $name => $value) {
             if (! $this->hasHeader($headers, (string) $name)) {
                 $headers[(string) $name] = $value;
@@ -141,8 +148,8 @@ final class Transport implements ApiClientInterface
         $key = null;
         if (RetryPolicy::isMutation($method) && $multipart === null) {
             $key = $options->idempotencyKey;
-            if ($key !== null && ($key === '' || strlen($key) > self::MAX_IDEMPOTENCY_KEY_LENGTH)) {
-                return BlindPayApiResponse::error(ErrorResponse::validation('The idempotency key must be 1-255 characters long.'));
+            if ($key !== null && ($key === '' || $key !== trim($key) || strlen($key) > self::MAX_IDEMPOTENCY_KEY_LENGTH)) {
+                return BlindPayApiResponse::error(ErrorResponse::validation('The idempotency key must be 1-255 characters long, with no leading or trailing whitespace.'));
             }
             if ($key === null && $this->maxRetries > 0) {
                 $key = Uuid::v4();
@@ -154,14 +161,23 @@ final class Transport implements ApiClientInterface
         $request['headers'] = $headers;
 
         for ($attempt = 0; ; $attempt++) {
+            $bodyUnreadable = false;
+
             try {
                 $response = $this->client->request($method, $path, $request);
-            } catch (Throwable $e) {
-                if ($e instanceof RequestException && $e->getResponse() !== null) {
-                    $response = $e->getResponse();
-                } else {
+            } catch (TransferException $e) {
+                // A status line may have arrived before the transfer failed (e.g. a timeout while
+                // reading the body). Then the server has handled the request, so it is treated as
+                // that response, never as "no response" (a mutation 5xx must not be resent).
+                $response = $e instanceof RequestException ? $e->getResponse() : null;
+                $seenStatus = $response?->getStatusCode() ?? (int) ($this->handlerContext($e)['http_code'] ?? 0);
+                if ($response === null && $seenStatus > 0) {
+                    $response = new Response($seenStatus);
+                    $bodyUnreadable = true;
+                }
+                if ($response === null) {
                     $nothingSent = $e instanceof ConnectException
-                        && in_array($e->getHandlerContext()['errno'] ?? null, self::NOTHING_SENT_ERRNOS, true);
+                        && in_array($this->handlerContext($e)['errno'] ?? null, self::NOTHING_SENT_ERRNOS, true);
                     if ($attempt < $this->maxRetries && RetryPolicy::shouldRetryNetworkError($method, $key !== null, $multipart !== null, $nothingSent)) {
                         ($this->sleep)(RetryPolicy::delay($attempt, null, $this->random));
 
@@ -175,10 +191,31 @@ final class Transport implements ApiClientInterface
                         type: ErrorType::NETWORK,
                     ));
                 }
+            } catch (Throwable $e) {
+                // Not a transfer failure (e.g. an invalid request): retrying cannot help.
+                return BlindPayApiResponse::error(new ErrorResponse(
+                    message: 'The request could not be sent: '.$e->getMessage(),
+                    idempotencyKey: $key,
+                    type: ErrorType::VALIDATION,
+                ));
             }
 
             $status = $response->getStatusCode();
-            $raw = (string) $response->getBody();
+
+            try {
+                $raw = (string) $response->getBody();
+            } catch (Throwable) {
+                $raw = '';
+                $bodyUnreadable = true;
+            }
+            if ($bodyUnreadable && $status >= 200 && $status < 300) {
+                return BlindPayApiResponse::error(new ErrorResponse(
+                    message: "The API answered HTTP {$status} but its body could not be read.",
+                    status: $status,
+                    idempotencyKey: $key,
+                    type: ErrorType::DECODE,
+                ));
+            }
             $requestId = $response->getHeaderLine('X-Request-Id') !== '' ? $response->getHeaderLine('X-Request-Id') : null;
 
             if ($status >= 200 && $status < 300) {
@@ -267,6 +304,12 @@ final class Transport implements ApiClientInterface
         }
 
         return strcasecmp($name, 'Idempotency-Key') === 0 || strcasecmp($name, 'Content-Type') === 0;
+    }
+
+    /** @return array<string, mixed> */
+    private function handlerContext(TransferException $e): array
+    {
+        return $e instanceof RequestException || $e instanceof ConnectException ? $e->getHandlerContext() : [];
     }
 
     /** Never expose the API key in var_dump() / print_r(). */

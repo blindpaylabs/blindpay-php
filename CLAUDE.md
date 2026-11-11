@@ -145,7 +145,7 @@ readonly class ExampleResponse
 Key rules:
 - Required fields: access directly as `$data['key']`. "Required" means listed in the spec schema's `required` AND not nullable; anything else is optional (`$data['key'] ?? null`).
 - **Every enum in a response type is open**: `Decode::enum(EnumName::class, $data['key'])`, typed `EnumName|string`. A value the SDK does not know is kept as the raw string, so a new API value never fails a whole response. Optional: `Decode::enum(EnumName::class, $data['key'] ?? null)`, typed `EnumName|string|null`. In a `toArray()` of such a type, serialise with `Decode::wire($this->field)`, never a hand-written `instanceof` check. Never `EnumName::from()` on response data.
-  - Exceptions, kept as plain `string` on purpose (plan C7, listed in `.api-sync/known-divergences.json`): `swift_payment_code` and `business_industry` on `BankAccountOut`, and bank account `status`.
+  - Exceptions, kept as plain `string` on purpose (open-ended value sets, listed in `.api-sync/known-divergences.json`): `swift_payment_code` and `business_industry` on `BankAccountOut`, and bank account `status`.
   - When the API starts returning a value an enum lacks, add the case (the open decoding keeps working before and after).
   - **Request (input) enums stay closed**, for type safety.
 - A type shared by input and output (e.g. `Customers\Owner`) keeps its constructor as strict as the request spec. If a response may omit a field the request requires, keep the constructor parameter non-nullable, declare the property nullable, and let `fromArray()` set the properties directly (see `Owner::fromArray`).

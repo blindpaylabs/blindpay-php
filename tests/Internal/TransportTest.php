@@ -12,6 +12,7 @@ use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\ErrorType;
 use BlindPay\SDK\Types\RequestOptions;
 use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
@@ -24,7 +25,7 @@ use Psr\Http\Message\RequestInterface;
 
 /**
  * The transport contract shared by every BlindPay SDK: headers, idempotency keys, the retry
- * decision table (sdk-parity Appendix A2, one test per row) and the error model. No test sleeps:
+ * decision table (one test per row) and the error model. No test sleeps:
  * retries go through a recording fake sleeper.
  */
 final class TransportTest extends TestCase
@@ -198,7 +199,7 @@ final class TransportTest extends TestCase
     {
         $blindpay = $this->client();
 
-        foreach (['', str_repeat('k', 256)] as $key) {
+        foreach (['', ' ', ' key', 'key ', "key\n", str_repeat('k', 256)] as $key) {
             $response = $blindpay->post('instances/in_000000000000/payouts/evm', [], new RequestOptions(idempotencyKey: $key));
             $this->assertTrue($response->isError());
             $this->assertSame(ErrorType::VALIDATION, $response->error->type);
@@ -442,6 +443,71 @@ final class TransportTest extends TestCase
             $this->assertGreaterThanOrEqual($base * 0.5, $seconds, "attempt {$attempt}");
             $this->assertLessThanOrEqual($base, $seconds, "attempt {$attempt}");
         }
+    }
+
+    #[Test]
+    public function it_rejects_an_idempotency_key_passed_as_a_header_and_keeps_its_own_headers(): void
+    {
+        $blindpay = $this->client();
+        $this->mock->append($this->json(200, []));
+
+        $rejected = $blindpay->post('instances/in_000000000000/payouts/evm', [], new RequestOptions(headers: ['idempotency-KEY' => 'k1']));
+        $blindpay->get('available/rails', new RequestOptions(headers: ['user-agent' => 'evil/1.0', 'AUTHORIZATION' => 'Bearer x', 'X-Extra' => '1']));
+
+        $this->assertSame(ErrorType::VALIDATION, $rejected->error->type);
+        $this->assertCount(1, $this->history);
+        $request = $this->history[0]['request'];
+        $this->assertMatchesRegularExpression('#^blindpay-php/#', $request->getHeaderLine('User-Agent'));
+        $this->assertSame('Bearer test_key', $request->getHeaderLine('Authorization'));
+        $this->assertSame('1', $request->getHeaderLine('X-Extra'));
+    }
+
+    #[Test]
+    public function it_never_resends_a_mutation_whose_5xx_status_arrived_before_the_body_failed(): void
+    {
+        $blindpay = $this->client();
+        $request = new Request('POST', '/');
+        $this->mock->append(
+            new RequestException('body read failed', $request, new Response(503)),
+            new ConnectException('cURL error 28: Operation timed out', $request, null, ['errno' => 28, 'http_code' => 502]),
+        );
+
+        $first = $blindpay->post('instances/in_000000000000/payouts/evm', ['quote_id' => 'qu_1']);
+        $second = $blindpay->post('instances/in_000000000000/payouts/evm', ['quote_id' => 'qu_2']);
+
+        $this->assertCount(2, $this->history);
+        $this->assertSame(503, $first->error->status);
+        $this->assertSame(502, $second->error->status);
+        $this->assertSame(ErrorType::API, $second->error->type);
+        $this->assertTrue($second->error->retryable);
+        $this->assertNotNull($second->error->idempotencyKey);
+        $this->assertSame([], $this->sleeps);
+    }
+
+    #[Test]
+    public function it_still_retries_a_get_whose_5xx_body_could_not_be_read(): void
+    {
+        $blindpay = $this->client();
+        $this->mock->append(
+            new ConnectException('cURL error 28: Operation timed out', new Request('GET', '/'), null, ['errno' => 28, 'http_code' => 503]),
+            $this->json(200, ['ok' => true]),
+        );
+
+        $this->assertTrue($blindpay->get('available/rails')->isSuccess());
+        $this->assertCount(2, $this->history);
+    }
+
+    #[Test]
+    public function it_does_not_retry_an_error_raised_while_building_the_request(): void
+    {
+        $blindpay = $this->client();
+        $this->mock->append(new \InvalidArgumentException('bad request'), $this->json(200, []));
+
+        $response = $blindpay->get('available/rails');
+
+        $this->assertSame(ErrorType::VALIDATION, $response->error->type);
+        $this->assertCount(1, $this->history);
+        $this->assertSame([], $this->sleeps);
     }
 
     // -- C4: the error model, from the shared error fixtures ------------------------------------

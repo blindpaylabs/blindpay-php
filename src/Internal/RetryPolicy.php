@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Internal;
 
 /**
- * The retry decision table shared by every BlindPay SDK (sdk-parity Appendix A2), evaluated top to
+ * The retry decision table shared by every BlindPay SDK, evaluated top to
  * bottom per failed attempt. The attempt budget (max retries) is checked by the caller.
  *
  * Mutations (POST/PUT/PATCH/DELETE) are retried only where their Idempotency-Key fully protects
