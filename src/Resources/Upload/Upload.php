@@ -75,10 +75,23 @@ final readonly class UploadFile
         return new self($handle, $filename ?? basename($path), $contentType ?? (mime_content_type($path) ?: 'application/octet-stream'));
     }
 
-    /** @return array<string, mixed> the Guzzle multipart part for form field $name */
-    public function toPart(string $name): array
+    /**
+     * Guzzle multipart parts for form fields: an UploadFile becomes a file part, anything else a
+     * plain field.
+     *
+     * @param  array<string, self|string>  $fields
+     * @return list<array<string, mixed>>
+     */
+    public static function parts(array $fields): array
     {
-        return ['name' => $name, 'contents' => $this->contents, 'filename' => $this->filename, 'headers' => ['Content-Type' => $this->contentType]];
+        $parts = [];
+        foreach ($fields as $name => $value) {
+            $parts[] = $value instanceof self
+                ? ['name' => $name, 'contents' => $value->contents, 'filename' => $value->filename, 'headers' => ['Content-Type' => $value->contentType]]
+                : ['name' => $name, 'contents' => $value];
+        }
+
+        return $parts;
     }
 }
 
@@ -88,6 +101,15 @@ readonly class UploadInput
         public UploadBucket $bucket,
         public UploadFile $file,
     ) {}
+
+    /** @return list<array<string, mixed>> the multipart form fields, as Guzzle parts */
+    public function toArray(): array
+    {
+        return UploadFile::parts([
+            'file' => $this->file,
+            'bucket' => $this->bucket->value,
+        ]);
+    }
 }
 
 readonly class UploadResponse
@@ -116,6 +138,20 @@ readonly class AnalyzeUploadInput
         public UploadAnalyzeType $type,
         public ?array $metadata = null,
     ) {}
+
+    /**
+     * @return list<array<string, mixed>> the multipart form fields
+     *
+     * @throws JsonException when $metadata cannot be encoded
+     */
+    public function toArray(): array
+    {
+        return UploadFile::parts(array_filter([
+            'file' => $this->file,
+            'type' => $this->type->value,
+            'metadata' => $this->metadata === null ? null : json_encode($this->metadata, JSON_THROW_ON_ERROR),
+        ], static fn ($value) => $value !== null));
+    }
 }
 
 readonly class AnalyzeUploadResponse
@@ -170,7 +206,7 @@ class Upload
     {
         return $this->client->postMultipart(
             'upload'.Query::build(['instance_id' => $this->instanceId]),
-            [$input->file->toPart('file'), ['name' => 'bucket', 'contents' => $input->bucket->value]],
+            $input->toArray(),
             $options,
         )->map(fn (array $data) => UploadResponse::fromArray($data));
     }
@@ -182,13 +218,10 @@ class Upload
      */
     public function analyze(AnalyzeUploadInput $input, ?RequestOptions $options = null): BlindPayApiResponse
     {
-        $parts = [$input->file->toPart('file'), ['name' => 'type', 'contents' => $input->type->value]];
-        if ($input->metadata !== null) {
-            try {
-                $parts[] = ['name' => 'metadata', 'contents' => json_encode($input->metadata, JSON_THROW_ON_ERROR)];
-            } catch (JsonException $e) {
-                return BlindPayApiResponse::error(ErrorResponse::validation('metadata cannot be encoded as JSON: '.$e->getMessage()));
-            }
+        try {
+            $parts = $input->toArray();
+        } catch (JsonException $e) {
+            return BlindPayApiResponse::error(ErrorResponse::validation('metadata cannot be encoded as JSON: '.$e->getMessage()));
         }
 
         return $this->client->postMultipart('upload/analyze'.Query::build(['instance_id' => $this->instanceId]), $parts, $options)

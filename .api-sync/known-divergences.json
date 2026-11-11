@@ -136,6 +136,24 @@
       "field": "pse_document_type",
       "reason": "Spec constrains payer_rules.pse_document_type to a 2-value enum (CC/NIT). PayerRules models it as a plain `?string`; every spec value still parses without error.",
       "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "business_industry",
+      "reason": "NAICS code: typed as a plain string by design (plan C7; ~390 values, the API adds more).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "swift_payment_code",
+      "reason": "SWIFT payment code: typed as a plain string by design (plan C7; ~1,000 values).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "BankAccountOut",
+      "field": "status",
+      "reason": "Bank account status, decoded as a plain string (verifying, approved, rejected, ...); values the SDK does not know are kept.",
+      "owner": "support@blindpay.com"
     }
   ]
 }
