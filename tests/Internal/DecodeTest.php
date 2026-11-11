@@ -28,7 +28,7 @@ final class DecodeTest extends TestCase
     }
 
     #[Test]
-    public function wire_returns_the_backing_value_or_the_raw_string(): void
+    public function it_returns_the_backing_value_or_the_raw_string_as_the_wire_value(): void
     {
         $this->assertSame('base', Decode::wire(Network::BASE));
         $this->assertSame('future_chain', Decode::wire('future_chain'));

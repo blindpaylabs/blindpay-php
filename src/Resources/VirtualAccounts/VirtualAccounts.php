@@ -252,12 +252,12 @@ readonly class VirtualAccount
         $data = [
             'id' => $this->id,
             'us' => $this->us?->toArray(),
-            'token' => $this->token instanceof StablecoinToken ? $this->token->value : $this->token,
+            'token' => Decode::wire($this->token),
             'blockchain_wallet_id' => $this->blockchainWalletId,
         ];
 
         if ($this->bankingPartner !== null) {
-            $data['banking_partner'] = $this->bankingPartner instanceof BankingPartner ? $this->bankingPartner->value : $this->bankingPartner;
+            $data['banking_partner'] = Decode::wire($this->bankingPartner);
         }
 
         if ($this->kycStatus !== null) {

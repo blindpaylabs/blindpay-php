@@ -81,10 +81,7 @@ readonly class WebhookEndpoint
         return [
             'id' => $this->id,
             'url' => $this->url,
-            'events' => array_map(
-                fn (WebhookEvents|string $event) => $event instanceof WebhookEvents ? $event->value : $event,
-                $this->events
-            ),
+            'events' => array_map(Decode::wire(...), $this->events),
             'last_event_at' => $this->lastEventAt,
             'instance_id' => $this->instanceId,
             'created_at' => $this->createdAt?->format(\DateTimeInterface::ATOM),
