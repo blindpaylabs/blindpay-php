@@ -144,7 +144,11 @@ readonly class CreateTransferQuoteInput
         public int $requestAmount,
         public CurrencyType $amountReference,
         public ?bool $coverFees = null,
-        public ?string $partnerFeeId = null
+        public ?string $partnerFeeId = null,
+        /** basis points (100 = 1%), overriding the partner fee's */
+        public ?int $partnerPercentageFee = null,
+        /** cents, overriding the partner fee's */
+        public ?int $partnerFlatFee = null,
     ) {}
 
     public function toArray(): array
@@ -165,6 +169,12 @@ readonly class CreateTransferQuoteInput
 
         if ($this->partnerFeeId !== null) {
             $data['partner_fee_id'] = $this->partnerFeeId;
+        }
+        if ($this->partnerPercentageFee !== null) {
+            $data['partner_percentage_fee'] = $this->partnerPercentageFee;
+        }
+        if ($this->partnerFlatFee !== null) {
+            $data['partner_flat_fee'] = $this->partnerFlatFee;
         }
 
         return $data;
@@ -315,13 +325,32 @@ readonly class CreateTransferResponse
 
 readonly class ListTransfersInput extends PaginationParams
 {
+    /**
+     * @param  int|null  $offset  deprecated: ignored by the API; use $startingAfter
+     */
     public function __construct(
         ?int $limit = null,
         ?int $offset = null,
         ?string $startingAfter = null,
-        ?string $endingBefore = null
+        ?string $endingBefore = null,
+        public ?string $customerId = null,
+        public ?string $walletId = null,
+        public ?TransactionStatus $status = null,
+        public ?Network $network = null,
+        public ?StablecoinToken $token = null,
     ) {
         parent::__construct($limit, $offset, $startingAfter, $endingBefore);
+    }
+
+    public function toArray(): array
+    {
+        return parent::toArray() + array_filter([
+            'customer_id' => $this->customerId,
+            'wallet_id' => $this->walletId,
+            'status' => $this->status?->value,
+            'network' => $this->network?->value,
+            'token' => $this->token?->value,
+        ], static fn ($value) => $value !== null);
     }
 }
 

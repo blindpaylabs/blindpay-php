@@ -93,13 +93,11 @@ class PartnerFeesTest extends TestCase
         $this->mockResponse($mockPartnerFee);
 
         $input = new CreatePartnerFeeInput(
-            evmWalletAddress: '0x1234567890123456789012345678901234567890',
             name: 'Display Name',
             payinFlatFee: 0,
             payinPercentageFee: 0,
             payoutFlatFee: 0,
-            payoutPercentageFee: 0,
-            stellarWalletAddress: 'GAB22222222222222222222222222222222222222222222222222222222222222'
+            payoutPercentageFee: 0
         );
 
         $response = $this->blindpay->partnerFees->create($input);

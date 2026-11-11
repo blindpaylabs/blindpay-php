@@ -205,25 +205,39 @@ readonly class Payout
 
 readonly class ListPayoutsInput extends PaginationParams
 {
+    /**
+     * @param  int|null  $offset  deprecated: ignored by the API; use $startingAfter
+     */
     public function __construct(
         public ?string $customerId = null,
         ?int $limit = null,
         ?int $offset = null,
         ?string $startingAfter = null,
-        ?string $endingBefore = null
+        ?string $endingBefore = null,
+        public ?TransactionStatus $status = null,
+        public ?string $customerName = null,
+        public ?string $bankAccountId = null,
+        public ?string $country = null,
+        /** the rail / payment method wire value, e.g. pix, ach, wire, spei_bitso */
+        public ?string $paymentMethod = null,
+        public ?Network $network = null,
+        public ?StablecoinToken $token = null,
     ) {
         parent::__construct($limit, $offset, $startingAfter, $endingBefore);
     }
 
     public function toArray(): array
     {
-        $params = parent::toArray();
-
-        if ($this->customerId !== null) {
-            $params['customer_id'] = $this->customerId;
-        }
-
-        return $params;
+        return parent::toArray() + array_filter([
+            'customer_id' => $this->customerId,
+            'status' => $this->status?->value,
+            'customer_name' => $this->customerName,
+            'bank_account_id' => $this->bankAccountId,
+            'country' => $this->country,
+            'payment_method' => $this->paymentMethod,
+            'network' => $this->network?->value,
+            'token' => $this->token?->value,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -239,19 +253,25 @@ readonly class ListPayoutsResponse extends ListResponse
     }
 }
 
+/**
+ * Pay from a wallet: exactly one of `senderWalletAddress` (a customer's blockchain wallet address)
+ * or `walletId` (a BlindPay managed wallet); the API checks it.
+ */
 readonly class AuthorizeStellarTokenInput
 {
     public function __construct(
         public string $quoteId,
-        public string $senderWalletAddress
+        public ?string $senderWalletAddress = null,
+        public ?string $walletId = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        return array_filter([
             'quote_id' => $this->quoteId,
             'sender_wallet_address' => $this->senderWalletAddress,
-        ];
+            'wallet_id' => $this->walletId,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -269,26 +289,28 @@ readonly class AuthorizeStellarTokenResponse
     }
 }
 
+/**
+ * Pay from a wallet: exactly one of `senderWalletAddress` (a customer's blockchain wallet address)
+ * or `walletId` (a BlindPay managed wallet); the API checks it.
+ */
 readonly class CreateStellarPayoutInput
 {
     public function __construct(
         public string $quoteId,
-        public string $senderWalletAddress,
-        public ?string $signedTransaction = null
+        public ?string $senderWalletAddress = null,
+        public ?string $walletId = null,
+        /** the signed transaction, for the second step of a self-signed payout */
+        public ?string $signedTransaction = null,
     ) {}
 
     public function toArray(): array
     {
-        $data = [
+        return array_filter([
             'quote_id' => $this->quoteId,
             'sender_wallet_address' => $this->senderWalletAddress,
-        ];
-
-        if ($this->signedTransaction !== null) {
-            $data['signed_transaction'] = $this->signedTransaction;
-        }
-
-        return $data;
+            'wallet_id' => $this->walletId,
+            'signed_transaction' => $this->signedTransaction,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -322,19 +344,25 @@ readonly class CreateStellarPayoutResponse
     }
 }
 
+/**
+ * Pay from a wallet: exactly one of `senderWalletAddress` (a customer's blockchain wallet address)
+ * or `walletId` (a BlindPay managed wallet); the API checks it.
+ */
 readonly class CreateEvmPayoutInput
 {
     public function __construct(
         public string $quoteId,
-        public string $senderWalletAddress
+        public ?string $senderWalletAddress = null,
+        public ?string $walletId = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        return array_filter([
             'quote_id' => $this->quoteId,
             'sender_wallet_address' => $this->senderWalletAddress,
-        ];
+            'wallet_id' => $this->walletId,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -368,19 +396,28 @@ readonly class CreateEvmPayoutResponse
     }
 }
 
+/**
+ * Pay from a wallet: exactly one of `senderWalletAddress` (a customer's blockchain wallet address)
+ * or `walletId` (a BlindPay managed wallet); the API checks it.
+ */
 readonly class CreateSolanaPayoutInput
 {
     public function __construct(
         public string $quoteId,
-        public string $senderWalletAddress
+        public ?string $senderWalletAddress = null,
+        public ?string $walletId = null,
+        /** the signed transaction, for the second step of a self-signed payout */
+        public ?string $signedTransaction = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        return array_filter([
             'quote_id' => $this->quoteId,
             'sender_wallet_address' => $this->senderWalletAddress,
-        ];
+            'wallet_id' => $this->walletId,
+            'signed_transaction' => $this->signedTransaction,
+        ], static fn ($value) => $value !== null);
     }
 }
 

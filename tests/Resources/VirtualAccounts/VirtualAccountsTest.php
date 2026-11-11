@@ -102,7 +102,8 @@ class VirtualAccountsTest extends TestCase
         $input = new CreateVirtualAccountInput(
             customerId: 're_000000000000',
             blockchainWalletId: 'bw_000000000000',
-            token: StablecoinToken::USDC
+            token: StablecoinToken::USDC,
+            bankingPartner: BankingPartner::JPMORGAN,
         );
 
         $response = $this->blindpay->virtualAccounts->create($input);

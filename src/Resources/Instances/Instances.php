@@ -110,32 +110,39 @@ readonly class InstanceMember
 
 readonly class UpdateInstanceInput
 {
+    /**
+     * @param  string[]|null  $complianceEmails
+     * @param  bool|null  $partnerTosTermsAccepted  only `true` is accepted
+     */
     public function __construct(
         public string $name,
         public ?string $customerInviteRedirectUrl = null,
         public ?bool $emailNotifications = null,
-        public ?bool $requirePasskey = null
+        public ?bool $requirePasskey = null,
+        public ?string $logoUrl = null,
+        public ?string $accentColor = null,
+        public ?array $complianceEmails = null,
+        public ?string $partnerTosLink = null,
+        public ?string $partnerTosScreenshot = null,
+        public ?bool $customerRfiEmailsEnabled = null,
+        public ?bool $partnerTosTermsAccepted = null,
     ) {}
 
     public function toArray(): array
     {
-        $data = [
+        return array_filter([
             'name' => $this->name,
-        ];
-
-        if ($this->customerInviteRedirectUrl !== null) {
-            $data['customer_invite_redirect_url'] = $this->customerInviteRedirectUrl;
-        }
-
-        if ($this->emailNotifications !== null) {
-            $data['email_notifications'] = $this->emailNotifications;
-        }
-
-        if ($this->requirePasskey !== null) {
-            $data['require_passkey'] = $this->requirePasskey;
-        }
-
-        return $data;
+            'customer_invite_redirect_url' => $this->customerInviteRedirectUrl,
+            'logo_url' => $this->logoUrl,
+            'accent_color' => $this->accentColor,
+            'email_notifications' => $this->emailNotifications,
+            'require_passkey' => $this->requirePasskey,
+            'compliance_emails' => $this->complianceEmails,
+            'partner_tos_link' => $this->partnerTosLink,
+            'partner_tos_screenshot' => $this->partnerTosScreenshot,
+            'customer_rfi_emails_enabled' => $this->customerRfiEmailsEnabled,
+            'partner_tos_terms_accepted' => $this->partnerTosTermsAccepted,
+        ], static fn ($value) => $value !== null);
     }
 }
 

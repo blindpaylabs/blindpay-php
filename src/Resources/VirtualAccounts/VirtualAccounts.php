@@ -273,35 +273,31 @@ readonly class VirtualAccount
 
 readonly class CreateVirtualAccountInput
 {
+    /**
+     * @param  string|null  $breBGender  `male` or `female`; required by the bre_b banking partner
+     */
     public function __construct(
         public string $customerId,
         public string $blockchainWalletId,
         public StablecoinToken $token,
-        public ?BankingPartner $bankingPartner = null,
+        public BankingPartner $bankingPartner,
         public ?SoleProprietorDocType $soleProprietorDocType = null,
-        public ?string $soleProprietorDocFile = null
+        public ?string $soleProprietorDocFile = null,
+        public ?string $partnerFeeId = null,
+        public ?string $breBGender = null,
     ) {}
 
     public function toArray(): array
     {
-        $data = [
+        return array_filter([
+            'banking_partner' => $this->bankingPartner->value,
             'blockchain_wallet_id' => $this->blockchainWalletId,
             'token' => $this->token->value,
-        ];
-
-        if ($this->bankingPartner !== null) {
-            $data['banking_partner'] = $this->bankingPartner->value;
-        }
-
-        if ($this->soleProprietorDocType !== null) {
-            $data['sole_proprietor_doc_type'] = $this->soleProprietorDocType->value;
-        }
-
-        if ($this->soleProprietorDocFile !== null) {
-            $data['sole_proprietor_doc_file'] = $this->soleProprietorDocFile;
-        }
-
-        return $data;
+            'sole_proprietor_doc_type' => $this->soleProprietorDocType?->value,
+            'sole_proprietor_doc_file' => $this->soleProprietorDocFile,
+            'partner_fee_id' => $this->partnerFeeId,
+            'bre_b' => $this->breBGender === null ? null : ['gender' => $this->breBGender],
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -311,15 +307,17 @@ readonly class UpdateVirtualAccountInput
         public string $customerId,
         public string $virtualAccountId,
         public string $blockchainWalletId,
-        public StablecoinToken $token
+        public StablecoinToken $token,
+        public ?string $partnerFeeId = null,
     ) {}
 
     public function toArray(): array
     {
-        return [
+        return array_filter([
             'blockchain_wallet_id' => $this->blockchainWalletId,
             'token' => $this->token->value,
-        ];
+            'partner_fee_id' => $this->partnerFeeId,
+        ], static fn ($value) => $value !== null);
     }
 }
 

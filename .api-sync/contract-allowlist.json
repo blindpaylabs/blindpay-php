@@ -534,6 +534,48 @@
       "field": "payable_id",
       "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
       "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "UpdateInstanceInput",
+      "field": "logo_url",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "UpdateInstanceInput",
+      "field": "accent_color",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "UpdateInstanceInput",
+      "field": "partner_tos_link",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "UpdateInstanceInput",
+      "field": "partner_tos_screenshot",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "UpdateInstanceInput",
+      "field": "partner_tos_terms_accepted",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreateVirtualAccountInput",
+      "field": "bre_b",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CreateVirtualAccountInput",
+      "field": "gender",
+      "reason": "In the reference spec (blindpay-v2@66144f3b2) but not in the stale snapshot; remove when the snapshot is refreshed.",
+      "owner": "support@blindpay.com"
     }
   ]
 }

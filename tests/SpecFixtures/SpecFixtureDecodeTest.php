@@ -8,6 +8,7 @@ use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\Resources\BankAccounts\CreatePixInput;
 use BlindPay\SDK\Resources\BankAccounts\DeleteBankAccountInput;
 use BlindPay\SDK\Resources\BankAccounts\GetBankAccountInput;
+use BlindPay\SDK\Resources\BankAccounts\ListBankAccountsInput;
 use BlindPay\SDK\Resources\CustodialWallets\CreateCustodialWalletInput;
 use BlindPay\SDK\Resources\CustodialWallets\DeleteCustodialWalletInput;
 use BlindPay\SDK\Resources\CustodialWallets\GetCustodialWalletInput;
@@ -64,6 +65,7 @@ use BlindPay\SDK\Resources\Wallets\SetSelfCustodyInput;
 use BlindPay\SDK\Resources\Wallets\UpdateOfframpWalletInput;
 use BlindPay\SDK\Resources\Webhooks\CreateWebhookEndpointInput;
 use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
+use BlindPay\SDK\Types\BankingPartner;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Currency;
@@ -125,7 +127,7 @@ final class SpecFixtureDecodeTest extends TestCase
             'POST /v1/e/instances/{instance_id}/tos' => fn (BlindPay $b, ?RequestOptions $o) => $b->instances->tos->initiate(new InitiateInput('key'), $o),
 
             // Customers
-            'POST /v1/instances/{instance_id}/customers/{customer_id}/limit-increase' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->requestLimitIncrease(new RequestLimitIncreaseInput($c, 100.0, 1000.0, 50.0, 'https://example.com/doc.pdf', LimitIncreaseRequestSupportingDocumentType::cases()[0]), $o),
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/limit-increase' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->requestLimitIncrease(new RequestLimitIncreaseInput($c, 100, 1000, 50, 'https://example.com/doc.pdf', LimitIncreaseRequestSupportingDocumentType::cases()[0]), $o),
             'GET /v1/instances/{instance_id}/customers/{customer_id}/limit-increase' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->getLimitIncreaseRequests($c, $o),
             'POST /v1/instances/{instance_id}/customers' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->createIndividualWithStandardKYC(new CreateIndividualWithStandardKYCInput(
                 '1 Main St',
@@ -155,12 +157,12 @@ final class SpecFixtureDecodeTest extends TestCase
 
             // Bank accounts
             'POST /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->createPix(new CreatePixInput($c, 'PIX', 'key@example.com'), $o),
-            'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->list($c, $o),
+            'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->list($c, new ListBankAccountsInput(status: 'approved'), $o),
             'GET /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->get(new GetBankAccountInput($c, $id), $o),
             'DELETE /v1/instances/{instance_id}/customers/{customer_id}/bank-accounts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->bankAccounts->delete(new DeleteBankAccountInput($c, $id), $o),
 
             // Virtual accounts
-            'POST /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => fn (BlindPay $b, ?RequestOptions $o) => $b->virtualAccounts->create(new CreateVirtualAccountInput($c, $id, StablecoinToken::USDC), $o),
+            'POST /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => fn (BlindPay $b, ?RequestOptions $o) => $b->virtualAccounts->create(new CreateVirtualAccountInput($c, $id, StablecoinToken::USDC, BankingPartner::JPMORGAN), $o),
             'GET /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts' => fn (BlindPay $b, ?RequestOptions $o) => $b->virtualAccounts->list($c, $o),
             'GET /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->virtualAccounts->get($c, $id, $o),
             'PUT /v1/instances/{instance_id}/customers/{customer_id}/virtual-accounts/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->virtualAccounts->update(new UpdateVirtualAccountInput($c, $id, $id, StablecoinToken::USDC), $o),
@@ -195,7 +197,7 @@ final class SpecFixtureDecodeTest extends TestCase
             'POST /v1/instances/{instance_id}/payin-quotes' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->quotes->create(new CreatePayinQuoteInput($id, CurrencyType::SENDER, PayinPaymentMethod::cases()[0], 1000, StablecoinToken::USDC), $o),
             'POST /v1/instances/{instance_id}/payin-quotes/fx' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->quotes->getFxRate(new GetPayinFxRateInput(CurrencyType::SENDER, Currency::BRL, Currency::USDC, 1000), $o),
             'GET /v1/instances/{instance_id}/payins/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->get($id, $o),
-            'GET /v1/e/payins/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->getTrack($id, $o),
+            'GET /v1/e/payins/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->getTrack($id, 'ct_000000000000', $o),
             'GET /v1/instances/{instance_id}/payins' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->list(new ListPayinsInput(limit: 10), $o),
             'POST /v1/instances/{instance_id}/payins/evm' => fn (BlindPay $b, ?RequestOptions $o) => $b->payins->createEvm($id, $o),
 
@@ -222,7 +224,7 @@ final class SpecFixtureDecodeTest extends TestCase
 
             // Fees and partner fees
             'GET /v1/instances/{instance_id}/billing/fees' => fn (BlindPay $b, ?RequestOptions $o) => $b->fees->get($o),
-            'POST /v1/instances/{instance_id}/partner-fees' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->create(new CreatePartnerFeeInput('0x0', 'Fee', 100.0, 1.0, 100.0, 1.0), $o),
+            'POST /v1/instances/{instance_id}/partner-fees' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->create(new CreatePartnerFeeInput('Fee', 100, 1, 100, 1), $o),
             'GET /v1/instances/{instance_id}/partner-fees' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->list($o),
             'GET /v1/instances/{instance_id}/partner-fees/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->get($id, $o),
             'DELETE /v1/instances/{instance_id}/partner-fees/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->partnerFees->delete($id, $o),

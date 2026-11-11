@@ -1287,26 +1287,41 @@ readonly class LimitIncreaseRequest
     }
 }
 
+/** The requested limits are integer cents (null keeps the current limit). */
 readonly class RequestLimitIncreaseInput
 {
+    /**
+     * @param  list<array{type: string, file: string}>  $supportingDocuments  more documents, as
+     *                                                                        `['type' => ..., 'file' => <uploaded file URL>]`
+     */
     public function __construct(
         public string $customerId,
-        public ?float $daily,
-        public ?float $monthly,
-        public ?float $perTransaction,
-        public string $supportingDocumentFile,
-        public LimitIncreaseRequestSupportingDocumentType $supportingDocumentType
+        public ?int $daily,
+        public ?int $monthly,
+        public ?int $perTransaction,
+        public ?string $supportingDocumentFile = null,
+        public ?LimitIncreaseRequestSupportingDocumentType $supportingDocumentType = null,
+        public array $supportingDocuments = [],
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'daily' => $this->daily,
             'monthly' => $this->monthly,
             'per_transaction' => $this->perTransaction,
-            'supporting_document_file' => $this->supportingDocumentFile,
-            'supporting_document_type' => $this->supportingDocumentType->value,
         ];
+        if ($this->supportingDocumentFile !== null) {
+            $data['supporting_document_file'] = $this->supportingDocumentFile;
+        }
+        if ($this->supportingDocumentType !== null) {
+            $data['supporting_document_type'] = $this->supportingDocumentType->value;
+        }
+        if ($this->supportingDocuments !== []) {
+            $data['supporting_documents'] = $this->supportingDocuments;
+        }
+
+        return $data;
     }
 }
 

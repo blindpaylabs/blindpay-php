@@ -304,30 +304,39 @@ readonly class Payin
 
 readonly class ListPayinsInput extends PaginationParams
 {
+    /**
+     * @param  int|null  $offset  deprecated: ignored by the API; use $startingAfter
+     */
     public function __construct(
         public ?TransactionStatus $status = null,
         public ?string $customerId = null,
         ?int $limit = null,
         ?int $offset = null,
         ?string $startingAfter = null,
-        ?string $endingBefore = null
+        ?string $endingBefore = null,
+        public ?string $customerName = null,
+        public ?string $bankAccountId = null,
+        public ?string $country = null,
+        /** the rail / payment method wire value, e.g. pix, ach, wire, spei_bitso */
+        public ?string $paymentMethod = null,
+        public ?Network $network = null,
+        public ?StablecoinToken $token = null,
     ) {
         parent::__construct($limit, $offset, $startingAfter, $endingBefore);
     }
 
     public function toArray(): array
     {
-        $params = parent::toArray();
-
-        if ($this->status !== null) {
-            $params['status'] = $this->status->value;
-        }
-
-        if ($this->customerId !== null) {
-            $params['customer_id'] = $this->customerId;
-        }
-
-        return $params;
+        return parent::toArray() + array_filter([
+            'status' => $this->status?->value,
+            'customer_id' => $this->customerId,
+            'customer_name' => $this->customerName,
+            'bank_account_id' => $this->bankAccountId,
+            'country' => $this->country,
+            'payment_method' => $this->paymentMethod,
+            'network' => $this->network?->value,
+            'token' => $this->token?->value,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -445,7 +454,7 @@ class Payins
      * @param string $payinId The payin ID to track
      * @return BlindPayApiResponse<Payin>
      */
-    public function getTrack(string $payinId, ?RequestOptions $options = null): BlindPayApiResponse
+    public function getTrack(string $payinId, ?string $checkoutToken = null, ?RequestOptions $options = null): BlindPayApiResponse
     {
         if (empty($payinId)) {
             return BlindPayApiResponse::error(
@@ -453,7 +462,7 @@ class Payins
             );
         }
 
-        $response = $this->client->get(Path::of('e/payins/%s', $payinId), $options);
+        $response = $this->client->get(Path::of('e/payins/%s', $payinId).Query::build(['checkout_token' => $checkoutToken]), $options);
 
         return $response->map(fn (array $data) => Payin::fromArray($data));
     }

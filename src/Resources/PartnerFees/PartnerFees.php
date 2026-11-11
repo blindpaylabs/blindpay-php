@@ -56,39 +56,28 @@ readonly class PartnerFee
     }
 }
 
+/** Percentage fees are basis points (100 = 1%); flat fees are cents. */
 readonly class CreatePartnerFeeInput
 {
     public function __construct(
-        public string $evmWalletAddress,
         public string $name,
-        public float $payinFlatFee,
-        public float $payinPercentageFee,
-        public float $payoutFlatFee,
-        public float $payoutPercentageFee,
+        public int $payinFlatFee,
+        public int $payinPercentageFee,
+        public int $payoutFlatFee,
+        public int $payoutPercentageFee,
         public ?bool $virtualAccountSet = null,
-        public ?string $stellarWalletAddress = null
     ) {}
 
     public function toArray(): array
     {
-        $data = [
-            'evm_wallet_address' => $this->evmWalletAddress,
+        return array_filter([
             'name' => $this->name,
             'payin_flat_fee' => $this->payinFlatFee,
             'payin_percentage_fee' => $this->payinPercentageFee,
             'payout_flat_fee' => $this->payoutFlatFee,
             'payout_percentage_fee' => $this->payoutPercentageFee,
-        ];
-
-        if ($this->virtualAccountSet !== null) {
-            $data['virtual_account_set'] = $this->virtualAccountSet;
-        }
-
-        if ($this->stellarWalletAddress !== null) {
-            $data['stellar_wallet_address'] = $this->stellarWalletAddress;
-        }
-
-        return $data;
+            'virtual_account_set' => $this->virtualAccountSet,
+        ], static fn ($value) => $value !== null);
     }
 }
 

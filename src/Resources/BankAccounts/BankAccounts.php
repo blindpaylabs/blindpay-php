@@ -7,6 +7,7 @@ namespace BlindPay\SDK\Resources\BankAccounts;
 use BlindPay\SDK\Internal\ApiClientInterface;
 use BlindPay\SDK\Internal\Decode;
 use BlindPay\SDK\Internal\Path;
+use BlindPay\SDK\Internal\Query;
 use BlindPay\SDK\Types\AccountClass;
 use BlindPay\SDK\Types\BankAccountType;
 use BlindPay\SDK\Types\BlindPayApiResponse;
@@ -225,6 +226,33 @@ readonly class BankAccountListItem
             swiftPaymentCode: $data['swift_payment_code'] ?? null,
             plaidConnectedAt: $data['plaid_connected_at'] ?? null,
         );
+    }
+}
+
+/** Filters for a customer's bank accounts (the API returns every match; no pagination). */
+readonly class ListBankAccountsInput
+{
+    /**
+     * @param  string|null  $status  verifying, approved, rejected or deprecated
+     */
+    public function __construct(
+        public ?string $status = null,
+        public ?Rail $type = null,
+        public ?string $name = null,
+        public ?string $bankAccountId = null,
+        public ?string $country = null,
+    ) {}
+
+    /** @return array<string, string> */
+    public function toArray(): array
+    {
+        return array_filter([
+            'status' => $this->status,
+            'type' => $this->type?->value,
+            'name' => $this->name,
+            'bank_account_id' => $this->bankAccountId,
+            'country' => $this->country,
+        ], static fn ($value) => $value !== null);
     }
 }
 
@@ -761,6 +789,7 @@ class BankAccounts
      */
     public function list(
         string $customerId,
+        ?ListBankAccountsInput $params = null,
         ?RequestOptions $options = null
     ): BlindPayApiResponse {
         if (empty($customerId)) {
@@ -770,7 +799,7 @@ class BankAccounts
         }
 
         $response = $this->client->get(
-            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $customerId),
+            Path::of('instances/%s/customers/%s/bank-accounts', $this->instanceId, $customerId).Query::build($params?->toArray() ?? []),
             $options
         );
 
