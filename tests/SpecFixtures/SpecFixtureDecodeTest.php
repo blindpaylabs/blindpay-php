@@ -151,7 +151,7 @@ final class SpecFixtureDecodeTest extends TestCase
             ), $o),
             'GET /v1/instances/{instance_id}/customers' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->list(new ListCustomersInput(limit: 10), $o),
             'GET /v1/instances/{instance_id}/customers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->get($c, $o),
-            'PUT /v1/instances/{instance_id}/customers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->update(new UpdateCustomerInput($c), $o),
+            'PUT /v1/instances/{instance_id}/customers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->update(new UpdateCustomerInput($c, 'jane@example.com', Country::US), $o),
             'DELETE /v1/instances/{instance_id}/customers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->delete($c, $o),
             'GET /v1/instances/{instance_id}/limits/customers/{id}' => fn (BlindPay $b, ?RequestOptions $o) => $b->customers->getLimits($c, $o),
 

@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Tests\Resources;
 
 use BlindPay\SDK\BlindPay;
+use BlindPay\SDK\Resources\Customers\CreateCustomerInput;
+use BlindPay\SDK\Resources\Customers\KycType;
 use BlindPay\SDK\Resources\Payables\CreatePayableInput;
 use BlindPay\SDK\Resources\Payables\PayableLineItem;
 use BlindPay\SDK\Resources\Payables\PayableParty;
 use BlindPay\SDK\Resources\Wallets\SetSelfCustodyInput;
 use BlindPay\SDK\Resources\Wallets\UpdateOfframpWalletInput;
+use BlindPay\SDK\Types\AccountClass;
+use BlindPay\SDK\Types\Country;
 use BlindPay\SDK\Types\Currency;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -60,6 +64,20 @@ final class RequestBodiesTest extends TestCase
     {
         $this->assertSame(['redirect_url' => 'https://x'], $this->send(fn (BlindPay $b) => $b->customers->bankAccounts->createPlaidLink('cu_1', 'https://x'), ['url' => 'https://plaid']));
         $this->assertSame([], $this->send(fn (BlindPay $b) => $b->customers->bankAccounts->createPlaidLink('cu_1'), ['url' => 'https://plaid']));
+    }
+
+    #[Test]
+    public function a_light_kyc_customer_can_be_created_with_only_the_required_fields(): void
+    {
+        $body = $this->send(fn (BlindPay $b) => $b->customers->create(new CreateCustomerInput(
+            AccountClass::INDIVIDUAL,
+            KycType::LIGHT,
+            'jane@example.com',
+            Country::BR,
+            ['first_name' => 'Jane', 'tax_id' => '00000000000'],
+        )), ['id' => 'cu_000000000000']);
+
+        $this->assertSame(['type' => 'individual', 'kyc_type' => 'light', 'email' => 'jane@example.com', 'country' => 'BR', 'first_name' => 'Jane', 'tax_id' => '00000000000'], $body);
     }
 
     #[Test]

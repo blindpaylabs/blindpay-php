@@ -906,7 +906,6 @@ readonly class CreateIndividualWithEnhancedKYCInput
         public string $idDocFrontFile,
         public IdentificationDocument $idDocType,
         public ?string $idDocBackFile,
-        public string $individualHoldingDocFrontFile,
         public string $lastName,
         public string $postalCode,
         public ?string $phoneNumber,
@@ -944,7 +943,6 @@ readonly class CreateIndividualWithEnhancedKYCInput
             'id_doc_front_file' => $this->idDocFrontFile,
             'id_doc_type' => $this->idDocType->value,
             'id_doc_back_file' => $this->idDocBackFile,
-            'individual_holding_doc_front_file' => $this->individualHoldingDocFrontFile,
             'last_name' => $this->lastName,
             'postal_code' => $this->postalCode,
             'phone_number' => $this->phoneNumber,
@@ -1127,17 +1125,47 @@ readonly class CreateCustomerResponse
     }
 }
 
+/**
+ * Any customer type and KYC level, including `light` KYC and business `enhanced` KYB. Only the
+ * four fields the API requires are typed; pass the rest of CreateCustomerIn by wire key, e.g.
+ * `['first_name' => 'Jane', 'last_name' => 'Doe', 'tax_id' => '...']` (file fields take an
+ * uploaded file URL, see upload->create()).
+ */
+readonly class CreateCustomerInput
+{
+    /**
+     * @param  array<string, mixed>  $fields  other CreateCustomerIn fields, by snake_case wire key
+     */
+    public function __construct(
+        public AccountClass $type,
+        public KycType $kycType,
+        public string $email,
+        public Country $country,
+        public array $fields = [],
+    ) {}
+
+    public function toArray(): array
+    {
+        return [
+            'type' => $this->type->value,
+            'kyc_type' => $this->kycType->value,
+            'email' => $this->email,
+            'country' => $this->country->value,
+        ] + $this->fields;
+    }
+}
+
 readonly class UpdateCustomerInput
 {
     public function __construct(
         public string $customerId,
-        public ?string $email = null,
+        public string $email,
+        public Country $country,
         public ?string $taxId = null,
         public ?string $addressLine1 = null,
         public ?string $addressLine2 = null,
         public ?string $city = null,
         public ?string $stateProvinceRegion = null,
-        public ?Country $country = null,
         public ?string $postalCode = null,
         public ?string $ipAddress = null,
         public ?string $imageUrl = null,
@@ -1160,7 +1188,6 @@ readonly class UpdateCustomerInput
         public ?string $proofOfOwnershipDocFile = null,
         public ?SourceOfFundsDocType $sourceOfFundsDocType = null,
         public ?string $sourceOfFundsDocFile = null,
-        public ?string $individualHoldingDocFrontFile = null,
         public ?PurposeOfTransactions $purposeOfTransactions = null,
         public ?string $purposeOfTransactionsExplanation = null,
         public ?string $externalId = null,
@@ -1186,7 +1213,7 @@ readonly class UpdateCustomerInput
             'address_line_2' => $this->addressLine2,
             'city' => $this->city,
             'state_province_region' => $this->stateProvinceRegion,
-            'country' => $this->country?->value,
+            'country' => $this->country->value,
             'postal_code' => $this->postalCode,
             'ip_address' => $this->ipAddress,
             'image_url' => $this->imageUrl,
@@ -1204,12 +1231,11 @@ readonly class UpdateCustomerInput
             'alternate_name' => $this->alternateName,
             'formation_date' => $this->formationDate,
             'website' => $this->website,
-            'owners' => $this->owners,
+            'owners' => $this->owners === null ? null : array_map(static fn (Owner|array $owner) => $owner instanceof Owner ? $owner->toArray() : $owner, $this->owners),
             'incorporation_doc_file' => $this->incorporationDocFile,
             'proof_of_ownership_doc_file' => $this->proofOfOwnershipDocFile,
             'source_of_funds_doc_type' => $this->sourceOfFundsDocType?->value,
             'source_of_funds_doc_file' => $this->sourceOfFundsDocFile,
-            'individual_holding_doc_front_file' => $this->individualHoldingDocFrontFile,
             'purpose_of_transactions' => $this->purposeOfTransactions?->value,
             'purpose_of_transactions_explanation' => $this->purposeOfTransactionsExplanation,
             'external_id' => $this->externalId,
@@ -1450,6 +1476,17 @@ class Customers
     {
         return $this->client->get(Path::of('instances/%s/customers', $this->instanceId).Query::build($query), $options)
             ->map(fn (array $data) => ListCustomersResponse::decode($data, self::customerFromArray(...)));
+    }
+
+    /**
+     * Create a customer of any type and KYC level.
+     *
+     * @return BlindPayApiResponse<CreateCustomerResponse>
+     */
+    public function create(CreateCustomerInput $input, ?RequestOptions $options = null): BlindPayApiResponse
+    {
+        return $this->client->post(Path::of('instances/%s/customers', $this->instanceId), $input->toArray(), $options)
+            ->map(fn (array $data) => CreateCustomerResponse::fromArray($data));
     }
 
     /*
