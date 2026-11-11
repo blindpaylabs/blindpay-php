@@ -221,7 +221,7 @@ final class TransportTest extends TestCase
     // -- C3: the A2 retry table -----------------------------------------------------------------
 
     #[Test]
-    public function row_2_multipart_is_retried_only_when_nothing_was_sent(): void
+    public function it_row_2_multipart_is_retried_only_when_nothing_was_sent(): void
     {
         $blindpay = $this->client();
         $refused = new ConnectException('cURL error 7: Failed to connect', new Request('POST', '/'), null, ['errno' => 7]);
@@ -237,7 +237,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function row_3_a_mutation_without_a_key_is_never_retried(): void
+    public function it_row_3_a_mutation_without_a_key_is_never_retried(): void
     {
         // Only reachable with maxRetries = 0, which also disables the auto key.
         $blindpay = $this->client(maxRetries: 0);
@@ -248,7 +248,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function row_4_a_mutation_is_retried_after_a_timeout_with_the_same_key_and_bytes(): void
+    public function it_row_4_a_mutation_is_retried_after_a_timeout_with_the_same_key_and_bytes(): void
     {
         $blindpay = $this->client();
         $this->mock->append($this->timeout(), $this->json(200, ['id' => 'po_1']));
@@ -264,7 +264,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function row_4_a_network_error_is_reported_with_the_key_once_retries_run_out(): void
+    public function it_row_4_a_network_error_is_reported_with_the_key_once_retries_run_out(): void
     {
         $blindpay = $this->client();
         $this->mock->append($this->timeout(), $this->timeout(), $this->timeout());
@@ -280,7 +280,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function row_5_in_flight_409_waits_retry_after_up_to_60_seconds(): void
+    public function it_row_5_in_flight_409_waits_retry_after_up_to_60_seconds(): void
     {
         $blindpay = $this->client();
         $inFlight = ['success' => false, 'message' => 'idempotency_key_in_flight', 'errors' => []];
@@ -292,7 +292,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function row_5_in_flight_409_with_retry_after_above_60_falls_back_to_backoff(): void
+    public function it_row_5_in_flight_409_with_retry_after_above_60_falls_back_to_backoff(): void
     {
         $blindpay = $this->client();
         $inFlight = ['success' => false, 'message' => 'idempotency_key_in_flight'];
@@ -315,7 +315,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function row_6_429_is_retried_for_mutations_and_gets_honouring_retry_after(): void
+    public function it_row_6_429_is_retried_for_mutations_and_gets_honouring_retry_after(): void
     {
         $blindpay = $this->client();
         $this->mock->append(
@@ -342,7 +342,7 @@ final class TransportTest extends TestCase
 
     #[Test]
     #[DataProvider('serverErrors')]
-    public function row_7_a_mutation_is_never_auto_retried_on_5xx(int $status): void
+    public function it_row_7_a_mutation_is_never_auto_retried_on_5xx(int $status): void
     {
         $blindpay = $this->client();
         $this->mock->append($this->json($status, ['success' => false, 'code' => 'INTERNAL_ERROR', 'message' => 'internal_error']));
@@ -357,7 +357,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function row_8_a_get_5xx_with_a_terminal_code_is_not_retried(): void
+    public function it_row_8_a_get_5xx_with_a_terminal_code_is_not_retried(): void
     {
         $blindpay = $this->client();
         $this->mock->append($this->json(502, ['success' => false, 'code' => 'PAYINS_CARD_PAYMENT_PENDING', 'message' => 'card_payment_pending']));
@@ -370,7 +370,7 @@ final class TransportTest extends TestCase
 
     #[Test]
     #[DataProvider('serverErrors')]
-    public function row_9_a_get_is_retried_on_5xx_without_a_key(int $status): void
+    public function it_row_9_a_get_is_retried_on_5xx_without_a_key(int $status): void
     {
         $blindpay = $this->client();
         $this->mock->append($this->json($status, ['message' => 'unavailable']), $this->json(200, ['ok' => true]));
@@ -383,7 +383,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function row_9_get_408_is_retried_until_the_budget_runs_out(): void
+    public function it_row_9_get_408_is_retried_until_the_budget_runs_out(): void
     {
         $blindpay = $this->client();
         $this->mock->append($this->json(408, []), $this->json(408, []), $this->json(408, []));
@@ -406,7 +406,7 @@ final class TransportTest extends TestCase
 
     #[Test]
     #[DataProvider('terminal')]
-    public function row_10_other_statuses_are_not_retried(string $method, int $status): void
+    public function it_row_10_other_statuses_are_not_retried(string $method, int $status): void
     {
         $blindpay = $this->client();
         $this->mock->append($this->json($status, ['success' => false, 'message' => 'idempotency_key_payload_mismatch']));
@@ -418,7 +418,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function max_retries_zero_disables_retries(): void
+    public function it_max_retries_zero_disables_retries(): void
     {
         $blindpay = $this->client(maxRetries: 0);
         $this->mock->append($this->json(503, []));
@@ -429,7 +429,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function the_backoff_grows_and_is_capped_at_8_seconds(): void
+    public function it_backoff_grows_and_is_capped_at_8_seconds(): void
     {
         $blindpay = $this->client(maxRetries: 6);
         $this->mock->append(...array_fill(0, 7, $this->json(503, [])));
@@ -506,7 +506,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function a_2xx_body_that_is_not_json_is_a_decode_error(): void
+    public function it_2xx_body_that_is_not_json_is_a_decode_error(): void
     {
         $blindpay = $this->client();
         $this->mock->append(new Response(200, [], '<html>'));
@@ -518,7 +518,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function map_turns_decode_failures_and_warnings_into_error_responses(): void
+    public function it_map_turns_decode_failures_and_warnings_into_error_responses(): void
     {
         $ok = BlindPayApiResponse::success(['a' => 1], 'req_1');
 
@@ -535,7 +535,7 @@ final class TransportTest extends TestCase
     }
 
     #[Test]
-    public function get_data_or_fail_throws_the_error_response(): void
+    public function it_get_data_or_fail_throws_the_error_response(): void
     {
         $blindpay = $this->client(maxRetries: 0);
         $this->mock->append($this->json(404, ['success' => false, 'code' => 'CUSTOMERS_NOT_FOUND', 'message' => 'customer_not_found']));

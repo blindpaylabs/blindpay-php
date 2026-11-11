@@ -110,7 +110,7 @@ final class AutoPagerTest extends TestCase
     }
 
     #[Test]
-    public function a_failed_page_throws_with_the_error_response(): void
+    public function it_failed_page_throws_with_the_error_response(): void
     {
         $blindpay = $this->client();
         $this->mock->append($this->page(['po_1'], true), new Response(400, [], json_encode(['success' => false, 'code' => 'INVALID_CURSOR', 'message' => 'invalid_cursor'])));
@@ -138,7 +138,7 @@ final class AutoPagerTest extends TestCase
     }
 
     #[Test]
-    public function every_cursor_paginated_list_has_an_auto_pager(): void
+    public function it_every_cursor_paginated_list_has_an_auto_pager(): void
     {
         $blindpay = $this->client();
         $empty = new Response(200, [], json_encode(['data' => [], 'pagination' => ['has_more' => false, 'next_page' => null, 'prev_page' => null]]));
@@ -162,7 +162,7 @@ final class AutoPagerTest extends TestCase
     }
 
     #[Test]
-    public function list_decodes_both_wire_shapes_into_one_type(): void
+    public function it_list_decodes_both_wire_shapes_into_one_type(): void
     {
         $blindpay = $this->client();
         $this->mock->append(new Response(200, [], json_encode([$this->payout('po_1')])), $this->page(['po_2'], true));
@@ -181,7 +181,7 @@ final class AutoPagerTest extends TestCase
     }
 
     #[Test]
-    public function the_query_helper_skips_unset_values(): void
+    public function it_query_helper_skips_unset_values(): void
     {
         $this->assertSame('', Query::build(['a' => null, 'b' => '']));
         $this->assertSame('?limit=10&x=a%20b%26c&flag=false', Query::build(['limit' => '10', 'skip' => null, 'x' => 'a b&c', 'flag' => false]));

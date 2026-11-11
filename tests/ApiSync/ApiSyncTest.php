@@ -376,7 +376,7 @@ class ApiSyncTest extends TestCase
     // ---- idempotency ----
 
     #[Test]
-    public function applying_a_field_twice_only_inserts_it_once(): void
+    public function it_applying_a_field_twice_only_inserts_it_once(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $newSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['description' => ['type' => ['string', 'null']]]]]]]);
@@ -398,7 +398,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_multi_schema_entry_missing_the_same_field_on_both_schemas_is_only_scheduled_once(): void
+    public function it_multi_schema_entry_missing_the_same_field_on_both_schemas_is_only_scheduled_once(): void
     {
         // Reproduces the exact double-apply bug: a single spec-map.json entry with TWO schemas
         // (e.g. spec: ["PayinOut", "CreatePayinOut"]) sharing one SDK class. If both schemas are
@@ -450,7 +450,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function two_separate_entries_mapping_the_same_class_missing_the_same_field_are_only_scheduled_once(): void
+    public function it_two_separate_entries_mapping_the_same_class_missing_the_same_field_are_only_scheduled_once(): void
     {
         // Same bug, different trigger shape: TWO separate spec-map.json `types` entries (not one
         // multi-schema entry) independently point at the same SDK class -- this is exactly how
@@ -493,7 +493,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function two_enum_entries_mapping_the_same_class_missing_the_same_value_are_only_scheduled_once(): void
+    public function it_two_enum_entries_mapping_the_same_class_missing_the_same_value_are_only_scheduled_once(): void
     {
         // Mirrors the field-insertion bug on the enum side: two spec-map.json `enums` entries
         // (e.g. the same LimitIncreaseRequestSupportingDocumentType class mapped from both
@@ -580,7 +580,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function computestructuraldiff_no_longer_reports_new_operations_itself(): void
+    public function it_computestructuraldiff_no_longer_reports_new_operations_itself(): void
     {
         // New-operation classification moved to reconcileOperations() (STANDARD vs NON-STANDARD),
         // so computeStructuralDiff() must stay silent about additions -- only removals are still
@@ -851,7 +851,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function golden_self_test_regenerates_two_deleted_methods_idempotently_and_needs_humans_a_multipart_op(): void
+    public function it_golden_self_test_regenerates_two_deleted_methods_idempotently_and_needs_humans_a_multipart_op(): void
     {
         $root = $this->buildGoldenRepo();
 
@@ -958,7 +958,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function check_mode_fails_on_a_pending_unapplied_operation_insert(): void
+    public function it_check_mode_fails_on_a_pending_unapplied_operation_insert(): void
     {
         $root = $this->buildGoldenRepo();
 
@@ -1007,7 +1007,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_new_unreferenced_schema_is_not_flagged_at_all(): void
+    public function it_new_unreferenced_schema_is_not_flagged_at_all(): void
     {
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
@@ -1023,7 +1023,7 @@ class ApiSyncTest extends TestCase
     // ---- NEEDS_HUMAN: type mismatches on already-modeled properties ----
 
     #[Test]
-    public function a_string_property_changing_to_integer_in_the_spec_is_needs_human(): void
+    public function it_string_property_changing_to_integer_in_the_spec_is_needs_human(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $newSpec = $this->baseSpec();
@@ -1037,7 +1037,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_property_newly_allowing_null_while_the_sdk_stays_non_nullable_is_needs_human(): void
+    public function it_property_newly_allowing_null_while_the_sdk_stays_non_nullable_is_needs_human(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $oldSpec = $this->baseSpec(); // WidgetOut.name: {"type": "string"} -- non-nullable
@@ -1073,7 +1073,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_enum_backed_sdk_property_whose_spec_constraint_degrades_to_a_bare_string_is_needs_human(): void
+    public function it_enum_backed_sdk_property_whose_spec_constraint_degrades_to_a_bare_string_is_needs_human(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $newSpec = $this->baseSpec();
@@ -1090,7 +1090,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_integer_spec_property_modeled_as_a_php_float_is_deliberately_treated_as_compatible(): void
+    public function it_integer_spec_property_modeled_as_a_php_float_is_deliberately_treated_as_compatible(): void
     {
         // PHP widens int to float safely, even under strict_types -- a spec `integer` read into a
         // `float`-typed property parses every value without error, so this is not a mismatch.
@@ -1103,7 +1103,7 @@ class ApiSyncTest extends TestCase
     // ---- constructor insertion never reorders existing parameters ----
 
     #[Test]
-    public function the_new_promoted_property_always_lands_last_and_no_existing_parameter_moves(): void
+    public function it_new_promoted_property_always_lands_last_and_no_existing_parameter_moves(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $before = array_column($classIndex['WidgetResponse']['ctor']['params'], 'name');
@@ -1356,7 +1356,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_valid_map_produces_no_errors(): void
+    public function it_valid_map_produces_no_errors(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $errors = validateMap($this->widgetMap(), $classIndex, $this->fixtureRoot);
@@ -1366,31 +1366,31 @@ class ApiSyncTest extends TestCase
     // ---- version bump classification ----
 
     #[Test]
-    public function an_enum_member_addition_bumps_minor(): void
+    public function it_enum_member_addition_bumps_minor(): void
     {
         $this->assertSame('minor', computeBump([['kind' => 'enum-member-added']]));
     }
 
     #[Test]
-    public function a_field_only_addition_bumps_patch(): void
+    public function it_field_only_addition_bumps_patch(): void
     {
         $this->assertSame('patch', computeBump([['kind' => 'field-added']]));
     }
 
     #[Test]
-    public function a_mix_of_enum_and_field_changes_bumps_minor(): void
+    public function it_mix_of_enum_and_field_changes_bumps_minor(): void
     {
         $this->assertSame('minor', computeBump([['kind' => 'field-added'], ['kind' => 'enum-member-added']]));
     }
 
     #[Test]
-    public function no_changes_means_no_bump(): void
+    public function it_no_changes_means_no_bump(): void
     {
         $this->assertNull(computeBump([]));
     }
 
     #[Test]
-    public function version_string_bumps_correctly(): void
+    public function it_version_string_bumps_correctly(): void
     {
         $this->assertSame('3.1.0', bumpVersionString('3.0.0', 'minor'));
         $this->assertSame('3.0.6', bumpVersionString('3.0.5', 'patch'));
@@ -1400,7 +1400,7 @@ class ApiSyncTest extends TestCase
     // ---- --audit-types: non-blocking, full state comparison (not just forward drift) ----
 
     #[Test]
-    public function audit_types_reports_a_pre_existing_nullability_mismatch_that_check_mode_would_not_flag(): void
+    public function it_audit_types_reports_a_pre_existing_nullability_mismatch_that_check_mode_would_not_flag(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         // WidgetResponse declares `public string $name` (non-nullable); the spec allows null.
@@ -1420,7 +1420,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function audit_types_marks_a_recorded_known_divergence_instead_of_hiding_it(): void
+    public function it_audit_types_marks_a_recorded_known_divergence_instead_of_hiding_it(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $spec = $this->baseSpec();
@@ -1435,7 +1435,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function audit_types_skips_discriminator_fan_outs_instead_of_guessing(): void
+    public function it_audit_types_skips_discriminator_fan_outs_instead_of_guessing(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $map = $this->widgetMap();
@@ -1451,7 +1451,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function audit_types_cli_mode_always_exits_zero_even_with_findings(): void
+    public function it_audit_types_cli_mode_always_exits_zero_even_with_findings(): void
     {
         // Reuse the byte-copy fixture wiring (real script copy + full .api-sync/*.json set), but
         // seed a spec with a deliberate nullability mismatch so --audit-types has something to say.
@@ -1485,7 +1485,7 @@ class ApiSyncTest extends TestCase
     // ---- the repository root.
 
     #[Test]
-    public function resolve_readable_path_accepts_an_existing_file_and_returns_its_canonical_form(): void
+    public function it_resolve_readable_path_accepts_an_existing_file_and_returns_its_canonical_form(): void
     {
         $file = "{$this->fixtureRoot}/src/BlindPay.php";
         file_put_contents($file, "<?php\n");
@@ -1496,7 +1496,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_readable_path_rejects_a_nul_byte(): void
+    public function it_resolve_readable_path_rejects_a_nul_byte(): void
     {
         // A NUL byte cannot survive in a real argv element (execve() argv strings are
         // NUL-terminated), so this is tested as a direct unit call, isolated in a subprocess since
@@ -1512,7 +1512,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_readable_path_rejects_a_file_that_does_not_exist(): void
+    public function it_resolve_readable_path_rejects_a_file_that_does_not_exist(): void
     {
         [$output, $exitCode] = $this->runCliSubprocess(['--check', '--spec='."{$this->fixtureRoot}/does-not-exist.json"]);
 
@@ -1521,7 +1521,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_writable_path_rejects_a_parent_directory_that_does_not_exist(): void
+    public function it_resolve_writable_path_rejects_a_parent_directory_that_does_not_exist(): void
     {
         [$output, $exitCode] = $this->runCliSubprocess([
             '--check',
@@ -1534,7 +1534,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_writable_path_accepts_a_destination_outside_the_repository_root(): void
+    public function it_resolve_writable_path_accepts_a_destination_outside_the_repository_root(): void
     {
         // Required, legitimate functionality: CI writes --report to /tmp; the determinism proof
         // writes into scratch copies elsewhere on disk. Writable paths are deliberately NOT
@@ -1547,7 +1547,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_within_root_accepts_a_legitimate_spec_map_file(): void
+    public function it_resolve_within_root_accepts_a_legitimate_spec_map_file(): void
     {
         $resolved = resolveWithinRoot($this->fixtureRoot, 'src/Resources/Widgets/Widgets.php', 'class file');
 
@@ -1555,7 +1555,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function resolve_within_root_refuses_a_path_that_escapes_the_repository_root(): void
+    public function it_resolve_within_root_refuses_a_path_that_escapes_the_repository_root(): void
     {
         // Simulates a corrupted or malicious spec-map.json entry trying to write outside the repo.
         // Unit-tested directly against resolveWithinRoot(): going through the full CLI, validateMap()
@@ -1623,7 +1623,7 @@ class ApiSyncTest extends TestCase
     // ---- snapshot refresh must copy bytes verbatim, never re-serialize ----
 
     #[Test]
-    public function apply_refreshes_the_snapshot_as_a_byte_identical_copy_of_the_source_spec(): void
+    public function it_apply_refreshes_the_snapshot_as_a_byte_identical_copy_of_the_source_spec(): void
     {
         // A full, real invocation via a copy of the real script, run as a subprocess against a
         // throwaway repo root -- exercises the exact code path apply uses, including the file
@@ -1695,7 +1695,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_operation_without_x_sdk_true_is_not_an_sdk_operation(): void
+    public function it_operation_without_x_sdk_true_is_not_an_sdk_operation(): void
     {
         $spec = $this->specWithNonSdkOperation();
         $spec['paths']['/v1/instances/{instance_id}/widgets/{id}/string-flag'] = ['get' => ['x-sdk' => 'true', 'tags' => ['Widgets']]];
@@ -1707,7 +1707,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function reconcile_operations_ignores_a_new_non_sdk_operation_even_on_a_mapped_tag(): void
+    public function it_reconcile_operations_ignores_a_new_non_sdk_operation_even_on_a_mapped_tag(): void
     {
         [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $this->specWithNonSdkOperation());
 
@@ -1716,7 +1716,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function schemas_only_non_sdk_operations_reference_are_unreachable_and_never_need_a_mapping_decision(): void
+    public function it_schemas_only_non_sdk_operations_reference_are_unreachable_and_never_need_a_mapping_decision(): void
     {
         $oldSpec = $this->baseSpec();
         $newSpec = $this->specWithNonSdkOperation();
@@ -1731,7 +1731,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_schema_shared_with_an_sdk_operation_stays_reachable(): void
+    public function it_schema_shared_with_an_sdk_operation_stays_reachable(): void
     {
         $spec = $this->specWithNonSdkOperation();
         $spec['paths']['/v1/widgets']['post']['responses']['200']['content']['application/json']['schema'] = ['$ref' => '#/components/schemas/YieldOut'];
@@ -1741,7 +1741,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function check_mode_exits_zero_for_a_spec_whose_only_new_surface_is_non_sdk(): void
+    public function it_check_mode_exits_zero_for_a_spec_whose_only_new_surface_is_non_sdk(): void
     {
         $root = $this->buildGoldenRepo();
 
@@ -1759,7 +1759,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_operation_that_loses_x_sdk_is_reported_as_removed(): void
+    public function it_operation_that_loses_x_sdk_is_reported_as_removed(): void
     {
         $oldSpec = $this->baseSpec();
         $newSpec = $this->baseSpec();
@@ -1773,7 +1773,7 @@ class ApiSyncTest extends TestCase
     // ---- coverage and reconciliation key on METHOD + path, never the path alone ----
 
     #[Test]
-    public function a_new_method_on_an_already_known_path_is_a_new_operation(): void
+    public function it_new_method_on_an_already_known_path_is_a_new_operation(): void
     {
         $oldSpec = $this->baseSpec(); // POST /v1/widgets only
         $newSpec = $this->baseSpec();
@@ -1792,7 +1792,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function removing_one_method_of_a_path_reports_only_that_method(): void
+    public function it_removing_one_method_of_a_path_reports_only_that_method(): void
     {
         $oldSpec = $this->baseSpec();
         $oldSpec['paths']['/v1/widgets']['get'] = ['x-sdk' => true, 'tags' => ['Widgets']];
@@ -1805,7 +1805,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_non_sdk_method_does_not_hide_or_hold_up_an_sdk_method_on_the_same_path(): void
+    public function it_non_sdk_method_does_not_hide_or_hold_up_an_sdk_method_on_the_same_path(): void
     {
         $spec = $this->baseSpec();
         $spec['paths']['/v1/widgets']['get'] = ['tags' => ['Widgets']]; // public, not SDK
@@ -1833,7 +1833,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_null_member_of_a_spec_enum_is_not_an_enum_value(): void
+    public function it_null_member_of_a_spec_enum_is_not_an_enum_value(): void
     {
         $spec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', null, 'blue']]]]]]]);
 
@@ -1842,7 +1842,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function reconcile_enums_survives_a_nullable_enum_without_a_false_positive_or_a_deprecation(): void
+    public function it_reconcile_enums_survives_a_nullable_enum_without_a_false_positive_or_a_deprecation(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $newSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', null]]]]]]]);
@@ -1854,7 +1854,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_nullable_enum_with_a_genuinely_new_value_schedules_only_that_value(): void
+    public function it_nullable_enum_with_a_genuinely_new_value_schedules_only_that_value(): void
     {
         $classIndex = scanAllClasses($this->fixtureRoot);
         $newSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', 'green', null]]]]]]]);
@@ -1865,7 +1865,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function adding_or_dropping_a_null_enum_member_is_not_a_removed_value(): void
+    public function it_adding_or_dropping_a_null_enum_member_is_not_a_removed_value(): void
     {
         $withNull = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['color' => ['enum' => ['red', 'blue', null]]]]]]]);
         $withoutNull = $this->baseSpec();
@@ -1877,7 +1877,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_null_enum_member_makes_the_spec_type_nullable(): void
+    public function it_null_enum_member_makes_the_spec_type_nullable(): void
     {
         $this->assertTrue(specTypeCategory(['type' => 'string', 'enum' => ['a', null]])['nullable']);
         $this->assertSame('enum', specTypeCategory(['type' => 'string', 'enum' => ['a', null]])['category']);
@@ -1885,7 +1885,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function check_mode_runs_clean_against_a_nullable_enum_spec(): void
+    public function it_check_mode_runs_clean_against_a_nullable_enum_spec(): void
     {
         $root = $this->buildGoldenRepo();
 
@@ -1908,7 +1908,7 @@ class ApiSyncTest extends TestCase
     // ---- resourceForTag ----
 
     #[Test]
-    public function resource_for_tag_maps_the_tags_that_have_a_resource_in_src(): void
+    public function it_resource_for_tag_maps_the_tags_that_have_a_resource_in_src(): void
     {
         $expected = [
             'Payables' => ['src/Resources/Payables/Payables.php', 'Payables'],
@@ -1963,7 +1963,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_generated_delete_forwards_null_body_and_options_and_validates_the_id(): void
+    public function it_generated_delete_forwards_null_body_and_options_and_validates_the_id(): void
     {
         $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('delete', '/v1/instances/{instance_id}/widgets/{id}', [
             'responses' => ['204' => ['description' => 'gone']],
@@ -1977,7 +1977,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_generated_put_without_a_body_sends_an_empty_array_and_options(): void
+    public function it_generated_put_without_a_body_sends_an_empty_array_and_options(): void
     {
         $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('put', '/v1/instances/{instance_id}/customers/{customer_id}/widgets/{id}/archive', [
             'responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['ok' => ['type' => 'boolean']], 'required' => ['ok']])],
@@ -1990,7 +1990,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_generated_get_with_query_parameters_uses_query_build(): void
+    public function it_generated_get_with_query_parameters_uses_query_build(): void
     {
         $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}/history', [
             'parameters' => [
@@ -2011,7 +2011,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_generated_get_with_a_required_query_parameter_takes_a_required_input(): void
+    public function it_generated_get_with_a_required_query_parameter_takes_a_required_input(): void
     {
         $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/lookup', [
             'parameters' => [['name' => 'code', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string']]],
@@ -2023,7 +2023,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_enum_constrained_query_parameter_still_needs_a_human(): void
+    public function it_enum_constrained_query_parameter_still_needs_a_human(): void
     {
         [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/by-color', [
             'parameters' => [['name' => 'color', 'in' => 'query', 'schema' => ['type' => 'string', 'enum' => ['red', 'blue']]]],
@@ -2035,7 +2035,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_mapped_response_enum_is_decoded_open_with_decode_enum(): void
+    public function it_mapped_response_enum_is_decoded_open_with_decode_enum(): void
     {
         $widgetOut = ['$ref' => '#/components/schemas/WidgetOut'];
         $spec = $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}/state', ['responses' => ['200' => $this->jsonContent($widgetOut)]]);
@@ -2050,7 +2050,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_optional_or_nullable_mapped_response_enum_is_typed_enum_string_null(): void
+    public function it_optional_or_nullable_mapped_response_enum_is_typed_enum_string_null(): void
     {
         $spec = $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}/state', ['responses' => ['200' => $this->jsonContent(['$ref' => '#/components/schemas/WidgetOut'])]]);
         // listed in `required` but nullable: still optional (C8)
@@ -2064,7 +2064,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_mapped_request_enum_stays_closed(): void
+    public function it_mapped_request_enum_stays_closed(): void
     {
         $widgetOut = ['$ref' => '#/components/schemas/WidgetOut'];
         $spec = $this->widgetsOperation('post', '/v1/instances/{instance_id}/widgets/paint', [
@@ -2082,7 +2082,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_unmapped_enum_property_in_a_new_operation_still_needs_a_human(): void
+    public function it_unmapped_enum_property_in_a_new_operation_still_needs_a_human(): void
     {
         [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $this->widgetsOperation('post', '/v1/instances/{instance_id}/widgets/paint', [
             'requestBody' => $this->jsonContent(['type' => 'object', 'properties' => ['shade' => ['type' => 'string', 'enum' => ['light', 'dark']]]]),
@@ -2094,7 +2094,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function an_operation_the_sdk_already_implements_is_not_regenerated(): void
+    public function it_operation_the_sdk_already_implements_is_not_regenerated(): void
     {
         $path = "{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php";
         file_put_contents($path, file_get_contents($path)."\nclass Existing\n{\n    public function get(string \$id)\n    {\n        return \$this->client->get(Path::of('instances/%s/widgets/%s', \$this->instanceId, \$id));\n    }\n\n    public function presign()\n    {\n        return \$this->client->post('presign'.Query::build([]), []);\n    }\n}\n");
@@ -2113,7 +2113,7 @@ class ApiSyncTest extends TestCase
     // ---- use statements ----
 
     #[Test]
-    public function ensure_use_statements_adds_only_what_is_missing_in_alphabetical_place(): void
+    public function it_ensure_use_statements_adds_only_what_is_missing_in_alphabetical_place(): void
     {
         $path = "{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php";
         $before = file_get_contents($path); // imports only BlindPay\SDK\Types\WidgetColor
@@ -2130,7 +2130,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function ensure_use_statements_creates_the_block_in_a_file_that_imports_nothing(): void
+    public function it_ensure_use_statements_creates_the_block_in_a_file_that_imports_nothing(): void
     {
         $path = "{$this->fixtureRoot}/src/Types/WidgetColor.php";
 
@@ -2156,7 +2156,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_new_enum_field_on_a_response_class_is_decoded_open(): void
+    public function it_new_enum_field_on_a_response_class_is_decoded_open(): void
     {
         $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public string \$id\n    ) {}\n\n    public static function fromArray(array \$data): self\n    {\n        return new self(\n            id: \$data['id']\n        );\n    }\n}");
         $c = $this->enumFieldChange();
@@ -2171,7 +2171,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_new_enum_field_on_an_input_class_stays_closed(): void
+    public function it_new_enum_field_on_an_input_class_stays_closed(): void
     {
         $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public string \$name,\n        public ?string \$extra = null\n    ) {}\n\n    public function toArray(): array\n    {\n        \$data = [\n            'name' => \$this->name,\n        ];\n\n        if (\$this->extra !== null) {\n            \$data['extra'] = \$this->extra;\n        }\n\n        return \$data;\n    }\n}");
         $c = $this->enumFieldChange();
@@ -2187,7 +2187,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_new_enum_field_on_a_class_that_both_decodes_and_serialises_round_trips_through_decode_wire(): void
+    public function it_new_enum_field_on_a_class_that_both_decodes_and_serialises_round_trips_through_decode_wire(): void
     {
         $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public string \$id\n    ) {}\n\n    public static function fromArray(array \$data): self\n    {\n        return new self(\n            id: \$data['id']\n        );\n    }\n\n    public function toArray(): array\n    {\n        return [\n            'id' => \$this->id,\n        ];\n    }\n}");
         $c = $this->enumFieldChange();
@@ -2201,7 +2201,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function reconcile_types_binds_a_new_enum_field_to_its_mapped_enum_class(): void
+    public function it_reconcile_types_binds_a_new_enum_field_to_its_mapped_enum_class(): void
     {
         $map = $this->widgetMap();
         $map['enums'][] = ['spec' => ['schema' => 'WidgetOut', 'property' => 'shade'], 'sdk' => ['file' => 'src/Types/WidgetColor.php', 'class' => 'WidgetColor']];
@@ -2215,7 +2215,7 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function a_class_constant_access_is_not_mistaken_for_a_class_declaration(): void
+    public function it_class_constant_access_is_not_mistaken_for_a_class_declaration(): void
     {
         $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public WidgetColor|string|null \$color = null\n    ) {}\n\n    public static function fromArray(array \$data): self\n    {\n        return new self(\n            color: Decode::enum(WidgetColor::class, \$data['color'] ?? null)\n        );\n    }\n\n    public function toArray(): array\n    {\n        return [\n            'color' => Decode::wire(\$this->color),\n        ];\n    }\n}\n\nclass Resource\n{\n    public function get(): string\n    {\n        return WidgetColor::class;\n    }\n}");
 
