@@ -782,39 +782,34 @@ class ApiSyncTest extends TestCase
                     private readonly ApiClientInterface $client
                 ) {}
 
-                public function get(string $id): BlindPayApiResponse
+                /**
+                 * @return BlindPayApiResponse<GetWidgetResponse>
+                 */
+                public function get(string $id, ?RequestOptions $options = null): BlindPayApiResponse
                 {
-                    if (empty($id)) {
+                    if ($id === '') {
                         return BlindPayApiResponse::error(
-                            new \BlindPay\SDK\Types\ErrorResponse('Id cannot be empty')
+                            ErrorResponse::validation('ID cannot be empty')
                         );
                     }
 
-                    $response = $this->client->get("instances/{$this->instanceId}/widgets/{$id}");
+                    $response = $this->client->get(Path::of('instances/%s/widgets/%s', $this->instanceId, $id), $options);
 
-                    if ($response->isSuccess() && is_array($response->data)) {
-                        return BlindPayApiResponse::success(
-                            GetWidgetResponse::fromArray($response->data)
-                        );
-                    }
-
-                    return $response;
+                    return $response->map(fn (array $data) => GetWidgetResponse::fromArray($data));
                 }
 
-                public function create(CreateWidgetInput $input): BlindPayApiResponse
+                /**
+                 * @return BlindPayApiResponse<CreateWidgetResponse>
+                 */
+                public function create(CreateWidgetInput $input, ?RequestOptions $options = null): BlindPayApiResponse
                 {
                     $response = $this->client->post(
-                        "instances/{$this->instanceId}/widgets",
-                        $input->toArray()
+                        Path::of('instances/%s/widgets', $this->instanceId),
+                        $input->toArray(),
+                        $options
                     );
 
-                    if ($response->isSuccess() && is_array($response->data)) {
-                        return BlindPayApiResponse::success(
-                            CreateWidgetResponse::fromArray($response->data)
-                        );
-                    }
-
-                    return $response;
+                    return $response->map(fn (array $data) => CreateWidgetResponse::fromArray($data));
                 }
             }
 
@@ -838,7 +833,7 @@ class ApiSyncTest extends TestCase
         $baseWidgetsSource = file_get_contents("{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php");
         $baseWidgetsSource = str_replace(
             "use BlindPay\SDK\Types\WidgetColor;\n",
-            "use BlindPay\SDK\Internal\ApiClientInterface;\nuse BlindPay\SDK\Types\BlindPayApiResponse;\nuse BlindPay\SDK\Types\WidgetColor;\n",
+            "use BlindPay\SDK\Internal\ApiClientInterface;\nuse BlindPay\SDK\Internal\Path;\nuse BlindPay\SDK\Types\BlindPayApiResponse;\nuse BlindPay\SDK\Types\ErrorResponse;\nuse BlindPay\SDK\Types\RequestOptions;\nuse BlindPay\SDK\Types\WidgetColor;\n",
             $baseWidgetsSource
         );
         file_put_contents("{$root}/src/Resources/Widgets/Widgets.php", rtrim($baseWidgetsSource)."\n".$this->goldenWidgetsResourceSource());
@@ -871,9 +866,13 @@ class ApiSyncTest extends TestCase
             // request/response bodies are inline schemas, never eligible for a coverage-ledger
             // entry in the first place -- see nonStandardBodyReason()'s scope note.)
             $mutated = preg_replace('/\n\nreadonly class GetWidgetResponse.*\nclass Widgets\n\{\n/s', "\n\nclass Widgets\n{\n", $originalSource);
-            $mutated = preg_replace('/\n\n    public function get\(string \$id\).*\n\}\n$/s', "\n}\n", $mutated);
+            $mutated = preg_replace('/\n\n    \/\*\*\n     \* @return BlindPayApiResponse<GetWidgetResponse>.*\n\}\n$/s', "\n}\n", $mutated);
             $this->assertStringNotContainsString('GetWidgetResponse', $mutated, 'setup sanity check: the deletion regex must actually strip the target classes');
             $this->assertStringNotContainsString('function create(', $mutated);
+            // The regenerated code must bring its own imports back: drop the ones only the
+            // deleted methods use, so the file starts without them.
+            $mutated = str_replace(["use BlindPay\\SDK\\Internal\\Path;\n", "use BlindPay\\SDK\\Types\\ErrorResponse;\n", "use BlindPay\\SDK\\Types\\RequestOptions;\n"], '', $mutated);
+            $this->assertStringNotContainsString('Internal\\Path;', $mutated);
             file_put_contents($widgetsPath, $mutated);
             $this->assertPhpFileParses($widgetsPath);
 
@@ -892,11 +891,17 @@ class ApiSyncTest extends TestCase
             // and parameter/return types (class *names* are allowed to differ -- the generator
             // derives them from the method name, not from the hand-written original's naming
             // choice -- but the wire route, verb, and field-level shape must match exactly).
-            $this->assertMatchesRegularExpression('/public function get\(string \$id\): BlindPayApiResponse/', $regenerated);
-            $this->assertStringContainsString('$this->client->get("instances/{$this->instanceId}/widgets/{$id}")', $regenerated);
-            $this->assertMatchesRegularExpression('/public function create\((\w+) \$input\): BlindPayApiResponse/', $regenerated, '');
-            $this->assertStringContainsString('$this->client->post(', $regenerated);
-            $this->assertStringContainsString('"instances/{$this->instanceId}/widgets"', $regenerated);
+            $this->assertMatchesRegularExpression('/public function get\(string \$id, \?RequestOptions \$options = null\): BlindPayApiResponse/', $regenerated);
+            $this->assertStringContainsString("if (\$id === '') {", $regenerated);
+            $this->assertStringContainsString("ErrorResponse::validation('ID cannot be empty')", $regenerated);
+            $this->assertStringContainsString("\$this->client->get(Path::of('instances/%s/widgets/%s', \$this->instanceId, \$id), \$options);", $regenerated);
+            $this->assertStringContainsString('return $response->map(fn (array $data) => GetResponse::fromArray($data));', $regenerated);
+            $this->assertMatchesRegularExpression('/public function create\((\w+) \$input, \?RequestOptions \$options = null\): BlindPayApiResponse/', $regenerated);
+            $this->assertStringContainsString("\$this->client->post(\n            Path::of('instances/%s/widgets', \$this->instanceId),\n            \$input->toArray(),\n            \$options\n        );", $regenerated);
+            $this->assertStringContainsString('return $response->map(fn (array $data) => CreateResponse::fromArray($data));', $regenerated);
+            $this->assertStringNotContainsString('{$this->instanceId}', $regenerated, 'paths go through Path::of(), never string interpolation');
+            // The imports the new code needs are back, in the file's alphabetical order.
+            $this->assertStringContainsString("use BlindPay\\SDK\\Internal\\ApiClientInterface;\nuse BlindPay\\SDK\\Internal\\Path;\nuse BlindPay\\SDK\\Types\\BlindPayApiResponse;\nuse BlindPay\\SDK\\Types\\ErrorResponse;\nuse BlindPay\\SDK\\Types\\RequestOptions;\nuse BlindPay\\SDK\\Types\\WidgetColor;\n", $regenerated);
 
             $classes = scanClassesDetailed($widgetsPath);
             $getResponseClass = null;
@@ -961,7 +966,7 @@ class ApiSyncTest extends TestCase
             $widgetsPath = "{$root}/src/Resources/Widgets/Widgets.php";
             $original = file_get_contents($widgetsPath);
             $mutated = preg_replace('/\n\nreadonly class GetWidgetResponse.*\nclass Widgets\n\{\n/s', "\n\nclass Widgets\n{\n", $original);
-            $mutated = preg_replace('/\n\n    public function get\(string \$id\).*\n\}\n$/s', "\n}\n", $mutated);
+            $mutated = preg_replace('/\n\n    \/\*\*\n     \* @return BlindPayApiResponse<GetWidgetResponse>.*\n\}\n$/s', "\n}\n", $mutated);
             file_put_contents($widgetsPath, $mutated);
 
             $specPath = "{$root}/.api-sync/spec-current.json";
@@ -1920,6 +1925,312 @@ class ApiSyncTest extends TestCase
             $this->assertMatchesRegularExpression('/^class '.$class.'$/m', file_get_contents($realFile), $tag);
         }
         $this->assertNull(resourceForTag('No Such Tag'));
+    }
+
+    // ---- generated code follows the SDK conventions (request options, Path::of, Query::build,
+    // ErrorResponse::validation, $response->map, open response enums) ----
+
+    /** Appends an empty `Widgets` resource class (and its own imports) to the fixture's Widgets.php
+     * so operation-insert has a class to splice into, then reconciles and applies every STANDARD
+     * operation $newSpec adds over the baseline. Returns the resulting file's source. */
+    private function applyOperationsToWidgetsResource(array $newSpec, string $imports = "use BlindPay\\SDK\\Internal\\ApiClientInterface;\n"): string
+    {
+        $path = "{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php";
+        $source = file_get_contents($path);
+        $source = str_replace("use BlindPay\\SDK\\Types\\WidgetColor;\n", $imports.'use BlindPay\\SDK\\Types\\WidgetColor;'."\n", $source);
+        $source = rtrim($source)."\n\nclass Widgets\n{\n    public function __construct(\n        private readonly string \$instanceId,\n        private readonly ApiClientInterface \$client\n    ) {}\n}\n";
+        file_put_contents($path, $source);
+
+        [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $newSpec, buildEnumIndex($this->widgetMap()));
+        $this->assertSame([], $needsHuman);
+        $this->assertNotEmpty($applicable);
+        foreach ($applicable as $change) {
+            applyOperationInsert($this->fixtureRoot, $change, $newSpec);
+        }
+        $this->assertPhpFileParses($path);
+
+        return file_get_contents($path);
+    }
+
+    private function widgetsOperation(string $verb, string $urlPath, array $op): array
+    {
+        return $this->baseSpec(['paths' => [$urlPath => [$verb => array_merge(['x-sdk' => true, 'tags' => ['Widgets']], $op)]]]);
+    }
+
+    private function jsonContent(array $schema): array
+    {
+        return ['content' => ['application/json' => ['schema' => $schema]]];
+    }
+
+    #[Test]
+    public function a_generated_delete_forwards_null_body_and_options_and_validates_the_id(): void
+    {
+        $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('delete', '/v1/instances/{instance_id}/widgets/{id}', [
+            'responses' => ['204' => ['description' => 'gone']],
+        ]));
+
+        $this->assertStringContainsString('public function delete(string $id, ?RequestOptions $options = null): BlindPayApiResponse', $source);
+        $this->assertStringContainsString("if (\$id === '') {\n", $source);
+        $this->assertStringContainsString("ErrorResponse::validation('ID cannot be empty')", $source);
+        $this->assertStringContainsString("return \$this->client->delete(Path::of('instances/%s/widgets/%s', \$this->instanceId, \$id), null, \$options);", $source);
+        $this->assertStringNotContainsString('->map(', $source, 'no response body, so nothing to decode');
+    }
+
+    #[Test]
+    public function a_generated_put_without_a_body_sends_an_empty_array_and_options(): void
+    {
+        $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('put', '/v1/instances/{instance_id}/customers/{customer_id}/widgets/{id}/archive', [
+            'responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['ok' => ['type' => 'boolean']], 'required' => ['ok']])],
+        ]));
+
+        $this->assertStringContainsString('public function update(string $customerId, string $id, ?RequestOptions $options = null): BlindPayApiResponse', $source);
+        $this->assertStringContainsString("ErrorResponse::validation('Customer ID cannot be empty')", $source);
+        $this->assertStringContainsString("\$this->client->put(Path::of('instances/%s/customers/%s/widgets/%s/archive', \$this->instanceId, \$customerId, \$id), [], \$options);", $source);
+        $this->assertStringContainsString('return $response->map(fn (array $data) => UpdateResponse::fromArray($data));', $source);
+    }
+
+    #[Test]
+    public function a_generated_get_with_query_parameters_uses_query_build(): void
+    {
+        $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}/history', [
+            'parameters' => [
+                ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'string']],
+                ['name' => 'status_filter', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string']],
+                ['name' => 'min_amount', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer']],
+                ['name' => 'Idempotency-Key', 'in' => 'header', 'required' => false, 'schema' => ['type' => 'string']],
+            ],
+            'responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']])],
+        ]));
+
+        $this->assertStringContainsString('public function list(string $id, ?ListInput $input = null, ?RequestOptions $options = null): BlindPayApiResponse', $source);
+        $this->assertStringContainsString("Path::of('instances/%s/widgets/%s/history', \$this->instanceId, \$id).Query::build(\$input?->toArray() ?? [])", $source);
+        $this->assertStringContainsString("public ?string \$statusFilter = null,\n        public ?int \$minAmount = null", $source);
+        $this->assertStringContainsString("\$data['status_filter'] = \$this->statusFilter;", $source);
+        $this->assertStringNotContainsString('Idempotency', $source, 'header parameters are not query parameters');
+        $this->assertStringContainsString("use BlindPay\\SDK\\Internal\\Query;\n", $source);
+    }
+
+    #[Test]
+    public function a_generated_get_with_a_required_query_parameter_takes_a_required_input(): void
+    {
+        $source = $this->applyOperationsToWidgetsResource($this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/lookup', [
+            'parameters' => [['name' => 'code', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string']]],
+            'responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['id' => ['type' => 'string']]])],
+        ]));
+
+        $this->assertStringContainsString('public function list(LookupInput $input, ?RequestOptions $options = null)', str_replace('ListInput', 'LookupInput', $source));
+        $this->assertStringContainsString("Path::of('instances/%s/widgets/lookup', \$this->instanceId).Query::build(\$input->toArray())", $source);
+    }
+
+    #[Test]
+    public function an_enum_constrained_query_parameter_still_needs_a_human(): void
+    {
+        [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/by-color', [
+            'parameters' => [['name' => 'color', 'in' => 'query', 'schema' => ['type' => 'string', 'enum' => ['red', 'blue']]]],
+            'responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['id' => ['type' => 'string']]])],
+        ]));
+
+        $this->assertSame([], $applicable);
+        $this->assertStringContainsString('enum-constrained query parameter', $needsHuman[0]);
+    }
+
+    #[Test]
+    public function a_mapped_response_enum_is_decoded_open_with_decode_enum(): void
+    {
+        $widgetOut = ['$ref' => '#/components/schemas/WidgetOut'];
+        $spec = $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}/state', ['responses' => ['200' => $this->jsonContent($widgetOut)]]);
+        $spec['components']['schemas']['WidgetOut']['required'] = ['id', 'color'];
+
+        $source = $this->applyOperationsToWidgetsResource($spec);
+
+        $this->assertStringContainsString("public string \$id,\n        public WidgetColor|string \$color,\n        public ?string \$name = null\n", $source);
+        $this->assertStringContainsString("color: Decode::enum(WidgetColor::class, \$data['color']),", $source);
+        $this->assertStringContainsString("name: \$data['name'] ?? null\n", $source);
+        $this->assertStringContainsString("use BlindPay\\SDK\\Internal\\Decode;\n", $source);
+    }
+
+    #[Test]
+    public function an_optional_or_nullable_mapped_response_enum_is_typed_enum_string_null(): void
+    {
+        $spec = $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}/state', ['responses' => ['200' => $this->jsonContent(['$ref' => '#/components/schemas/WidgetOut'])]]);
+        // listed in `required` but nullable: still optional (C8)
+        $spec['components']['schemas']['WidgetOut']['required'] = ['id', 'color'];
+        $spec['components']['schemas']['WidgetOut']['properties']['color'] = ['type' => ['string', 'null'], 'enum' => ['red', 'blue', null]];
+
+        $source = $this->applyOperationsToWidgetsResource($spec);
+
+        $this->assertStringContainsString('public WidgetColor|string|null $color = null', $source);
+        $this->assertStringContainsString("color: Decode::enum(WidgetColor::class, \$data['color'] ?? null)", $source);
+    }
+
+    #[Test]
+    public function a_mapped_request_enum_stays_closed(): void
+    {
+        $widgetOut = ['$ref' => '#/components/schemas/WidgetOut'];
+        $spec = $this->widgetsOperation('post', '/v1/instances/{instance_id}/widgets/paint', [
+            'requestBody' => $this->jsonContent($widgetOut),
+            'responses' => ['204' => ['description' => 'ok']],
+        ]);
+        $spec['components']['schemas']['WidgetOut']['required'] = ['name', 'color'];
+
+        $source = $this->applyOperationsToWidgetsResource($spec);
+
+        $this->assertStringContainsString("public string \$name,\n        public WidgetColor \$color,\n        public ?string \$id = null\n", $source);
+        $this->assertStringContainsString("'color' => \$this->color->value,", $source);
+        $this->assertStringNotContainsString('Decode', $source);
+        $this->assertStringContainsString("\$this->client->post(\n            Path::of('instances/%s/widgets/paint', \$this->instanceId),\n            \$input->toArray(),\n            \$options\n        );", $source);
+    }
+
+    #[Test]
+    public function an_unmapped_enum_property_in_a_new_operation_still_needs_a_human(): void
+    {
+        [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $this->widgetsOperation('post', '/v1/instances/{instance_id}/widgets/paint', [
+            'requestBody' => $this->jsonContent(['type' => 'object', 'properties' => ['shade' => ['type' => 'string', 'enum' => ['light', 'dark']]]]),
+            'responses' => ['204' => ['description' => 'ok']],
+        ]), buildEnumIndex($this->widgetMap()));
+
+        $this->assertSame([], $applicable);
+        $this->assertStringContainsString('enum-constrained property in request body', $needsHuman[0]);
+    }
+
+    #[Test]
+    public function an_operation_the_sdk_already_implements_is_not_regenerated(): void
+    {
+        $path = "{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php";
+        file_put_contents($path, file_get_contents($path)."\nclass Existing\n{\n    public function get(string \$id)\n    {\n        return \$this->client->get(Path::of('instances/%s/widgets/%s', \$this->instanceId, \$id));\n    }\n\n    public function presign()\n    {\n        return \$this->client->post('presign'.Query::build([]), []);\n    }\n}\n");
+        $spec = $this->widgetsOperation('get', '/v1/instances/{instance_id}/widgets/{id}', ['responses' => ['200' => $this->jsonContent(['type' => 'object', 'properties' => ['id' => ['type' => 'string']]])]]);
+        $isImplemented = fn (string $method, string $urlPath) => operationAlreadyImplemented($this->fixtureRoot, $method, $urlPath);
+
+        [$applicable, $needsHuman] = reconcileOperations($this->baseSpec(), $spec, [], $isImplemented);
+
+        $this->assertSame([], $applicable);
+        $this->assertSame([], $needsHuman);
+        $this->assertTrue(operationAlreadyImplemented($this->fixtureRoot, 'post', '/v1/presign'));
+        $this->assertFalse(operationAlreadyImplemented($this->fixtureRoot, 'delete', '/v1/instances/{instance_id}/widgets/{id}'), 'same path, other verb is a different operation');
+        $this->assertFalse(operationAlreadyImplemented($this->fixtureRoot, 'get', '/v1/instances/{instance_id}/gadgets/{id}'));
+    }
+
+    // ---- use statements ----
+
+    #[Test]
+    public function ensure_use_statements_adds_only_what_is_missing_in_alphabetical_place(): void
+    {
+        $path = "{$this->fixtureRoot}/src/Resources/Widgets/Widgets.php";
+        $before = file_get_contents($path); // imports only BlindPay\SDK\Types\WidgetColor
+
+        ensureUseStatements($path, ['BlindPay\SDK\Types\WidgetColor', 'BlindPay\SDK\Resources\Widgets\Sibling', 'BlindPay\SDK\Internal\Path', 'BlindPay\SDK\Types\RequestOptions', 'BlindPay\SDK\Internal\Path']);
+
+        $after = file_get_contents($path);
+        $this->assertStringContainsString("use BlindPay\\SDK\\Internal\\Path;\nuse BlindPay\\SDK\\Types\\RequestOptions;\nuse BlindPay\\SDK\\Types\\WidgetColor;\n", $after);
+        $this->assertStringNotContainsString('Sibling', $after, 'a class in the file\'s own namespace needs no import');
+        ensureUseStatements($path, ['BlindPay\SDK\Internal\Path']);
+        $this->assertSame($after, file_get_contents($path), 'idempotent');
+        $this->assertNotSame($before, $after);
+        $this->assertPhpFileParses($path);
+    }
+
+    #[Test]
+    public function ensure_use_statements_creates_the_block_in_a_file_that_imports_nothing(): void
+    {
+        $path = "{$this->fixtureRoot}/src/Types/WidgetColor.php";
+
+        ensureUseStatements($path, ['BlindPay\SDK\Internal\Decode']);
+
+        $this->assertStringContainsString("namespace BlindPay\\SDK\\Types;\n\nuse BlindPay\\SDK\\Internal\\Decode;\n\nenum WidgetColor", file_get_contents($path));
+        $this->assertPhpFileParses($path);
+    }
+
+    // ---- field insertion of enum-constrained fields ----
+
+    private function enumFieldChange(): array
+    {
+        return ['class' => 'EnumHolder', 'file' => 'src/Resources/Widgets/EnumHolder.php', 'enum' => ['class' => 'WidgetColor', 'file' => 'src/Types/WidgetColor.php']];
+    }
+
+    private function writeEnumHolder(string $body): string
+    {
+        $path = "{$this->fixtureRoot}/src/Resources/Widgets/EnumHolder.php";
+        file_put_contents($path, "<?php\n\ndeclare(strict_types=1);\n\nnamespace BlindPay\\SDK\\Resources\\Widgets;\n\n{$body}\n");
+
+        return $path;
+    }
+
+    #[Test]
+    public function a_new_enum_field_on_a_response_class_is_decoded_open(): void
+    {
+        $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public string \$id\n    ) {}\n\n    public static function fromArray(array \$data): self\n    {\n        return new self(\n            id: \$data['id']\n        );\n    }\n}");
+        $c = $this->enumFieldChange();
+
+        applyFieldInsertion($this->fixtureRoot, $c['file'], 'EnumHolder', 'color', ['type' => 'string', 'enum' => ['red', 'blue']], $c['enum']);
+
+        $source = file_get_contents($path);
+        $this->assertStringContainsString('public WidgetColor|string|null $color = null', $source);
+        $this->assertStringContainsString("color: Decode::enum(WidgetColor::class, \$data['color'] ?? null)", $source);
+        $this->assertStringContainsString("use BlindPay\\SDK\\Internal\\Decode;\nuse BlindPay\\SDK\\Types\\WidgetColor;\n", $source);
+        $this->assertPhpFileParses($path);
+    }
+
+    #[Test]
+    public function a_new_enum_field_on_an_input_class_stays_closed(): void
+    {
+        $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public string \$name,\n        public ?string \$extra = null\n    ) {}\n\n    public function toArray(): array\n    {\n        \$data = [\n            'name' => \$this->name,\n        ];\n\n        if (\$this->extra !== null) {\n            \$data['extra'] = \$this->extra;\n        }\n\n        return \$data;\n    }\n}");
+        $c = $this->enumFieldChange();
+
+        applyFieldInsertion($this->fixtureRoot, $c['file'], 'EnumHolder', 'color', ['type' => 'string', 'enum' => ['red', 'blue']], $c['enum']);
+
+        $source = file_get_contents($path);
+        $this->assertStringContainsString('public ?WidgetColor $color = null', $source);
+        $this->assertStringContainsString("\$data['color'] = \$this->color->value;", $source);
+        $this->assertStringNotContainsString('Decode', $source);
+        $this->assertStringContainsString("use BlindPay\\SDK\\Types\\WidgetColor;\n", $source);
+        $this->assertPhpFileParses($path);
+    }
+
+    #[Test]
+    public function a_new_enum_field_on_a_class_that_both_decodes_and_serialises_round_trips_through_decode_wire(): void
+    {
+        $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public string \$id\n    ) {}\n\n    public static function fromArray(array \$data): self\n    {\n        return new self(\n            id: \$data['id']\n        );\n    }\n\n    public function toArray(): array\n    {\n        return [\n            'id' => \$this->id,\n        ];\n    }\n}");
+        $c = $this->enumFieldChange();
+
+        applyFieldInsertion($this->fixtureRoot, $c['file'], 'EnumHolder', 'color', ['type' => 'string', 'enum' => ['red', 'blue']], $c['enum']);
+
+        $source = file_get_contents($path);
+        $this->assertStringContainsString("'color' => Decode::wire(\$this->color)", $source);
+        $this->assertStringContainsString("color: Decode::enum(WidgetColor::class, \$data['color'] ?? null)", $source);
+        $this->assertPhpFileParses($path);
+    }
+
+    #[Test]
+    public function reconcile_types_binds_a_new_enum_field_to_its_mapped_enum_class(): void
+    {
+        $map = $this->widgetMap();
+        $map['enums'][] = ['spec' => ['schema' => 'WidgetOut', 'property' => 'shade'], 'sdk' => ['file' => 'src/Types/WidgetColor.php', 'class' => 'WidgetColor']];
+        $newSpec = $this->baseSpec(['components' => ['schemas' => ['WidgetOut' => ['properties' => ['shade' => ['type' => 'string', 'enum' => ['red']], 'plain' => ['type' => 'string']]]]]]);
+
+        [$applicable] = reconcileTypes($map, $newSpec, computeReachable($newSpec), scanAllClasses($this->fixtureRoot), []);
+
+        $byField = array_column($applicable, 'enum', 'field');
+        $this->assertSame(['class' => 'WidgetColor', 'file' => 'src/Types/WidgetColor.php'], $byField['shade']);
+        $this->assertNull($byField['plain']);
+    }
+
+    #[Test]
+    public function a_class_constant_access_is_not_mistaken_for_a_class_declaration(): void
+    {
+        $path = $this->writeEnumHolder("readonly class EnumHolder\n{\n    public function __construct(\n        public WidgetColor|string|null \$color = null\n    ) {}\n\n    public static function fromArray(array \$data): self\n    {\n        return new self(\n            color: Decode::enum(WidgetColor::class, \$data['color'] ?? null)\n        );\n    }\n\n    public function toArray(): array\n    {\n        return [\n            'color' => Decode::wire(\$this->color),\n        ];\n    }\n}\n\nclass Resource\n{\n    public function get(): string\n    {\n        return WidgetColor::class;\n    }\n}");
+
+        $classes = scanClassesDetailed($path);
+
+        $this->assertSame(['EnumHolder', 'Resource'], array_keys($classes));
+        $this->assertSame('literal', $classes['EnumHolder']['toArray']['style']);
+        $this->assertArrayHasKey('literal', $classes['EnumHolder']['toArray']);
+        $boundaries = findClassBoundaries($path, 'Resource');
+        $this->assertNotNull($boundaries['declLine']);
+        $this->assertNotNull($boundaries['endLine']);
+        $lines = file($path, FILE_IGNORE_NEW_LINES);
+        $this->assertSame('class Resource', $lines[$boundaries['declLine'] - 1]);
+        $this->assertSame('}', $lines[$boundaries['endLine'] - 1]);
+        $this->assertSame(count($lines), $boundaries['endLine'], 'the class ends at the file\'s last closing brace');
     }
 
     // ---- helper assertion ----

@@ -322,6 +322,26 @@ function phpFilesUnder(string $dir): array
 }
 
 /**
+ * Whether the `class` / `enum` token at $tokens[$i] is the tail of a `Foo::class` constant access
+ * (the previous significant token is `::`), not the start of a declaration. `Decode::enum(E::class,
+ * ...)` is how every open-enum response field is decoded, and taking its `class` for a declaration
+ * made the scanners adopt the next identifier as a class name.
+ */
+function isClassConstantAccess(array $tokens, int $i): bool
+{
+    for ($j = $i - 1; $j >= 0; $j--) {
+        $prev = $tokens[$j];
+        if (is_array($prev) && in_array($prev[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+            continue;
+        }
+
+        return is_array($prev) && $prev[0] === T_DOUBLE_COLON;
+    }
+
+    return false;
+}
+
+/**
  * Scan one PHP file and return per-class info:
  *  isEnum, enumCases: [{name, value, line}], ctor: {params:[{name,line,type}], list?: <list anchor>},
  *  fromArray: {args:[{name,line}], call?: <list anchor>, keys:[...]},
@@ -377,7 +397,7 @@ function scanClassesDetailed(string $path): array
         $tokenLine = is_array($t) ? $t[2] : $line;
         $line = $tokenLine;
 
-        if (is_array($t) && in_array($id, [T_CLASS, T_ENUM, T_INTERFACE, T_TRAIT], true)) {
+        if (is_array($t) && in_array($id, [T_CLASS, T_ENUM, T_INTERFACE, T_TRAIT], true) && ! isClassConstantAccess($tokens, $i)) {
             $pendingIsEnum = ($id === T_ENUM);
             for ($j = $i + 1; $j < $count; $j++) {
                 $nt = $tokens[$j];
@@ -1182,6 +1202,7 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
     // first schema to report a given (class, field) as missing wins, later reports of the exact
     // same gap are dropped as already-scheduled, not re-emitted.
     $scheduledInsertions = [];
+    $enumIndex = buildEnumIndex($map);
 
     foreach ($map['types'] as $entry) {
         $schemas = typeSpecSchemas($entry);
@@ -1272,6 +1293,11 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
                         continue; // same class+field already scheduled by an earlier schema/entry this run
                     }
                     $scheduledInsertions[$insertionKey] = true;
+                    // The mapped SDK enum covering this property, if any: a new enum-constrained
+                    // field is typed with it (open in a response, closed in a request) instead of
+                    // a bare string.
+                    $enumProperty = ($schemaPath !== null ? "{$schemaPath}." : '').$field;
+                    $enumBinding = $enumIndex["S:{$schemaName}|{$enumProperty}"] ?? $enumIndex["S:{$canonicalSchema}|{$enumProperty}"] ?? null;
                     $applicable[] = [
                         'kind' => 'field-added',
                         'schema' => $schemaName,
@@ -1282,6 +1308,7 @@ function reconcileTypes(array $map, array $newSpec, array $reachable, array $cla
                         'propSchema' => $schemaPath !== null
                             ? (nestedPropSchema($newSpec, $schemaName, $schemaPath, $field))
                             : ($newSpec['components']['schemas'][$schemaName]['properties'][$field] ?? []),
+                        'enum' => $enumBinding,
                         'sortKey' => "{$schemaName}|".($schemaPath ?? '')."|{$field}|{$site['class']}",
                     ];
                 }
@@ -1508,9 +1535,12 @@ function resolveSchemaRef(array $spec, array $schema): array
  * whose body shape this generator version can express (flat object of scalars -- see the property
  * loop below). Everything else is NON-STANDARD, with a specific reason string.
  *
+ * An enum-constrained body property is generatable only when $enumIndex (see buildEnumIndex())
+ * says which SDK enum class covers it; the generator never invents an enum.
+ *
  * @return array{0: bool, 1: ?array, 2: ?string} [isStandard, resource, reason]
  */
-function classifyNewOperation(array $spec, string $method, string $urlPath, array $op): array
+function classifyNewOperation(array $spec, string $method, string $urlPath, array $op, array $enumIndex = []): array
 {
     $tag = $op['tags'][0] ?? null;
     if ($tag === null) {
@@ -1519,6 +1549,11 @@ function classifyNewOperation(array $spec, string $method, string $urlPath, arra
     $resource = resourceForTag($tag);
     if ($resource === null) {
         return [false, null, "no matching resource for operation's tag '{$tag}'"];
+    }
+
+    $queryReason = nonStandardQueryReason($op);
+    if ($queryReason !== null) {
+        return [false, null, $queryReason];
     }
 
     if (isset($op['requestBody'])) {
@@ -1532,7 +1567,7 @@ function classifyNewOperation(array $spec, string $method, string $urlPath, arra
             return [false, null, 'non-JSON request body ('.implode(', ', $contentTypes).') not supported by generator'];
         }
         if (isset($content['application/json']['schema'])) {
-            $reason = nonStandardBodyReason($spec, $content['application/json']['schema'], 'request');
+            $reason = nonStandardBodyReason($spec, $content['application/json']['schema'], 'request', $enumIndex, strtoupper($method).' '.$urlPath);
             if ($reason !== null) {
                 return [false, null, $reason];
             }
@@ -1553,7 +1588,7 @@ function classifyNewOperation(array $spec, string $method, string $urlPath, arra
         if ($contentTypes !== ['application/json']) {
             return [false, null, 'non-JSON response body ('.implode(', ', $contentTypes).') not supported by generator'];
         }
-        $reason = nonStandardBodyReason($spec, $content['application/json']['schema'], 'response');
+        $reason = nonStandardBodyReason($spec, $content['application/json']['schema'], 'response', $enumIndex);
         if ($reason !== null) {
             return [false, null, $reason];
         }
@@ -1564,11 +1599,11 @@ function classifyNewOperation(array $spec, string $method, string $urlPath, arra
 
 /**
  * Whether a JSON request/response schema is outside what this generator version can synthesize.
- * Current scope: a flat object of scalar (string/integer/number/boolean) properties. Enum-
- * constrained and nested-object properties are intentionally deferred to a human for now, rather
- * than modeled incorrectly -- see the design notes in the PR description for the follow-up scope.
+ * Current scope: a flat object of scalar (string/integer/number/boolean) properties, plus enum-
+ * constrained properties the spec map already covers. Unmapped enum and nested-object properties
+ * are intentionally deferred to a human for now, rather than modeled incorrectly -- see the design notes in the PR description for the follow-up scope.
  */
-function nonStandardBodyReason(array $spec, array $schema, string $side): ?string
+function nonStandardBodyReason(array $spec, array $schema, string $side, array $enumIndex = [], ?string $operationKey = null): ?string
 {
     $resolved = resolveSchemaRef($spec, $schema);
     if (isset($resolved['oneOf']) || isset($resolved['anyOf']) || isset($resolved['allOf'])) {
@@ -1578,8 +1613,11 @@ function nonStandardBodyReason(array $spec, array $schema, string $side): ?strin
     if (is_array($type) ? ! in_array('object', $type, true) : $type !== 'object') {
         return "non-object {$side} body schema not supported by generator";
     }
-    foreach ($resolved['properties'] ?? [] as $propSchema) {
-        if (isEnumConstrained($propSchema)) {
+    $bindings = bodyEnumBindings($spec, $schema, $operationKey, $enumIndex);
+    foreach ($resolved['properties'] ?? [] as $field => $propSchema) {
+        // A direct enum covered by the spec map is generated (closed in a request, open in a
+        // response); every other enum shape (array of enum, anyOf enum, unmapped) needs a human.
+        if (isEnumConstrained($propSchema) && ! isset($bindings[$field])) {
             return "enum-constrained property in {$side} body not supported by this generator version";
         }
         $propType = $propSchema['type'] ?? null;
@@ -1596,7 +1634,7 @@ function nonStandardBodyReason(array $spec, array $schema, string $side): ?strin
     return null;
 }
 
-function reconcileOperations(array $oldSpec, array $newSpec): array
+function reconcileOperations(array $oldSpec, array $newSpec, array $enumIndex = [], ?callable $isImplemented = null): array
 {
     $applicable = [];
     $needsHuman = [];
@@ -1619,16 +1657,33 @@ function reconcileOperations(array $oldSpec, array $newSpec): array
         $scheduledOps[$opKey] = true;
 
         [$method, $urlPath] = explode(' ', $opKey, 2);
+        if ($isImplemented !== null && $isImplemented($method, $urlPath)) {
+            continue; // the SDK already has this operation (the baseline was just stale)
+        }
         $op = $newSpec['paths'][$urlPath][$method];
-        [$isStandard, $resource, $reason] = classifyNewOperation($newSpec, $method, $urlPath, $op);
+        [$isStandard, $resource, $reason] = classifyNewOperation($newSpec, $method, $urlPath, $op, $enumIndex);
 
         if ($isStandard) {
+            $enumOpKey = strtoupper($method).' '.$urlPath;
+            $enums = ['request' => [], 'response' => []];
+            $reqSchema = $op['requestBody']['content']['application/json']['schema'] ?? null;
+            if (is_array($reqSchema)) {
+                $enums['request'] = bodyEnumBindings($newSpec, $reqSchema, $enumOpKey, $enumIndex);
+            }
+            foreach ($op['responses'] ?? [] as $code => $resp) {
+                if (str_starts_with((string) $code, '2') && isset($resp['content']['application/json']['schema'])) {
+                    $enums['response'] = bodyEnumBindings($newSpec, $resp['content']['application/json']['schema'], null, $enumIndex);
+
+                    break;
+                }
+            }
             $applicable[] = [
                 'kind' => 'operation-insert',
                 'method' => $method,
                 'path' => $urlPath,
                 'op' => $op,
                 'resource' => $resource,
+                'enums' => $enums,
                 'sortKey' => "operation|{$opKey}",
             ];
         } else {
@@ -1651,29 +1706,33 @@ function pascalCase(string $snake): string
 }
 
 /**
- * Rewrite a spec path template into the PHP string interpolation this SDK's resource classes use,
- * e.g. "/v1/instances/{instance_id}/partner-fees/{id}" -> "instances/{$this->instanceId}/partner-fees/{$id}".
- * The `instance_id` path parameter is dropped from the returned method-parameter list because
- * every resource class already carries it as `$this->instanceId`; every other path parameter
- * becomes a `string` method parameter, in path order.
+ * Rewrite a spec path template into this SDK's Path::of() form, e.g.
+ * "/v1/instances/{instance_id}/partner-fees/{id}" -> template "instances/%s/partner-fees/%s" with
+ * arguments ['$this->instanceId', '$id']. The `instance_id` path parameter is dropped from the
+ * returned method-parameter list because every resource class already carries it as
+ * `$this->instanceId`; every other path parameter becomes a `string` method parameter, in path
+ * order. Path::of() percent-encodes each argument, so an ID can never change the request path.
  *
- * @return array{0: string, 1: array<int, string>}
+ * @return array{0: string, 1: array<int, string>, 2: array<int, string>} [template, Path::of arguments, method parameter names]
  */
 function buildUrlExpr(string $urlPath): array
 {
     $relative = preg_replace('#^/v1/#', '', $urlPath);
     $methodParams = [];
-    $expr = preg_replace_callback('/\{([a-zA-Z0-9_]+)\}/', function (array $m) use (&$methodParams) {
+    $arguments = [];
+    $template = preg_replace_callback('/\{([a-zA-Z0-9_]+)\}/', function (array $m) use (&$methodParams, &$arguments) {
         if ($m[1] === 'instance_id') {
-            return '{$this->instanceId}';
+            $arguments[] = '$this->instanceId';
+        } else {
+            $camel = snakeToCamel($m[1]);
+            $methodParams[] = $camel;
+            $arguments[] = '$'.$camel;
         }
-        $camel = snakeToCamel($m[1]);
-        $methodParams[] = $camel;
 
-        return '{$'.$camel.'}';
-    }, $relative);
+        return '%s';
+    }, str_replace('%', '%%', $relative));
 
-    return [$expr, $methodParams];
+    return [$template, $arguments, $methodParams];
 }
 
 /** Derive a method name following this SDK's verb-based naming convention (see CLAUDE.md section 2). */
@@ -1726,9 +1785,27 @@ function partitionSchemaFields(array $schema): array
     return [$requiredFields, $optionalFields];
 }
 
-/** Synthesize a readonly input class: promoted ctor properties (required first, per the PHP
- * ordering rule) plus a toArray() using this SDK's literal-required + conditional-optional style. */
-function synthesizeInputClassLines(string $className, array $schema): array
+/** Whether a property's JSON Schema `type` allows null. */
+function propertyAllowsNull(array $propSchema): bool
+{
+    $type = $propSchema['type'] ?? null;
+    if (is_array($type) && in_array('null', $type, true)) {
+        return true;
+    }
+
+    return ($propSchema['nullable'] ?? false) === true
+        || (isset($propSchema['enum']) && is_array($propSchema['enum']) && in_array(null, $propSchema['enum'], true));
+}
+
+/**
+ * Synthesize a readonly input (request) class: promoted ctor properties (required first, per the
+ * PHP ordering rule) plus a toArray() using this SDK's literal-required + conditional-optional
+ * style. Request enums stay closed: a bound enum property is typed `E` / `?E` and serialised with
+ * `->value`.
+ *
+ * @param  array<string, array{class: string, file: string}>  $enumBindings  wire field => mapped enum class
+ */
+function synthesizeInputClassLines(string $className, array $schema, array $enumBindings = []): array
 {
     $props = $schema['properties'] ?? [];
     [$requiredFields, $optionalFields] = partitionSchemaFields($schema);
@@ -1737,9 +1814,13 @@ function synthesizeInputClassLines(string $className, array $schema): array
     $lines = ["readonly class {$className}", '{', '    public function __construct('];
     foreach ($ordered as $i => $field) {
         $camel = snakeToCamel($field);
-        $phpType = phpTypeFor($props[$field]);
+        $phpType = isset($enumBindings[$field]) ? $enumBindings[$field]['class'] : phpTypeFor($props[$field]);
         $isRequired = in_array($field, $requiredFields, true);
-        $decl = $isRequired ? "public {$phpType} \${$camel}" : "public ?{$phpType} \${$camel} = null";
+        if ($isRequired) {
+            $decl = (propertyAllowsNull($props[$field]) ? 'public ?' : 'public ')."{$phpType} \${$camel}";
+        } else {
+            $decl = "public ?{$phpType} \${$camel} = null";
+        }
         $lines[] = '        '.$decl.($i === count($ordered) - 1 ? '' : ',');
     }
     $lines[] = '    ) {}';
@@ -1751,15 +1832,20 @@ function synthesizeInputClassLines(string $className, array $schema): array
     } else {
         $lines[] = '        $data = [';
         foreach ($requiredFields as $field) {
-            $lines[] = "            '{$field}' => \$this->".snakeToCamel($field).',';
+            $camel = snakeToCamel($field);
+            $value = isset($enumBindings[$field])
+                ? (propertyAllowsNull($props[$field]) ? "\$this->{$camel}?->value" : "\$this->{$camel}->value")
+                : "\$this->{$camel}";
+            $lines[] = "            '{$field}' => {$value},";
         }
         $lines[] = '        ];';
     }
     foreach ($optionalFields as $field) {
         $camel = snakeToCamel($field);
+        $value = isset($enumBindings[$field]) ? "\$this->{$camel}->value" : "\$this->{$camel}";
         $lines[] = '';
         $lines[] = "        if (\$this->{$camel} !== null) {";
-        $lines[] = "            \$data['{$field}'] = \$this->{$camel};";
+        $lines[] = "            \$data['{$field}'] = {$value};";
         $lines[] = '        }';
     }
     $lines[] = '';
@@ -1770,20 +1856,39 @@ function synthesizeInputClassLines(string $className, array $schema): array
     return $lines;
 }
 
-/** Synthesize a readonly response class: promoted ctor properties (required first) plus a
- * fromArray() following this SDK's direct-required + `?? null`-optional style. */
-function synthesizeResponseClassLines(string $className, array $schema): array
+/**
+ * Synthesize a readonly response class: promoted ctor properties (required first) plus a
+ * fromArray(). A field is required only when the spec lists it in `required` AND does not allow
+ * null; everything else is optional (`?T = null`, read with `?? null`). A bound enum property is
+ * decoded open: typed `E|string` (`E|string|null` when optional) and read with
+ * `Decode::enum(E::class, $data['k'])`, so a value this SDK does not know yet never fails a decode.
+ *
+ * @param  array<string, array{class: string, file: string}>  $enumBindings  wire field => mapped enum class
+ */
+function synthesizeResponseClassLines(string $className, array $schema, array $enumBindings = []): array
 {
     $props = $schema['properties'] ?? [];
-    [$requiredFields, $optionalFields] = partitionSchemaFields($schema);
-    $ordered = array_merge($requiredFields, $optionalFields);
+    $allRequired = $schema['required'] ?? [];
+    $ordered = [];
+    foreach (['required' => true, 'optional' => false] as $wantRequired) {
+        foreach (array_keys($props) as $field) {
+            $isRequired = in_array($field, $allRequired, true) && ! propertyAllowsNull($props[$field]);
+            if ($isRequired === $wantRequired) {
+                $ordered[] = [$field, $isRequired];
+            }
+        }
+    }
 
     $lines = ["readonly class {$className}", '{', '    public function __construct('];
-    foreach ($ordered as $i => $field) {
+    foreach ($ordered as $i => [$field, $isRequired]) {
         $camel = snakeToCamel($field);
-        $phpType = phpTypeFor($props[$field]);
-        $isRequired = in_array($field, $requiredFields, true);
-        $decl = $isRequired ? "public {$phpType} \${$camel}" : "public ?{$phpType} \${$camel} = null";
+        if (isset($enumBindings[$field])) {
+            $phpType = $enumBindings[$field]['class'].'|string';
+            $decl = $isRequired ? "public {$phpType} \${$camel}" : "public {$phpType}|null \${$camel} = null";
+        } else {
+            $phpType = phpTypeFor($props[$field]);
+            $decl = $isRequired ? "public {$phpType} \${$camel}" : "public ?{$phpType} \${$camel} = null";
+        }
         $lines[] = '        '.$decl.($i === count($ordered) - 1 ? '' : ',');
     }
     $lines[] = '    ) {}';
@@ -1791,10 +1896,10 @@ function synthesizeResponseClassLines(string $className, array $schema): array
     $lines[] = '    public static function fromArray(array $data): self';
     $lines[] = '    {';
     $lines[] = '        return new self(';
-    foreach ($ordered as $i => $field) {
+    foreach ($ordered as $i => [$field, $isRequired]) {
         $camel = snakeToCamel($field);
-        $isRequired = in_array($field, $requiredFields, true);
-        $expr = $isRequired ? "\$data['{$field}']" : "\$data['{$field}'] ?? null";
+        $raw = $isRequired ? "\$data['{$field}']" : "\$data['{$field}'] ?? null";
+        $expr = isset($enumBindings[$field]) ? "Decode::enum({$enumBindings[$field]['class']}::class, {$raw})" : $raw;
         $lines[] = "            {$camel}: {$expr}".($i === count($ordered) - 1 ? '' : ',');
     }
     $lines[] = '        );';
@@ -1804,45 +1909,309 @@ function synthesizeResponseClassLines(string $className, array $schema): array
     return $lines;
 }
 
-/** Synthesize the resource method body itself, following the ID-validation / BlindPayApiResponse
- * patterns documented in CLAUDE.md section 4. */
-function buildOperationMethodLines(string $methodName, string $verb, string $urlExpr, array $methodParams, ?string $inputClass, ?string $responseClass): array
+/** "customerId" -> "Customer ID", "id" -> "ID": the label of an empty-id validation message. */
+function humanizeParamName(string $camel): string
+{
+    $words = preg_split('/(?=[A-Z])/', $camel, -1, PREG_SPLIT_NO_EMPTY);
+    $words = array_map(fn ($w) => strtolower($w) === 'id' ? 'ID' : strtolower($w), $words);
+    $label = implode(' ', $words);
+
+    return $words[0] === 'ID' ? $label : ucfirst($label);
+}
+
+/**
+ * Synthesize the resource method itself, following this SDK's conventions: a trailing
+ * `?RequestOptions $options = null` forwarded as the client call's last argument, paths built with
+ * Path::of(), `ErrorResponse::validation()` for an empty id, `Query::build()` for query strings and
+ * `$response->map(fn (array $data) => X::fromArray($data))` for decoding.
+ *
+ * @param  array<int, string>  $pathArguments  Path::of() arguments after the template
+ * @param  array<int, string>  $methodParams  string method parameters (path ids), in path order
+ * @param  string|null  $inputKind  null, 'body' (the input is the JSON body) or 'query' (the input is the query string)
+ * @param  bool  $inputOptional  the input is `?XInput $input = null` (every query parameter is optional)
+ */
+function buildOperationMethodLines(string $methodName, string $verb, string $template, array $pathArguments, array $methodParams, ?string $inputClass, ?string $inputKind, bool $inputOptional, ?string $responseClass, ?string $summary = null): array
 {
     $paramsDecl = array_map(fn ($p) => "string \${$p}", $methodParams);
     if ($inputClass !== null) {
-        $paramsDecl[] = "{$inputClass} \$input";
+        $paramsDecl[] = $inputOptional ? "?{$inputClass} \$input = null" : "{$inputClass} \$input";
+    }
+    $paramsDecl[] = '?RequestOptions $options = null';
+
+    $lines = [];
+    $doc = [];
+    if ($summary !== null && $summary !== '') {
+        $doc[] = $summary;
+    }
+    if ($responseClass !== null) {
+        if ($doc !== []) {
+            $doc[] = '';
+        }
+        $doc[] = "@return BlindPayApiResponse<{$responseClass}>";
+    }
+    if ($doc !== []) {
+        $lines[] = '    /**';
+        foreach ($doc as $d) {
+            $lines[] = $d === '' ? '     *' : "     * {$d}";
+        }
+        $lines[] = '     */';
     }
 
-    $lines = ["    public function {$methodName}(".implode(', ', $paramsDecl).'): BlindPayApiResponse', '    {'];
+    $lines[] = "    public function {$methodName}(".implode(', ', $paramsDecl).'): BlindPayApiResponse';
+    $lines[] = '    {';
     foreach ($methodParams as $p) {
-        $lines[] = "        if (empty(\${$p})) {";
+        $lines[] = "        if (\${$p} === '') {";
         $lines[] = '            return BlindPayApiResponse::error(';
-        $lines[] = "                new \\BlindPay\\SDK\\Types\\ErrorResponse('".ucfirst($p)." cannot be empty')";
+        $lines[] = "                ErrorResponse::validation('".humanizeParamName($p)." cannot be empty')";
         $lines[] = '            );';
         $lines[] = '        }';
         $lines[] = '';
     }
-    if ($inputClass !== null) {
-        $lines[] = "        \$response = \$this->client->{$verb}(";
-        $lines[] = "            \"{$urlExpr}\",";
-        $lines[] = '            $input->toArray()';
-        $lines[] = '        );';
+
+    $quotedTemplate = "'".addcslashes($template, "'\\")."'";
+    $pathExpr = "Path::of({$quotedTemplate}".($pathArguments === [] ? '' : ', '.implode(', ', $pathArguments)).')';
+    if ($inputKind === 'query') {
+        $pathExpr .= '.Query::build('.($inputOptional ? '$input?->toArray() ?? []' : '$input->toArray()').')';
+    }
+
+    $call = null;
+    if ($inputKind === 'body') {
+        $call = ["\$this->client->{$verb}(", "    {$pathExpr},", '    $input->toArray(),', '    $options', ')'];
+    } elseif ($verb === 'delete') {
+        $call = ["\$this->client->delete({$pathExpr}, null, \$options)"];
+    } elseif ($verb === 'get') {
+        $call = ["\$this->client->get({$pathExpr}, \$options)"];
     } else {
-        $lines[] = "        \$response = \$this->client->{$verb}(\"{$urlExpr}\");";
+        // post/put/patch require an array body even when the operation takes none.
+        $call = ["\$this->client->{$verb}({$pathExpr}, [], \$options)"];
     }
-    $lines[] = '';
+
+    $prefix = $responseClass !== null ? '$response = ' : 'return ';
+    foreach ($call as $i => $line) {
+        $lines[] = '        '.($i === 0 ? $prefix : '').$line;
+    }
+    $lines[count($lines) - 1] .= ';';
     if ($responseClass !== null) {
-        $lines[] = '        if ($response->isSuccess() && is_array($response->data)) {';
-        $lines[] = '            return BlindPayApiResponse::success(';
-        $lines[] = "                {$responseClass}::fromArray(\$response->data)";
-        $lines[] = '            );';
-        $lines[] = '        }';
         $lines[] = '';
+        $lines[] = "        return \$response->map(fn (array \$data) => {$responseClass}::fromArray(\$data));";
     }
-    $lines[] = '        return $response;';
     $lines[] = '    }';
 
     return $lines;
+}
+
+/**
+ * Index of the spec-map.json enum entries by the spec property they cover, so the generators can
+ * name the SDK enum class for an enum-constrained property: "S:Schema|prop" for a component schema
+ * property, "O:METHOD /path|prop" for an inline request-body property.
+ *
+ * @return array<string, array{class: string, file: string}>
+ */
+function buildEnumIndex(array $map): array
+{
+    $index = [];
+    foreach ($map['enums'] ?? [] as $entry) {
+        $spec = $entry['spec'] ?? [];
+        $sdk = $entry['sdk'] ?? [];
+        if (! isset($sdk['class'], $sdk['file'], $spec['property'])) {
+            continue;
+        }
+        $key = isset($spec['schema'])
+            ? "S:{$spec['schema']}|{$spec['property']}"
+            : (isset($spec['operation']) ? "O:{$spec['operation']}|{$spec['property']}" : null);
+        if ($key !== null) {
+            $index[$key] ??= ['class' => $sdk['class'], 'file' => $sdk['file']];
+        }
+    }
+
+    return $index;
+}
+
+/** The component-schema name a `$ref` schema points at, or null for an inline schema. */
+function schemaRefName(array $schema): ?string
+{
+    if (isset($schema['$ref']) && is_string($schema['$ref']) && str_starts_with($schema['$ref'], '#/components/schemas/')) {
+        return substr($schema['$ref'], strlen('#/components/schemas/'));
+    }
+
+    return null;
+}
+
+/**
+ * Wire field => mapped enum class, for every directly enum-constrained property of a body schema
+ * that the spec map covers. A body is only generatable when every enum-constrained property is
+ * covered (see nonStandardBodyReason()): the generator never invents an enum.
+ *
+ * @param  array<string, array{class: string, file: string}>  $enumIndex
+ * @return array<string, array{class: string, file: string}>
+ */
+function bodyEnumBindings(array $spec, array $schema, ?string $operationKey, array $enumIndex): array
+{
+    $schemaName = schemaRefName($schema);
+    $resolved = resolveSchemaRef($spec, $schema);
+    $bindings = [];
+    foreach ($resolved['properties'] ?? [] as $field => $propSchema) {
+        if (! isset($propSchema['enum'])) {
+            continue;
+        }
+        $binding = ($schemaName !== null ? ($enumIndex["S:{$schemaName}|{$field}"] ?? null) : null)
+            ?? ($operationKey !== null ? ($enumIndex["O:{$operationKey}|{$field}"] ?? null) : null);
+        if ($binding !== null) {
+            $bindings[$field] = $binding;
+        }
+    }
+
+    return $bindings;
+}
+
+/**
+ * The query parameters of an operation as an object schema (`properties` + `required`), so the
+ * request-body class synthesizer can emit the params class too. Null when there are none.
+ */
+function operationQuerySchema(array $op): ?array
+{
+    $properties = [];
+    $required = [];
+    foreach ($op['parameters'] ?? [] as $param) {
+        if (! is_array($param) || ($param['in'] ?? null) !== 'query' || ! isset($param['name'])) {
+            continue;
+        }
+        $properties[$param['name']] = $param['schema'] ?? ['type' => 'string'];
+        if (($param['required'] ?? false) === true) {
+            $required[] = $param['name'];
+        }
+    }
+
+    return $properties === [] ? null : ['type' => 'object', 'properties' => $properties, 'required' => $required];
+}
+
+/** Why an operation's query parameters are outside what this generator can express, or null. */
+function nonStandardQueryReason(array $op): ?string
+{
+    $schema = operationQuerySchema($op);
+    if ($schema === null) {
+        return null;
+    }
+    if (isset($op['requestBody'])) {
+        return 'query parameters together with a request body not supported by this generator version';
+    }
+    foreach ($schema['properties'] as $propSchema) {
+        if (isEnumConstrained($propSchema)) {
+            return 'enum-constrained query parameter not supported by this generator version';
+        }
+        $types = is_array($propSchema['type'] ?? null) ? $propSchema['type'] : [$propSchema['type'] ?? 'string'];
+        if (array_intersect($types, ['object', 'array']) !== []) {
+            return 'non-scalar query parameter not supported by this generator version';
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Add `use` lines for $classes (fully qualified names) to the PHP file at $path: skipping any the
+ * file already imports or declares in its own namespace, inserting each at its alphabetical place
+ * among the existing contiguous top-level `use` block (existing lines are never reordered), or as a
+ * new block under the `namespace` line when the file imports nothing yet. Output stays
+ * Laravel-Pint-clean (single blank line around the block, ordered imports).
+ *
+ * @param  array<int, string>  $classes
+ */
+function ensureUseStatements(string $path, array $classes): void
+{
+    $lines = file($path, FILE_IGNORE_NEW_LINES);
+    $namespaceLine = null;
+    $namespace = '';
+    $useLines = []; // line index => fqcn
+    foreach ($lines as $i => $line) {
+        if (preg_match('/^namespace\s+([^;\s]+);/', $line, $m)) {
+            $namespaceLine = $i;
+            $namespace = $m[1];
+
+            continue;
+        }
+        if ($namespaceLine !== null && preg_match('/^use\s+([^;\s]+);\s*$/', $line, $m)) {
+            $useLines[$i] = $m[1];
+
+            continue;
+        }
+        if ($namespaceLine !== null && preg_match('/^(final\s+|abstract\s+|readonly\s+)*(class|enum|interface|trait)\s/', $line)) {
+            break;
+        }
+    }
+    if ($namespaceLine === null) {
+        throw new RuntimeException("api-sync: cannot add use statements to {$path}: no namespace declaration");
+    }
+
+    $classes = array_values(array_unique($classes));
+    sort($classes, SORT_STRING | SORT_FLAG_CASE);
+    foreach ($classes as $fqcn) {
+        $fqcn = ltrim($fqcn, '\\');
+        $classNamespace = str_contains($fqcn, '\\') ? substr($fqcn, 0, (int) strrpos($fqcn, '\\')) : '';
+        if ($classNamespace === $namespace || in_array($fqcn, $useLines, true)) {
+            continue;
+        }
+        if ($useLines === []) {
+            array_splice($lines, $namespaceLine + 1, 0, ['', "use {$fqcn};"]);
+            $useLines = [$namespaceLine + 2 => $fqcn];
+
+            continue;
+        }
+        $insertAt = null;
+        foreach ($useLines as $i => $existing) {
+            if (strcasecmp($existing, $fqcn) > 0) {
+                $insertAt = $i;
+
+                break;
+            }
+        }
+        $insertAt ??= array_key_last($useLines) + 1;
+        array_splice($lines, $insertAt, 0, ["use {$fqcn};"]);
+        // Re-index: every use line at or after the insertion point moved down by one.
+        $shifted = [];
+        foreach ($useLines as $i => $existing) {
+            $shifted[$i >= $insertAt ? $i + 1 : $i] = $existing;
+        }
+        $shifted[$insertAt] = $fqcn;
+        ksort($shifted);
+        $useLines = $shifted;
+    }
+
+    file_put_contents($path, implode("\n", $lines)."\n");
+}
+
+/** The PSR-4 fully qualified name of an SDK class declared in $file (src/ is the BlindPay\SDK root). */
+function fqcnForFile(string $file, string $class): string
+{
+    $dir = dirname(preg_replace('#^src/#', '', $file));
+    $namespace = 'BlindPay\\SDK'.($dir === '.' ? '' : '\\'.str_replace('/', '\\', $dir));
+
+    return "{$namespace}\\{$class}";
+}
+
+/**
+ * Whether any resource file already implements this operation: a call to the verb with this very
+ * path template (`->client->get(Path::of('instances/%s/things/%s'`, or the older interpolated
+ * form). Lets a snapshot refresh over a hand-written SDK stay clean instead of generating a
+ * duplicate `get2()` next to the real method.
+ */
+function operationAlreadyImplemented(string $root, string $method, string $urlPath): bool
+{
+    [$template] = buildUrlExpr($urlPath);
+    $interpolated = preg_replace_callback('/\{([a-zA-Z0-9_]+)\}/', fn (array $m) => $m[1] === 'instance_id' ? '{$this->instanceId}' : '{$'.snakeToCamel($m[1]).'}', preg_replace('#^/v1/#', '', $urlPath));
+    $verb = preg_quote(strtolower($method), '/');
+    // `Path::of('instances/%s/x', ...)`, or a bare literal for a parameterless path (`'presign'`).
+    $viaPath = '/->'.$verb.'\(\s*(?:Path::of\(\s*)?\''.preg_quote($template, '/').'\'/';
+    $viaInterpolation = '/->'.$verb.'\(\s*"'.preg_quote($interpolated, '/').'"/';
+
+    foreach (phpFilesUnder(rtrim($root, '/').'/src/Resources') as $file) {
+        $source = file_get_contents($file);
+        if (preg_match($viaPath, $source) === 1 || preg_match($viaInterpolation, $source) === 1) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -1867,12 +2236,12 @@ function findClassBoundaries(string $path, string $className): array
     $declLine = null;
     $endLine = null;
 
-    foreach ($tokens as $t) {
+    foreach ($tokens as $tokenIndex => $t) {
         $isArray = is_array($t);
         $id = $isArray ? $t[0] : null;
         $text = $isArray ? $t[1] : $t;
 
-        if ($id !== null && in_array($id, [T_CLASS, T_ENUM, T_INTERFACE, T_TRAIT], true)) {
+        if ($id !== null && in_array($id, [T_CLASS, T_ENUM, T_INTERFACE, T_TRAIT], true) && ! isClassConstantAccess($tokens, $tokenIndex)) {
             $awaitingName = true;
             $pendingDeclLine = $line;
         } elseif ($awaitingName && $id === T_STRING) {
@@ -1919,15 +2288,26 @@ function applyOperationInsert(string $root, array $change, array $spec): void
 
     $method = strtolower($change['method']);
     $op = $change['op'];
+    $enumBindings = $change['enums'] ?? ['request' => [], 'response' => []];
 
-    [$urlExpr, $methodParams] = buildUrlExpr($change['path']);
+    [$template, $pathArguments, $methodParams] = buildUrlExpr($change['path']);
     $methodName = uniqueSymbolName($path, deriveOperationMethodName($method, $change['path']), 'method');
 
     $inputClassName = null;
     $inputSchema = null;
+    $inputKind = null;
+    $inputOptional = false;
+    $inputEnums = [];
     if (isset($op['requestBody']['content']['application/json']['schema'])) {
         $inputSchema = resolveSchemaRef($spec, $op['requestBody']['content']['application/json']['schema']);
         $inputClassName = uniqueSymbolName($path, pascalCase($methodName).'Input', 'class');
+        $inputKind = 'body';
+        $inputEnums = $enumBindings['request'];
+    } elseif (($querySchema = operationQuerySchema($op)) !== null) {
+        $inputSchema = $querySchema;
+        $inputClassName = uniqueSymbolName($path, pascalCase($methodName).'Input', 'class');
+        $inputKind = 'query';
+        $inputOptional = ($querySchema['required'] ?? []) === [];
     }
 
     $responseClassName = null;
@@ -1944,10 +2324,10 @@ function applyOperationInsert(string $root, array $change, array $spec): void
 
     $newTypeLines = [];
     if ($inputClassName !== null) {
-        $newTypeLines = array_merge($newTypeLines, synthesizeInputClassLines($inputClassName, $inputSchema), ['']);
+        $newTypeLines = array_merge($newTypeLines, synthesizeInputClassLines($inputClassName, $inputSchema, $inputEnums), ['']);
     }
     if ($responseClassName !== null) {
-        $newTypeLines = array_merge($newTypeLines, synthesizeResponseClassLines($responseClassName, $responseSchema), ['']);
+        $newTypeLines = array_merge($newTypeLines, synthesizeResponseClassLines($responseClassName, $responseSchema, $enumBindings['response']), ['']);
     }
 
     if (! empty($newTypeLines)) {
@@ -1957,11 +2337,29 @@ function applyOperationInsert(string $root, array $change, array $spec): void
         file_put_contents($path, implode("\n", $lines)."\n");
     }
 
-    $methodLines = array_merge([''], buildOperationMethodLines($methodName, $method, $urlExpr, $methodParams, $inputClassName, $responseClassName));
+    $methodLines = array_merge([''], buildOperationMethodLines($methodName, $method, $template, $pathArguments, $methodParams, $inputClassName, $inputKind, $inputOptional, $responseClassName, $op['summary'] ?? null));
     $endLine = findClassBoundaries($path, $className)['endLine'];
     $lines = file($path, FILE_IGNORE_NEW_LINES);
     array_splice($lines, $endLine - 1, 0, $methodLines);
     file_put_contents($path, implode("\n", $lines)."\n");
+
+    $uses = ['BlindPay\\SDK\\Internal\\Path', 'BlindPay\\SDK\\Types\\BlindPayApiResponse', 'BlindPay\\SDK\\Types\\RequestOptions'];
+    if ($methodParams !== []) {
+        $uses[] = 'BlindPay\\SDK\\Types\\ErrorResponse';
+    }
+    if ($inputKind === 'query') {
+        $uses[] = 'BlindPay\\SDK\\Internal\\Query';
+    }
+    foreach ($enumBindings['request'] as $binding) {
+        $uses[] = fqcnForFile($binding['file'], $binding['class']);
+    }
+    if ($enumBindings['response'] !== []) {
+        $uses[] = 'BlindPay\\SDK\\Internal\\Decode';
+        foreach ($enumBindings['response'] as $binding) {
+            $uses[] = fqcnForFile($binding['file'], $binding['class']);
+        }
+    }
+    ensureUseStatements($path, $uses);
 }
 
 // ---------------------------------------------------------------------------
@@ -2153,24 +2551,51 @@ function deriveEnumCaseName(string $className, string $value): string
  * Apply a 2-or-3-part field insertion to one class: constructor property (always),
  * fromArray line (only if the class has fromArray), toArray line (only if the class has toArray,
  * honoring its existing literal-vs-conditional style).
+ *
+ * $enum is the SDK enum class mapped to this property, when there is one. A class that decodes
+ * (has fromArray) reads it open -- `Decode::enum(E::class, $data['k'] ?? null)`, typed
+ * `E|string|null`, serialised in toArray with `Decode::wire()`. A class that only serialises (an
+ * input) keeps it closed: `?E`, serialised with `->value`.
+ *
+ * @param  array{class: string, file: string}|null  $enum
  */
-function applyFieldInsertion(string $root, string $file, string $className, string $field, array $propSchema): void
+function applyFieldInsertion(string $root, string $file, string $className, string $field, array $propSchema, ?array $enum = null): void
 {
     $path = resolveWithinRoot($root, $file, "class file for {$className}");
     $camel = snakeToCamel($field);
-    $phpType = phpTypeFor($propSchema);
 
     // Re-scan fresh each time so line numbers stay valid across successive edits to the same file.
     $lines = file($path, FILE_IGNORE_NEW_LINES);
     $classes = scanClassesDetailed($path);
     $info = $classes[$className];
 
+    $decodes = $info['fromArray'] !== null;
+    $uses = [];
+    if ($enum === null) {
+        $phpType = '?'.phpTypeFor($propSchema);
+        $fromExpr = "\$data['{$field}'] ?? null";
+        $toExpr = "\$this->{$camel}";
+        $toConditionalExpr = $toExpr;
+    } elseif ($decodes) {
+        $phpType = "{$enum['class']}|string|null";
+        $fromExpr = "Decode::enum({$enum['class']}::class, \$data['{$field}'] ?? null)";
+        $toExpr = "Decode::wire(\$this->{$camel})";
+        $toConditionalExpr = $toExpr;
+        $uses = ['BlindPay\\SDK\\Internal\\Decode', fqcnForFile($enum['file'], $enum['class'])];
+    } else {
+        $phpType = "?{$enum['class']}";
+        $fromExpr = null;
+        $toExpr = "\$this->{$camel}?->value";
+        $toConditionalExpr = "\$this->{$camel}->value";
+        $uses = [fqcnForFile($enum['file'], $enum['class'])];
+    }
+
     // 1) constructor promoted property -- appended after the LAST parameter (promoted or not), so
     // it is always syntactically safe and never lands before a later parameter.
     if ($info['ctor'] === null || empty($info['ctor']['params']) || ! isset($info['ctor']['list'])) {
         throw new RuntimeException("api-sync: cannot insert '{$field}' into {$className}: no constructor with promoted properties found");
     }
-    spliceListElement($lines, $info['ctor']['list'], "public ?{$phpType} \${$camel} = null", "{$className}::__construct parameters");
+    spliceListElement($lines, $info['ctor']['list'], "public {$phpType} \${$camel} = null", "{$className}::__construct parameters");
     file_put_contents($path, implode("\n", $lines)."\n");
     $lines = file($path, FILE_IGNORE_NEW_LINES);
     $classes = scanClassesDetailed($path);
@@ -2183,7 +2608,7 @@ function applyFieldInsertion(string $root, string $file, string $className, stri
         if (! isset($info['fromArray']['call'])) {
             throw new RuntimeException("api-sync: cannot insert '{$field}' into {$className}::fromArray: no `new self(...)` call found");
         }
-        spliceListElement($lines, $info['fromArray']['call'], "{$camel}: \$data['{$field}'] ?? null", "{$className}::fromArray new self(...) arguments");
+        spliceListElement($lines, $info['fromArray']['call'], "{$camel}: {$fromExpr}", "{$className}::fromArray new self(...) arguments");
         file_put_contents($path, implode("\n", $lines)."\n");
         $lines = file($path, FILE_IGNORE_NEW_LINES);
         $classes = scanClassesDetailed($path);
@@ -2197,7 +2622,7 @@ function applyFieldInsertion(string $root, string $file, string $className, stri
         throw new RuntimeException("api-sync: cannot insert '{$field}' into {$className}::toArray: unrecognised layout");
     }
     if ($ta['style'] === 'literal') {
-        spliceListElement($lines, $ta['literal'], "'{$field}' => \$this->{$camel}", "{$className}::toArray array literal");
+        spliceListElement($lines, $ta['literal'], "'{$field}' => {$toExpr}", "{$className}::toArray array literal");
         file_put_contents($path, implode("\n", $lines)."\n");
     } elseif ($ta['style'] === 'conditional') {
         $returnLine = $ta['conditionalReturnLine'];
@@ -2205,11 +2630,15 @@ function applyFieldInsertion(string $root, string $file, string $className, stri
         $block = [
             '',
             "{$indent}if (\$this->{$camel} !== null) {",
-            "{$indent}    \$data['{$field}'] = \$this->{$camel};",
+            "{$indent}    \$data['{$field}'] = {$toConditionalExpr};",
             "{$indent}}",
         ];
         array_splice($lines, $returnLine - 1, 0, $block);
         file_put_contents($path, implode("\n", $lines)."\n");
+    }
+
+    if ($uses !== []) {
+        ensureUseStatements($path, $uses);
     }
 }
 
@@ -2366,7 +2795,7 @@ function runCli(array $argv, string $root): void
         ? reconcileTypes($map, $newSpec, $reachableNew, $classIndex, $unmodeledIndex, $divergenceFieldIndex)
         : [[], []];
     [$operationApplicable, $operationNeedsHuman] = empty($mapErrors)
-        ? reconcileOperations($oldSpec, $newSpec)
+        ? reconcileOperations($oldSpec, $newSpec, buildEnumIndex($map), fn (string $method, string $urlPath) => operationAlreadyImplemented($root, $method, $urlPath))
         : [[], []];
 
     $coverage = computeCoverageReport($map, $newSpec, $reachableNew);
@@ -2460,7 +2889,7 @@ function runCli(array $argv, string $root): void
         } elseif ($change['kind'] === 'operation-insert') {
             applyOperationInsert($root, $change, $newSpec);
         } else {
-            applyFieldInsertion($root, $change['file'], $change['class'], $change['field'], $change['propSchema']);
+            applyFieldInsertion($root, $change['file'], $change['class'], $change['field'], $change['propSchema'], $change['enum'] ?? null);
         }
     }
 
