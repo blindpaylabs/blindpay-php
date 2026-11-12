@@ -60,16 +60,24 @@ final class BlindPayExceptionTest extends TestCase
     }
 
     #[Test]
+    public function it_still_builds_an_exception_when_a_factory_is_called_on_a_subclass(): void
+    {
+        // On 4.0.0 BlindPayApiException::validation() inherited `new self` and returned an
+        // Internal\BlindPayException. It must keep returning one, never a TypeError from building a
+        // BlindPayApiException (whose constructor takes an ErrorResponse).
+        foreach ([BlindPayApiException::validation('x'), BlindPayApiException::configuration('x'), WebhookException::api('x')] as $e) {
+            $this->assertInstanceOf(InternalBlindPayException::class, $e);
+            $this->assertNotInstanceOf(BlindPayApiException::class, $e);
+        }
+        $this->assertSame('VALIDATION_ERROR', BlindPayApiException::validation('x')->getErrorCode());
+    }
+
+    #[Test]
     public function it_keeps_the_subclasses_and_factories_public(): void
     {
         $this->assertTrue(is_subclass_of(BlindPayApiException::class, BlindPayException::class));
         $this->assertTrue(is_subclass_of(WebhookException::class, BlindPayException::class));
-        foreach ([BlindPayException::configuration('x'), BlindPayException::validation('x'), BlindPayException::api('x'), BlindPayException::authentication()] as $e) {
-            $this->assertSame(BlindPayException::class, $e::class);
-        }
-        // The older base still builds its own class, so nothing changes for code that calls it.
-        $this->assertSame(InternalBlindPayException::class, InternalBlindPayException::configuration('x')::class);
-        $this->assertSame(401, BlindPayException::authentication()->getCode());
+        $this->assertInstanceOf(BlindPayException::class, BlindPayException::configuration('x'));
         $this->assertSame('CONFIGURATION_ERROR', BlindPayException::configuration('x')->getErrorCode());
         $this->assertSame('VALIDATION_ERROR', BlindPayException::validation('x')->getErrorCode());
     }

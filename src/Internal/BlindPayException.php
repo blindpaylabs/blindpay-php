@@ -46,33 +46,39 @@ class BlindPayException extends Exception
         return $this->context;
     }
 
-    /*
-     * The factories use late static binding, so BlindPay\SDK\BlindPayException::configuration()
-     * returns the public class. Only call them on classes that keep this constructor:
-     * BlindPayApiException has its own (it takes an ErrorResponse), hence the PHPStan ignores.
-     */
-    public static function validation(string $message, array $context = []): static
+    public static function validation(string $message, array $context = []): self
     {
-        // @phpstan-ignore new.static
-        return new static(message: $message, errorCode: 'VALIDATION_ERROR', context: $context);
+        return new self(
+            message: $message,
+            errorCode: 'VALIDATION_ERROR',
+            context: $context
+        );
     }
 
-    public static function api(string $message, ?string $errorCode = null, array $context = []): static
+    public static function api(string $message, ?string $errorCode = null, array $context = []): self
     {
-        // @phpstan-ignore new.static
-        return new static(message: $message, errorCode: $errorCode ?? 'API_ERROR', context: $context);
+        return new self(
+            message: $message,
+            errorCode: $errorCode ?? 'API_ERROR',
+            context: $context
+        );
     }
 
-    public static function configuration(string $message): static
+    public static function configuration(string $message): self
     {
-        // @phpstan-ignore new.static
-        return new static(message: $message, errorCode: 'CONFIGURATION_ERROR');
+        return new self(
+            message: $message,
+            errorCode: 'CONFIGURATION_ERROR'
+        );
     }
 
-    public static function authentication(string $message = 'Authentication failed'): static
+    public static function authentication(string $message = 'Authentication failed'): self
     {
-        // @phpstan-ignore new.static
-        return new static(message: $message, errorCode: 'AUTHENTICATION_ERROR', code: 401);
+        return new self(
+            message: $message,
+            errorCode: 'AUTHENTICATION_ERROR',
+            code: 401
+        );
     }
 
     public function toArray(): array
