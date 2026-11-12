@@ -64,7 +64,12 @@ final class BlindPayExceptionTest extends TestCase
     {
         $this->assertTrue(is_subclass_of(BlindPayApiException::class, BlindPayException::class));
         $this->assertTrue(is_subclass_of(WebhookException::class, BlindPayException::class));
-        $this->assertInstanceOf(BlindPayException::class, BlindPayException::configuration('x'));
+        foreach ([BlindPayException::configuration('x'), BlindPayException::validation('x'), BlindPayException::api('x'), BlindPayException::authentication()] as $e) {
+            $this->assertSame(BlindPayException::class, $e::class);
+        }
+        // The older base still builds its own class, so nothing changes for code that calls it.
+        $this->assertSame(InternalBlindPayException::class, InternalBlindPayException::configuration('x')::class);
+        $this->assertSame(401, BlindPayException::authentication()->getCode());
         $this->assertSame('CONFIGURATION_ERROR', BlindPayException::configuration('x')->getErrorCode());
         $this->assertSame('VALIDATION_ERROR', BlindPayException::validation('x')->getErrorCode());
     }
