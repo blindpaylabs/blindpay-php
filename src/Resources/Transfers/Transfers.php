@@ -185,12 +185,16 @@ readonly class CreateTransferQuoteResponse
 {
     public function __construct(
         public string $id,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $receiverAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $senderAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $flatFee,
         public ?float $expiresAt = null,
         public ?float $commercialQuotation = null,
         public ?float $blindpayQuotation = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $partnerFeeAmount = null,
         public ?int $partnerPercentageFee = null,
         public ?int $partnerFlatFee = null,
@@ -236,7 +240,9 @@ readonly class Transfer
         public string $transferQuoteId,
         public string $walletId,
         public StablecoinToken|string $senderToken,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $senderAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $receiverAmount,
         public StablecoinToken|string $customerToken,
         public Network|string $customerNetwork,
@@ -255,6 +261,7 @@ readonly class Transfer
         public ?string $firstName = null,
         public ?string $lastName = null,
         public ?string $legalName = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $partnerFeeAmount = null,
         public ?string $externalId = null,
         public ?int $partnerPercentageFee = null,

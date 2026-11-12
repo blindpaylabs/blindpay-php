@@ -71,12 +71,16 @@ readonly class Payout
         public Network|string $network,
         public StablecoinToken|string $token,
         public ?string $description,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $senderAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $receiverAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $partnerFeeAmount,
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
         public ?float $totalFeeAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $customerLocalAmount,
         public Currency|string $currency,
         public ?string $transactionDocumentFile,
@@ -117,12 +121,14 @@ readonly class Payout
         public ?string $tedBankCode = null,
         public ?string $tedBranchCode = null,
         public ?string $tedCpfCnpj = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $billingFeeAmount = null,
         public ?string $cpnPaymentId = null,
         public ?string $senderLegalName = null,
         public ?int $partnerFee = null,
         public ?array $trackingDocuments = null,
         public ?array $jpmTrackData = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $transactionFeeAmount = null,
         public ?string $pixSafeBankCode = null,
         public ?string $pixSafeBranchCode = null,
@@ -370,7 +376,9 @@ readonly class CreateStellarPayoutResponse
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
         public ?TrackingLiquidity $trackingLiquidity = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $billingFeeAmount = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $transactionFeeAmount = null,
         public ?int $partnerFee = null,
         public ?array $trackingDocuments = null,
@@ -436,7 +444,9 @@ readonly class CreateEvmPayoutResponse
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
         public ?TrackingLiquidity $trackingLiquidity = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $billingFeeAmount = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $transactionFeeAmount = null,
         public ?int $partnerFee = null,
         public ?array $trackingDocuments = null,
@@ -505,7 +515,9 @@ readonly class CreateSolanaPayoutResponse
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
         public ?TrackingLiquidity $trackingLiquidity = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $billingFeeAmount = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $transactionFeeAmount = null,
         public ?int $partnerFee = null,
         public ?array $trackingDocuments = null,
