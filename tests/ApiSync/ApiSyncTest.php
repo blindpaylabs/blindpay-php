@@ -1372,9 +1372,17 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function it_field_only_addition_bumps_patch(): void
+    public function it_field_only_addition_bumps_minor(): void
     {
-        $this->assertSame('patch', computeBump([['kind' => 'field-added']]));
+        // A new optional field is new public surface: MINOR, per CLAUDE.md section 9.
+        $this->assertSame('minor', computeBump([['kind' => 'field-added']]));
+    }
+
+    #[Test]
+    public function it_error_code_changes_bump_minor_when_codes_are_added_and_patch_otherwise(): void
+    {
+        $this->assertSame('minor', computeBump([['kind' => 'error-codes-added']]));
+        $this->assertSame('patch', computeBump([['kind' => 'error-codes-changed']]));
     }
 
     #[Test]

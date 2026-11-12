@@ -111,7 +111,7 @@ On success, `data` holds the decoded value, `requestId` the `X-Request-Id` respo
 |---|---|
 | `message` | The API `message` (for example `not_enough_balance`), or an SDK description. Never contains the request body or the API key. |
 | `status` | HTTP status, or `null` when no response was received. |
-| `code` | The API's stable, UPPERCASE error code (for example `PAYOUTS_INSUFFICIENT_BALANCE`). Branch on this, not on `message`. Absent on some errors (auth, rate limit, idempotency). |
+| `code` | The API's stable, UPPERCASE error code (for example `PAYOUTS_INSUFFICIENT_BALANCE`); compare it with the `ErrorCode` constants (see [Error codes](#error-codes)). Prefer it over `message`. Absent on some errors (idempotency conflicts, some legacy paths). |
 | `description` | A longer explanation, when the API sends one. |
 | `errors` | The raw `errors` array of the body (validation details); empty by default. |
 | `traceId` | The API `trace_id`, when present. Quote it to support. |
@@ -131,6 +131,36 @@ On success, `data` holds the decoded value, `requestId` the `X-Request-Id` respo
 | `DECODE` | The API answered 2xx but the body did not fit the SDK's types. |
 
 `$error->isNetworkError()` and `$error->isApiError()` are shortcuts. An empty 2xx body (for example 204) is a success with `data === null`.
+
+### Error codes
+
+`BlindPay\SDK\Types\ErrorCode` has a constant for every error code the API documents, generated from the API spec. `ErrorCode::info($code)` returns the code's typical HTTP `status` and its `retry` class, and `$error->retryClass()` returns that class for an error:
+
+| `RetryClass` | Meaning |
+|---|---|
+| `RETRYABLE` | The same request can be retried as is. |
+| `TERMINAL` | Do not retry. |
+| `ACTIONABLE` | The request succeeds only after you fix something (fund a balance, correct bank details, ...). |
+| `UNKNOWN` | The error has no code, or a code newer than this SDK version. |
+
+```php
+use BlindPay\SDK\Types\ErrorCode;
+use BlindPay\SDK\Types\RetryClass;
+
+$response = $blindpay->transfers->createQuote($input);
+
+if ($response->isError()) {
+    $error = $response->error;
+
+    if ($error->code === ErrorCode::TRANSFERS_SWAP_AMOUNT_BELOW_MINIMUM) {
+        // Swaps between different tokens need at least 100 USDC, measured on the USDC side.
+    } elseif ($error->retryClass() === RetryClass::ACTIONABLE) {
+        // Show $error->description: the user has to fix something first.
+    }
+}
+```
+
+`code` stays a plain string, so a code the API adds after your SDK version still reaches you, and `ErrorCode::info()` returns `null` for it. Some errors carry no code (idempotency conflicts and some legacy paths), so keep `message` as the fallback (the swap minimum's `message` is `fx_amount_below_minimum`). The retry class is guidance for your own handling: the SDK's automatic retries (see [Retries](#retries)) follow their own rules.
 
 If you prefer exceptions, `getDataOrFail()` returns the data or throws `BlindPay\SDK\BlindPayApiException`, which carries the `ErrorResponse`:
 
