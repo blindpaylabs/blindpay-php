@@ -102,6 +102,7 @@ class BlindPay implements ApiClientInterface
      * @throws BlindPayException on an empty API key or instance ID, or an invalid option
      */
     public function __construct(
+        #[\SensitiveParameter]
         string $apiKey,
         private readonly string $instanceId,
         string $baseUrl = self::DEFAULT_BASE_URL,
@@ -222,6 +223,7 @@ class BlindPay implements ApiClientInterface
      * @return bool True if the signature is valid, false otherwise
      */
     public function verifyWebhookSignature(
+        #[\SensitiveParameter]
         string $secret,
         string $id,
         string $timestamp,
