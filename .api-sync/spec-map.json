@@ -208,6 +208,10 @@
     {
       "spec": { "schema": "WalletDepositOut", "property": "status" },
       "sdk": { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "WalletDepositStatus" }
+    },
+    {
+      "spec": { "schema": "AdditionalInfoItem", "property": "label" },
+      "sdk": { "file": "src/Resources/Customers/Customers.php", "class": "AdditionalInfoLabel" }
     }
   ],
   "typesNote": "Class-per-file below always refers to src/Resources/**/*.php unless the file starts with src/Types/.",
@@ -440,7 +444,8 @@
     { "spec": ["VirtualAccountNewWebhookOut", "VirtualAccountCompleteWebhookOut"], "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccount" } ]},
     { "spec": "WalletDepositOut", "sdk": [ { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "WalletDeposit" } ]},
     { "spec": ["WalletNewWebhookOut", "WalletUpdateWebhookOut"], "sdk": [ { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "CustodialWallet" } ]},
-    { "spec": ["TransferOut", "CreateTransferOut", "TransferNewWebhookOut", "TransferUpdateWebhookOut", "TransferCompleteWebhookOut"], "path": "tracking_partner_fee", "sdk": [ { "file": "src/Types/TrackingPartnerFee.php", "class": "TrackingPartnerFee" } ]}
+    { "spec": ["TransferOut", "CreateTransferOut", "TransferNewWebhookOut", "TransferUpdateWebhookOut", "TransferCompleteWebhookOut"], "path": "tracking_partner_fee", "sdk": [ { "file": "src/Types/TrackingPartnerFee.php", "class": "TrackingPartnerFee" } ]},
+    { "spec": "AdditionalInfoItem", "sdk": [ { "file": "src/Resources/Customers/Customers.php", "class": "AdditionalInfoItem" } ]}
   ],
   "webhookPayloadsNote": "WebhookVerifier::constructEvent() decodes webhook bodies into the resource types (see WebhookEvent). The *WebhookOut schemas added with the reference spec are mapped above to the class that decodes them; the older ones are covered by tests/Webhooks/WebhookEventTest.php, which decodes every variant of every event.",
   "ignore": {

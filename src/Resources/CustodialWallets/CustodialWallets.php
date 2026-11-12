@@ -183,18 +183,23 @@ readonly class CustodialWalletBalanceResponse
 
 readonly class CreateCustodialWalletInput
 {
+    /**
+     * @param  string|null  $externalId  your own ID for the wallet (up to 255 characters)
+     */
     public function __construct(
         public string $customerId,
         public Network $network,
-        public string $name
+        public string $name,
+        public ?string $externalId = null
     ) {}
 
     public function toArray(): array
     {
-        return [
+        return array_filter([
             'network' => $this->network->value,
             'name' => $this->name,
-        ];
+            'external_id' => $this->externalId,
+        ], static fn ($value) => $value !== null);
     }
 }
 

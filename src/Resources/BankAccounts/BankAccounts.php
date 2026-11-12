@@ -366,19 +366,29 @@ readonly class DeleteBankAccountInput
 
 readonly class CreatePixInput
 {
+    /**
+     * @param  bool|null  $forceCpfCnpj  require the PIX key to be a CPF or CNPJ
+     */
     public function __construct(
         public string $customerId,
         public string $name,
-        public string $pixKey
+        public string $pixKey,
+        public ?bool $forceCpfCnpj = null
     ) {}
 
     public function toArray(): array
     {
-        return [
+        $data = [
             'type' => 'pix',
             'name' => $this->name,
             'pix_key' => $this->pixKey,
         ];
+
+        if ($this->forceCpfCnpj !== null) {
+            $data['force_cpf_cnpj'] = $this->forceCpfCnpj;
+        }
+
+        return $data;
     }
 }
 
@@ -590,6 +600,12 @@ readonly class CreateWireInput
 
 readonly class CreateInternationalSwiftInput
 {
+    /**
+     * @param  string|null  $swiftIfscBranchCode  Indian IFSC branch code (e.g. `BARB0AHIMCI`), for accounts in India
+     * @param  string|null  $swiftIntermediaryBankRoutingNumber  US ABA routing number (9 digits) of the
+     *                                                           correspondent bank, from the beneficiary bank's
+     *                                                           USD wire instructions
+     */
     public function __construct(
         public string $customerId,
         public string $name,
@@ -623,7 +639,9 @@ readonly class CreateInternationalSwiftInput
         public ?string $tedBankCode = null,
         public ?string $tedBranchCode = null,
         public ?string $tedCpfCnpj = null,
-        public ?string $sepaBeneficiaryBic = null
+        public ?string $sepaBeneficiaryBic = null,
+        public ?string $swiftIfscBranchCode = null,
+        public ?string $swiftIntermediaryBankRoutingNumber = null
     ) {}
 
     public function toArray(): array
@@ -695,6 +713,14 @@ readonly class CreateInternationalSwiftInput
 
         if ($this->sepaBeneficiaryBic !== null) {
             $data['sepa_beneficiary_bic'] = $this->sepaBeneficiaryBic;
+        }
+
+        if ($this->swiftIfscBranchCode !== null) {
+            $data['swift_ifsc_branch_code'] = $this->swiftIfscBranchCode;
+        }
+
+        if ($this->swiftIntermediaryBankRoutingNumber !== null) {
+            $data['swift_intermediary_bank_routing_number'] = $this->swiftIntermediaryBankRoutingNumber;
         }
 
         return $data;

@@ -801,8 +801,63 @@ readonly class BusinessWithStandardKYB extends BaseCustomer
     }
 }
 
+/**
+ * The category of an AdditionalInfoItem.
+ */
+enum AdditionalInfoLabel: string
+{
+    case EIN_LETTER = 'EIN_LETTER';
+    case KYC_PROVIDER_DOCUMENT = 'KYC_PROVIDER_DOCUMENT';
+    case FLOW_OF_FUNDS = 'FLOW_OF_FUNDS';
+    case BANK_STATEMENT = 'BANK_STATEMENT';
+    case TAX_RETURN = 'TAX_RETURN';
+    case AUDITED_FINANCIALS = 'AUDITED_FINANCIALS';
+    case OPERATING_AGREEMENT = 'OPERATING_AGREEMENT';
+    case BOARD_RESOLUTION = 'BOARD_RESOLUTION';
+    case CERTIFICATE_OF_GOOD_STANDING = 'CERTIFICATE_OF_GOOD_STANDING';
+    case BUSINESS_LICENSE = 'BUSINESS_LICENSE';
+    case MSB_LICENSE = 'MSB_LICENSE';
+    case POWER_OF_ATTORNEY = 'POWER_OF_ATTORNEY';
+    case TRUST_DEED = 'TRUST_DEED';
+    case SHAREHOLDER_REGISTRY = 'SHAREHOLDER_REGISTRY';
+    case BENEFICIAL_OWNER_DECLARATION = 'BENEFICIAL_OWNER_DECLARATION';
+    case COMPLIANCE_QUESTIONNAIRE = 'COMPLIANCE_QUESTIONNAIRE';
+    case PROOF_OF_EMPLOYMENT = 'PROOF_OF_EMPLOYMENT';
+    case REFERENCE_LETTER = 'REFERENCE_LETTER';
+    case OTHER = 'OTHER';
+}
+
+/**
+ * An extra document or note sent with a customer (`additional_info`). Any URL in `value` is
+ * downloaded and re-hosted by BlindPay.
+ */
+readonly class AdditionalInfoItem
+{
+    /**
+     * @param  string  $value  a URL to upload or a free-text description
+     */
+    public function __construct(
+        public AdditionalInfoLabel $label,
+        public string $value,
+    ) {}
+
+    public function toArray(): array
+    {
+        return [
+            'label' => $this->label->value,
+            'value' => $this->value,
+        ];
+    }
+}
+
 readonly class CreateIndividualWithStandardKYCInput
 {
+    /**
+     * @param  list<AdditionalInfoItem>|null  $additionalInfo  extra documents or notes for this customer:
+     *                                                         a known `label` and a URL to upload or free text
+     * @param  float|null  $latitude  geolocation latitude collected from the customer (-90 to 90)
+     * @param  float|null  $longitude  geolocation longitude collected from the customer (-180 to 180)
+     */
     public function __construct(
         public string $addressLine1,
         public string $city,
@@ -829,7 +884,10 @@ readonly class CreateIndividualWithStandardKYCInput
         public ?string $selfieFile = null,
         public ?string $occupation = null,
         public ?string $ipAddress = null,
-        public ?string $imageUrl = null
+        public ?string $imageUrl = null,
+        public ?array $additionalInfo = null,
+        public ?float $latitude = null,
+        public ?float $longitude = null
     ) {}
 
     public function toArray(): array
@@ -889,12 +947,30 @@ readonly class CreateIndividualWithStandardKYCInput
             $data['image_url'] = $this->imageUrl;
         }
 
+        if ($this->additionalInfo !== null) {
+            $data['additional_info'] = array_map(static fn (AdditionalInfoItem $item) => $item->toArray(), $this->additionalInfo);
+        }
+
+        if ($this->latitude !== null) {
+            $data['latitude'] = $this->latitude;
+        }
+
+        if ($this->longitude !== null) {
+            $data['longitude'] = $this->longitude;
+        }
+
         return $data;
     }
 }
 
 readonly class CreateIndividualWithEnhancedKYCInput
 {
+    /**
+     * @param  list<AdditionalInfoItem>|null  $additionalInfo  extra documents or notes for this customer:
+     *                                                         a known `label` and a URL to upload or free text
+     * @param  float|null  $latitude  geolocation latitude collected from the customer (-90 to 90)
+     * @param  float|null  $longitude  geolocation longitude collected from the customer (-180 to 180)
+     */
     public function __construct(
         public string $addressLine1,
         public string $city,
@@ -925,7 +1001,10 @@ readonly class CreateIndividualWithEnhancedKYCInput
         public ?string $selfieFile = null,
         public ?string $occupation = null,
         public ?string $ipAddress = null,
-        public ?string $imageUrl = null
+        public ?string $imageUrl = null,
+        public ?array $additionalInfo = null,
+        public ?float $latitude = null,
+        public ?float $longitude = null
     ) {}
 
     public function toArray(): array
@@ -989,12 +1068,30 @@ readonly class CreateIndividualWithEnhancedKYCInput
             $data['image_url'] = $this->imageUrl;
         }
 
+        if ($this->additionalInfo !== null) {
+            $data['additional_info'] = array_map(static fn (AdditionalInfoItem $item) => $item->toArray(), $this->additionalInfo);
+        }
+
+        if ($this->latitude !== null) {
+            $data['latitude'] = $this->latitude;
+        }
+
+        if ($this->longitude !== null) {
+            $data['longitude'] = $this->longitude;
+        }
+
         return $data;
     }
 }
 
 readonly class CreateBusinessWithStandardKYBInput
 {
+    /**
+     * @param  list<AdditionalInfoItem>|null  $additionalInfo  extra documents or notes for this customer:
+     *                                                         a known `label` and a URL to upload or free text
+     * @param  float|null  $latitude  geolocation latitude collected from the customer (-90 to 90)
+     * @param  float|null  $longitude  geolocation longitude collected from the customer (-180 to 180)
+     */
     public function __construct(
         public string $addressLine1,
         public string $city,
@@ -1025,7 +1122,10 @@ readonly class CreateBusinessWithStandardKYBInput
         public ?bool $publiclyTraded = null,
         public ?string $ipAddress = null,
         public ?string $imageUrl = null,
-        public ?string $phoneNumber = null
+        public ?string $phoneNumber = null,
+        public ?array $additionalInfo = null,
+        public ?float $latitude = null,
+        public ?float $longitude = null
     ) {}
 
     public function toArray(): array
@@ -1107,6 +1207,18 @@ readonly class CreateBusinessWithStandardKYBInput
             $data['phone_number'] = $this->phoneNumber;
         }
 
+        if ($this->additionalInfo !== null) {
+            $data['additional_info'] = array_map(static fn (AdditionalInfoItem $item) => $item->toArray(), $this->additionalInfo);
+        }
+
+        if ($this->latitude !== null) {
+            $data['latitude'] = $this->latitude;
+        }
+
+        if ($this->longitude !== null) {
+            $data['longitude'] = $this->longitude;
+        }
+
         return $data;
     }
 }
@@ -1157,6 +1269,12 @@ readonly class CreateCustomerInput
 
 readonly class UpdateCustomerInput
 {
+    /**
+     * @param  list<AdditionalInfoItem>|null  $additionalInfo  extra documents or notes for this customer:
+     *                                                         a known `label` and a URL to upload or free text
+     * @param  float|null  $latitude  geolocation latitude collected from the customer (-90 to 90)
+     * @param  float|null  $longitude  geolocation longitude collected from the customer (-180 to 180)
+     */
     public function __construct(
         public string $customerId,
         public string $email,
@@ -1201,7 +1319,10 @@ readonly class UpdateCustomerInput
         public ?SourceOfWealth $sourceOfWealth = null,
         public ?bool $publiclyTraded = null,
         public ?string $selfieFile = null,
-        public ?string $occupation = null
+        public ?string $occupation = null,
+        public ?array $additionalInfo = null,
+        public ?float $latitude = null,
+        public ?float $longitude = null
     ) {}
 
     public function toArray(): array
@@ -1250,6 +1371,9 @@ readonly class UpdateCustomerInput
             'publicly_traded' => $this->publiclyTraded,
             'selfie_file' => $this->selfieFile,
             'occupation' => $this->occupation,
+            'additional_info' => $this->additionalInfo === null ? null : array_map(static fn (AdditionalInfoItem $item) => $item->toArray(), $this->additionalInfo),
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
         ], fn ($value) => $value !== null);
     }
 }

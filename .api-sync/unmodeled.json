@@ -21,38 +21,8 @@
     },
     {
       "schema": "CreateBankAccountIn",
-      "field": "force_cpf_cnpj",
-      "reason": "Brazil-specific override flag; not exposed as a constructor parameter on any rail's create Input class.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "CreateBankAccountIn",
       "field": "status",
-      "reason": "Bank account status is server-assigned on creation, not client-set; no create Input class accepts it.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "CreateBankAccountIn",
-      "field": "swift_ifsc_branch_code",
-      "reason": "India-specific SWIFT branch code; not modeled on CreateInternationalSwiftInput.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "CreateCustomerIn",
-      "field": "additional_info",
-      "reason": "Free-form key/value compliance metadata; not exposed as a constructor parameter on any of the 3 create Input classes.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "CreateCustomerIn",
-      "field": "latitude",
-      "reason": "Geolocation captured at KYC submission time; not exposed as a constructor parameter on any of the 3 create Input classes.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "CreateCustomerIn",
-      "field": "longitude",
-      "reason": "Geolocation captured at KYC submission time; not exposed as a constructor parameter on any of the 3 create Input classes.",
+      "reason": "Server-assigned: the API overwrites any client value with 'approved' on creation (api apps/api/src/modules/bank-accounts/lib/create-bank-account.ts), so no create Input class sends it.",
       "owner": "eric@blindpay.com"
     },
     {
@@ -77,24 +47,6 @@
       "schema": "CustomerOut",
       "field": "longitude",
       "reason": "Geolocation captured at KYC submission time; not modeled on BaseCustomer or any of its 3 subclasses.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "UpdateCustomerIn",
-      "field": "additional_info",
-      "reason": "Free-form key/value compliance metadata; not exposed as a constructor parameter on UpdateCustomerInput.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "UpdateCustomerIn",
-      "field": "latitude",
-      "reason": "Geolocation; not exposed as a constructor parameter on UpdateCustomerInput.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "UpdateCustomerIn",
-      "field": "longitude",
-      "reason": "Geolocation; not exposed as a constructor parameter on UpdateCustomerInput.",
       "owner": "eric@blindpay.com"
     },
     {
@@ -214,12 +166,6 @@
       "path": "tracking_payment",
       "field": "approved_risk_sources",
       "reason": "See review_source on this same schema/path -- part of the same deferred payin tracking_payment batch.",
-      "owner": "eric@blindpay.com"
-    },
-    {
-      "schema": "CreateWalletIn",
-      "field": "external_id",
-      "reason": "Caller-supplied external ID; not exposed as a constructor parameter on CreateCustodialWalletInput.",
       "owner": "eric@blindpay.com"
     },
     {
@@ -765,12 +711,6 @@
       "schema": "GetFeesOut",
       "field": "yield",
       "reason": "Yield is excluded from the SDK surface (x-sdk: false); its fee block is not modeled.",
-      "owner": "support@blindpay.com"
-    },
-    {
-      "schema": "CreateBankAccountIn",
-      "field": "swift_intermediary_bank_routing_number",
-      "reason": "Intermediary routing number for SWIFT accounts; not yet a CreateInternationalSwiftInput field (the response, BankAccountListItem, decodes it).",
       "owner": "support@blindpay.com"
     },
     {
