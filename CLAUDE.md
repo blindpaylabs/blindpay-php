@@ -84,11 +84,16 @@ blindpay-php/
       BaseTracking.php, Tracking*.php, PayinTrackingPayment.php, PayoutTrackingPayment.php
       <Name>.php               # Shared enums (Network, StablecoinToken, Currency, Rail, TransactionStatus, Country, ...)
   tests/
-    Internal/                # TransportTest (retry table, idempotency, errors), AutoPagerTest, DecodeTest, RequestOptionsGuardTest
+    Internal/                # TransportTest (retry table, idempotency, errors), AutoPagerTest, DecodeTest, RequestOptionsGuardTest,
+                             # BlindPayExceptionTest (every SDK throw is the public BlindPayException),
+                             # SecretHygieneTest (no key/secret in traces or dumps, no query string in transport errors)
     Webhooks/                # WebhookVerifierTest (shared Svix vectors), WebhookEventTest (every webhook fixture variant)
-    Resources/               # One test file per resource, mirroring src/Resources; RequestBodiesTest checks request bodies
+    Resources/               # One test file per resource, mirroring src/Resources; RequestBodiesTest checks request bodies,
+                             # RequestFieldCoverageTest the optional request fields added in 4.1.0
     SpecFixtures/SpecFixtureDecodeTest.php  # decodes every shared spec fixture through the resource methods
+    SpecFixtures/LimitIncreaseReviewReasonTest.php  # review_reason on the GET and both limitIncrease.* webhooks
     ApiSync/ApiSyncTest.php  # scripts/api-sync.php
+    ApiSync/ErrorCodesTest.php  # src/Types/ErrorCode.php matches the snapshot's Errors table; retryClass()
     Fixtures/                # shared spec fixtures (spec/) and webhook vectors; never edit by hand
 ```
 
