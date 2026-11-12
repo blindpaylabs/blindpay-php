@@ -162,7 +162,7 @@ if ($response->isError()) {
 
 `code` stays a plain string, so a code the API adds after your SDK version still reaches you, and `ErrorCode::info()` returns `null` for it. Some errors carry no code (idempotency conflicts and some legacy paths), so keep `message` as the fallback (the swap minimum's `message` is `fx_amount_below_minimum`). The retry class is guidance for your own handling: the SDK's automatic retries (see [Retries](#retries)) follow their own rules.
 
-If you prefer exceptions, `getDataOrFail()` returns the data or throws `BlindPay\SDK\BlindPayApiException`, which carries the `ErrorResponse`:
+If you prefer exceptions, `getDataOrFail()` returns the data or throws `BlindPay\SDK\BlindPayApiException`, which carries the `ErrorResponse`. Every exception the SDK throws (configuration errors, `BlindPayApiException`, `WebhookException`) extends `BlindPay\SDK\BlindPayException`, so one `catch` covers them all:
 
 ```php
 use BlindPay\SDK\BlindPayApiException;
@@ -220,6 +220,8 @@ if ($response->isError() && $response->error->retryable && $response->error->sta
 ```
 
 A 409 `idempotency_key_in_flight` usually carries a `Retry-After` above 60 seconds, so after the retries run out you get a retryable error with the key: wait, then resend the same request with the same key.
+
+Indicative FX quote endpoints are rate limited per instance; a limited call returns 429 `AUTH_RATE_LIMITED` with a `Retry-After` header, which the SDK honours when it retries. That covers `quotes->getFxRate()` and `payins->quotes->getFxRate()` in production, and every call on a development instance.
 
 ## Pagination
 
@@ -306,7 +308,7 @@ http_response_code(200);
 | `customer.delete` | `CustomerDeletedPayload` |
 | `bankAccount.new` | `BankAccountListItem` |
 | `blockchainWallet.new`, `blockchainWallet.update` | `BlockchainWallet` |
-| `limitIncrease.new`, `limitIncrease.update` | `LimitIncreaseRequest` |
+| `limitIncrease.new`, `limitIncrease.update` | `LimitIncreaseRequest` (`reviewReason` says why compliance rejected the request or approved lower limits, and what to send to get the full amount) |
 | `payout.new`, `.update`, `.complete`, `.partnerFee` | `CreateEvmPayoutResponse` |
 | `payin.new`, `.update`, `.complete`, `.partnerFee` | `CreateEvmPayinResponse` |
 | `transfer.new`, `.update`, `.complete` | `CreateTransferResponse` |
@@ -375,6 +377,10 @@ Uploads authenticate against your instance ID and need a completed onboarding. T
 | Wallet balances | **whole tokens**, decimal (`10.5` is 10.5 USDC) |
 | `total_fee_amount` on payouts and payins | a decimal token amount |
 
+Some response amounts (quote, transfer, payin and payout amounts and fees) are typed `float` for backwards compatibility but always hold integer cents; their docblocks say so, and they become `int` in the next major.
+
+A transfer that swaps between different tokens needs at least 100 USDC, measured on the USDC side; a smaller quote fails with `ErrorCode::TRANSFERS_SWAP_AMOUNT_BELOW_MINIMUM` (see [Error codes](#error-codes)).
+
 For whole-unit sender currencies, a `CurrencyType::SENDER` payin quote amount must be a multiple of 100. Never build cent amounts by multiplying a float: round explicitly (`(int) round($dollars * 100)`).
 
 ## Enums
@@ -404,7 +410,7 @@ Some inputs take exactly one of two fields. The SDK does not validate this; the 
 - Amounts of `66600` (666.00) make a payout fail, and `77700` (777.00) make it refund.
 - Payins complete on their own after about 30 seconds.
 - Quotes expire after 5 minutes (OTC payin quotes after 10 seconds; SEPA quotes may expire sooner).
-- Development instances are rate limited to 40 requests per minute. A 429 is retried for you.
+- Development instances are rate limited per minute on every call. A 429 `AUTH_RATE_LIMITED` is retried for you, honouring `Retry-After`.
 - Settlement is simulated with the test token USDB.
 
 ## Resources

@@ -135,6 +135,11 @@ readonly class TransferTrackingBridgeSwap extends BaseTracking
 
 readonly class CreateTransferQuoteInput
 {
+    /**
+     * @param  int  $requestAmount  integer cents. A swap between different tokens needs at least 100 USDC
+     *                              (10000) on the USDC side, or the quote fails with
+     *                              \BlindPay\SDK\Types\ErrorCode::TRANSFERS_SWAP_AMOUNT_BELOW_MINIMUM
+     */
     public function __construct(
         public string $walletId,
         public StablecoinToken $senderToken,
@@ -390,6 +395,10 @@ class Transfers
 
     /**
      * Create a transfer quote
+     *
+     * A swap between different tokens needs at least 100 USDC, measured on the USDC side; a smaller
+     * one fails with code \BlindPay\SDK\Types\ErrorCode::TRANSFERS_SWAP_AMOUNT_BELOW_MINIMUM (400, message
+     * `fx_amount_below_minimum`).
      *
      * @return BlindPayApiResponse<CreateTransferQuoteResponse>
      */
