@@ -17,8 +17,10 @@ readonly class PartnerFee
         public string $instanceId,
         public string $name,
         public float $payoutPercentageFee,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $payoutFlatFee,
         public float $payinPercentageFee,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $payinFlatFee,
         /** @deprecated Not returned by the API (no evm_wallet_address on partner fees); always null. */
         public ?string $evmWalletAddress,
@@ -88,8 +90,10 @@ readonly class CreatePartnerFeeResponse
         public string $instanceId,
         public string $name,
         public float $payoutPercentageFee,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $payoutFlatFee,
         public float $payinPercentageFee,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $payinFlatFee,
         public ?string $evmWalletAddress = null,
         public ?string $stellarWalletAddress = null
@@ -119,8 +123,10 @@ readonly class GetPartnerFeeResponse
         /** @deprecated Not returned by the API (no evm_wallet_address on partner fees); always null. */
         public ?string $evmWalletAddress,
         public string $name,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $payinFlatFee,
         public float $payinPercentageFee,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $payoutFlatFee,
         public float $payoutPercentageFee,
         public ?string $stellarWalletAddress = null

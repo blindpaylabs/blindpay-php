@@ -158,6 +158,7 @@ Key rules:
 - Every response type must decode all variants of its shared spec fixture (`tests/Fixtures/spec`: `full`, `required_only`, `nullables_null`, `unknown_enum`, `decimals`), exercised by `tests/SpecFixtures/SpecFixtureDecodeTest.php`.
 - Nested objects: `NestedType::fromArray($data['key'])`; optional: `isset($data['key']) ? NestedType::fromArray($data['key']) : null`
 - Float fields: `(float) $data['key']`. Cent amounts stay integers (`(int)`); wallet balances are decimal whole tokens (`float`).
+  - Exception: response cent amounts that were `float` in 4.0 stay `float` until v5; each carries the unit docblock `/** Integer cents carried in a float (1000 = 10.00); ... */`. New cent fields are `int`. This is a deviation from the rule above, not from the spec (`number` maps to `float` either way), so it is recorded here rather than in `known-divergences.json`, whose entries would also switch off the type check for those fields.
 - DateTime fields: `new DateTimeImmutable($data['key'])`
 - Array of objects: `array_map(fn (array $item) => Type::fromArray($item), $data['key'])`
 - JSON keys are snake_case; PHP properties are camelCase. A few spec keys are not snake_case (`functionName`, `blindpayContractAddress`, `chainId`, `countrySlug`, `swiftCode`, `swiftCodeLink`, `requiredWhen`, `signedXdr`): keep them exactly.

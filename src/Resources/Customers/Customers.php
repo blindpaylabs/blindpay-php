@@ -326,8 +326,11 @@ readonly class AmlHits
 readonly class Limit
 {
     public function __construct(
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $perTransaction,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $daily,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $monthly
     ) {}
 

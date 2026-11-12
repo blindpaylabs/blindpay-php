@@ -79,6 +79,7 @@ readonly class Payout
         public ?float $partnerFeeAmount,
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
+        /** Sum of the fee fields (docs: payins.md), so integer cents carried in a float (1000 = 10.00); the spec example (1.5) reads like a decimal, an inconsistency reported to the API owners. */
         public ?float $totalFeeAmount,
         /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $customerLocalAmount,

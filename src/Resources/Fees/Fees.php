@@ -12,8 +12,10 @@ use BlindPay\SDK\Types\RequestOptions;
 readonly class FeeOptions
 {
     public function __construct(
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $payinFlat,
         public ?float $payinPercentage,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $payoutFlat,
         public ?float $payoutPercentage
     ) {}

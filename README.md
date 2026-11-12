@@ -375,9 +375,8 @@ Uploads authenticate against your instance ID and need a completed onboarding. T
 | Partner percentage fees | **basis points** (`100` is 1%) |
 | Partner flat fees | cents |
 | Wallet balances | **whole tokens**, decimal (`10.5` is 10.5 USDC) |
-| `total_fee_amount` on payouts and payins | a decimal token amount |
 
-Some response amounts (quote, transfer, payin and payout amounts and fees) are typed `float` for backwards compatibility but always hold integer cents; their docblocks say so, and they become `int` in the next major.
+Some response amounts (quote, transfer, payin and payout amounts and fees, `totalFeeAmount` included) are typed `float` for backwards compatibility but always hold integer cents; their docblocks say so, and they become `int` in the next major.
 
 A transfer that swaps between different tokens needs at least 100 USDC, measured on the USDC side; a smaller quote fails with `ErrorCode::TRANSFERS_SWAP_AMOUNT_BELOW_MINIMUM` (see [Error codes](#error-codes)).
 
