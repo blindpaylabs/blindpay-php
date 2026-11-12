@@ -1273,6 +1273,12 @@ readonly class GetCustomerLimitsResponse
 
 readonly class LimitIncreaseRequest
 {
+    /**
+     * @param  string|null  $reviewReason  why compliance rejected the request or approved lower limits
+     *                                     than requested, and what to send to get the full amount
+     *                                     (1-2000 characters). Set when the status is rejected or the
+     *                                     request was approved below the requested limits.
+     */
     public function __construct(
         public string $id,
         public string $customerId,
@@ -1288,6 +1294,7 @@ readonly class LimitIncreaseRequest
         public ?int $approvedDaily = null,
         public ?int $approvedMonthly = null,
         public ?array $supportingDocuments = null,
+        public ?string $reviewReason = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -1311,6 +1318,7 @@ readonly class LimitIncreaseRequest
             approvedDaily: isset($data['approved_daily']) ? (int) $data['approved_daily'] : null,
             approvedMonthly: isset($data['approved_monthly']) ? (int) $data['approved_monthly'] : null,
             supportingDocuments: $data['supporting_documents'] ?? null,
+            reviewReason: $data['review_reason'] ?? null,
         );
     }
 }

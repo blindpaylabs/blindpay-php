@@ -53,7 +53,7 @@ class BlindPay implements ApiClientInterface
     /** Retries after the first attempt (so 3 attempts in total); 0 disables retries. */
     public const DEFAULT_MAX_RETRIES = 2;
 
-    private const VERSION = '4.0.0';
+    private const VERSION = '4.1.0';
 
     private readonly Transport $transport;
 
