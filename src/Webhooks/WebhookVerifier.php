@@ -73,8 +73,10 @@ final class WebhookVerifier
      *
      * @param  array<string, string|string[]>  $headers
      *
-     * @throws WebhookException when the signature or timestamp does not verify, or the body is not
-     *                          a JSON object with a `webhook_event`
+     * @throws WebhookDecodeException when the delivery verified but its body is not a JSON object
+     *                                with a `webhook_event`, or its payload does not decode: the
+     *                                delivery is authentic, so log it and answer 2xx
+     * @throws WebhookException when the signature or timestamp does not verify (answer 400)
      */
     public static function constructEvent(string $payload, array $headers, #[\SensitiveParameter] string $secret, int $tolerance = self::DEFAULT_TOLERANCE, ?int $now = null): WebhookEvent
     {
@@ -84,7 +86,7 @@ final class WebhookVerifier
 
         $body = json_decode($payload, true);
         if (! is_array($body) || array_is_list($body)) {
-            throw new WebhookException('The webhook body is not a JSON object.');
+            throw new WebhookDecodeException('The webhook body is not a JSON object.');
         }
 
         return WebhookEvent::fromArray($body);

@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Tests\Webhooks;
 
 use BlindPay\SDK\BlindPay;
+use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutResponse;
+use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
+use BlindPay\SDK\Webhooks\WebhookDecodeException;
+use BlindPay\SDK\Webhooks\WebhookException;
 use BlindPay\SDK\Webhooks\WebhookVerifier;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -47,6 +51,32 @@ final class WebhookVerifierTest extends TestCase
         $valid = WebhookVerifier::verify($vector['payload'], $vector['headers'], $vector['secret'], now: $vector['now']);
 
         $this->assertSame($vector['expect'] === 'valid', $valid);
+    }
+
+    #[Test]
+    #[DataProvider('vectors')]
+    public function it_constructs_an_event_from_every_valid_vector_and_rejects_every_invalid_one(array $vector): void
+    {
+        try {
+            $event = WebhookVerifier::constructEvent($vector['payload'], $vector['headers'], $vector['secret'], now: $vector['now']);
+        } catch (WebhookException $e) {
+            $this->assertSame('invalid', $vector['expect'], "{$vector['name']}: {$e->getMessage()}");
+            $this->assertNotInstanceOf(WebhookDecodeException::class, $e, 'an invalid signature is not a decode failure');
+
+            return;
+        }
+
+        $this->assertSame('valid', $vector['expect'], $vector['name']);
+        $type = json_decode($vector['payload'], true)['webhook_event'];
+        if ($type === 'payout.complete') {
+            // The vectors carry a minimal payout body (no sender_wallet_address): it still decodes.
+            $this->assertSame(WebhookEvents::PAYOUT_COMPLETE, $event->type);
+            $this->assertInstanceOf(CreateEvmPayoutResponse::class, $event->data);
+            $this->assertNull($event->data->senderWalletAddress);
+        } else {
+            $this->assertSame($type, $event->type);
+            $this->assertNull($event->data);
+        }
     }
 
     private static function valid(): array

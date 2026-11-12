@@ -438,7 +438,8 @@ readonly class CreateEvmPayoutResponse
     public function __construct(
         public string $id,
         public TransactionStatus|string $status,
-        public string $senderWalletAddress,
+        /** The sending wallet's address. Null only when a payload omits it (the spec requires it). */
+        public ?string $senderWalletAddress,
         public ?string $customerId,
         public ?TrackingComplete $trackingComplete = null,
         public ?PayoutTrackingPayment $trackingPayment = null,
@@ -461,7 +462,7 @@ readonly class CreateEvmPayoutResponse
         return new self(
             id: $data['id'],
             status: Decode::enum(TransactionStatus::class, $data['status']),
-            senderWalletAddress: $data['sender_wallet_address'],
+            senderWalletAddress: $data['sender_wallet_address'] ?? null,
             customerId: $data['customer_id'] ?? null,
             trackingComplete: isset($data['tracking_complete']) ? TrackingComplete::fromArray($data['tracking_complete']) : null,
             trackingPayment: isset($data['tracking_payment']) ? PayoutTrackingPayment::fromArray($data['tracking_payment']) : null,

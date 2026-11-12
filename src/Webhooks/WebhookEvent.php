@@ -74,14 +74,14 @@ final readonly class WebhookEvent
      *
      * @param  array<string, mixed>  $body
      *
-     * @throws WebhookException when the body has no `webhook_event` or a known event's payload
-     *                          does not decode
+     * @throws WebhookDecodeException when the body has no `webhook_event` or a known event's
+     *                                payload does not decode
      */
     public static function fromArray(array $body): self
     {
         $name = $body['webhook_event'] ?? null;
         if (! is_string($name) || $name === '') {
-            throw new WebhookException('The webhook body has no webhook_event.');
+            throw new WebhookDecodeException('The webhook body has no webhook_event.', raw: $body);
         }
         $type = WebhookEvents::tryFrom($name);
         if ($type === null) {
@@ -91,7 +91,7 @@ final readonly class WebhookEvent
         try {
             $data = ErrorGuard::run(fn () => self::decode($type, $body));
         } catch (\Throwable $e) {
-            throw new WebhookException("The {$name} payload could not be decoded: {$e->getMessage()}", previous: $e instanceof \Exception ? $e : null);
+            throw new WebhookDecodeException("The {$name} payload could not be decoded: {$e->getMessage()}", $name, $body, $e instanceof \Exception ? $e : null);
         }
 
         return new self($type, $data, $body);

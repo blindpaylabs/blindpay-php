@@ -18,6 +18,7 @@ use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutResponse;
 use BlindPay\SDK\Resources\Webhooks\CreateWebhookEndpointInput;
 use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
 use BlindPay\SDK\Types\TransactionStatus;
+use BlindPay\SDK\Webhooks\WebhookDecodeException;
 use BlindPay\SDK\Webhooks\WebhookException;
 use BlindPay\SDK\Webhooks\WebhookVerifier;
 
@@ -59,8 +60,14 @@ function handleWebhookRequest(string $rawBody, array $headers, string $secret, c
     // Verifies the signature and the timestamp (5 minute tolerance), then decodes the payload.
     try {
         $event = WebhookVerifier::constructEvent($rawBody, $headers, $secret);
+    } catch (WebhookDecodeException $e) {
+        // Authentic (the signature verified) but not decodable by this SDK version. A non-2xx makes
+        // BlindPay retry for hours: log it, acknowledge, and replay it from the dashboard once fixed.
+        error_log("undecodable webhook {$e->eventType}: {$e->getMessage()}");
+
+        return 200;
     } catch (WebhookException) {
-        return 400;
+        return 400; // bad signature or stale timestamp
     }
 
     // BlindPay may deliver the same event more than once: dedupe on the svix-id header.
