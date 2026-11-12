@@ -10,3 +10,4 @@
 /phpstan.neon.dist export-ignore
 /CLAUDE.md export-ignore
 /examples export-ignore
+/RELEASING.md export-ignore

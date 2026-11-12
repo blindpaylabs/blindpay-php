@@ -14,6 +14,7 @@ blindpay-php/
   phpstan.neon.dist          # PHPStan level 7 over src/ and examples/ (phpVersion 80200)
   README.md                  # User docs: configuration, results, idempotency, retries, pagination, webhooks
   UPGRADING.md               # 3.x -> 4.0 migration guide (every breaking change, before/after)
+  RELEASING.md               # Release runbook: VERSION, release.yaml, secrets, stuck runs, verifying Packagist
   examples/                  # Runnable scripts (functions only, nothing runs on load); not in the Composer archive
   scripts/
     api-sync.php             # Patches the SDK from the OpenAPI spec (api-sync workflow)
@@ -637,6 +638,8 @@ private const VERSION = '4.1.0';
 Keep the exact form `private const VERSION = 'X.Y.Z';`: `scripts/api-sync.php` rewrites it with a regular expression when it bumps the version, and `.github/workflows/release.yaml` reads it on every push to `main` to decide whether to tag a release (it tags only when `vX.Y.Z` does not exist yet).
 
 ### Release process
+
+The full runbook (secrets, stuck runs, verifying Packagist) is [RELEASING.md](RELEASING.md).
 
 1. Bump `VERSION` in `src/BlindPay.php` in the PR itself, following the SemVer table below. api-sync PRs bump it automatically.
 2. Merge to `main`. `.github/workflows/release.yaml` then reads `VERSION`. If tag `vX.Y.Z` doesn't exist yet, it validates, runs the tests and contract check, pushes the tag and creates the GitHub release. Never tag by hand.

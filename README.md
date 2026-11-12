@@ -450,6 +450,10 @@ Responses are the readonly classes next to each resource (`BlindPay\SDK\Resource
 - [BlindPay API documentation](https://blindpay.com/docs/getting-started/overview)
 - [API reference](https://api.blindpay.com/reference)
 
+## Releasing
+
+Maintainers: [RELEASING.md](RELEASING.md) covers the version source, what a merge to `main` triggers, how to re-run a stuck release and how to verify the published package.
+
 ## Support
 
 - Email: [support@blindpay.com](mailto:support@blindpay.com)
