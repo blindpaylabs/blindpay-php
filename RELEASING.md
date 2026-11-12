@@ -14,15 +14,15 @@ Nothing gates the merge: `main` has no branch protection and `api-sync.yml` auto
 
 ## Secrets and owners
 
-| What | Used by | Owner |
+| What | Used by | Where it lives |
 |---|---|---|
-| `GITHUB_TOKEN` (`contents: write`) | `release.yaml` tag + GitHub release | GitHub, per run |
-| `SDK_SYNC_PAT` | `api-sync.yml` push + auto-merge, `api-sync-merged.yml` | BlindPay org admins |
-| `SNYK_TOKEN` | `snyk.yaml` | BlindPay org admins |
-| `SLACK_WEBHOOK_URL` | `pipeline-alert.yml` | BlindPay org admins |
-| Packagist webhook + package maintainers | publishing | `blindpay` on packagist.org, repo admins on GitHub |
+| `GITHUB_TOKEN` (`contents: write`) | `release.yaml` tag + GitHub release | issued by GitHub per run |
+| `SDK_SYNC_PAT` | `api-sync.yml` push + auto-merge, `api-sync-merged.yml` | GitHub Actions secret |
+| `SNYK_TOKEN` | `snyk.yaml` | GitHub Actions secret |
+| `SLACK_WEBHOOK_URL` | `pipeline-alert.yml` | GitHub Actions secret |
+| Packagist GitHub webhook | publishing | repo Settings > Webhooks (`https://packagist.org/api/github`); the `blindpay/php` package maintainers on packagist.org |
 
-No OIDC is involved: Packagist publishes from tags.
+Who administers the secrets, the webhook and the Packagist package is not recorded here; ask the repository admins. No OIDC is involved: Packagist publishes from tags.
 
 ## Re-running a stuck release
 
