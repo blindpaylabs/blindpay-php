@@ -27,7 +27,9 @@ final class AutoPager
      * @param  callable(array<string, mixed>): BlindPayApiResponse<ListResponse<T>>  $fetchPage
      * @return Generator<int, T>
      *
-     * @throws BlindPayException when ending_before is set (backward paging is not supported)
+     * @throws BlindPayException when ending_before is set (backward paging is not supported), or
+     *                           when the API returns the same next_page cursor twice in a row
+     *                           (error code PAGINATION_CURSOR_REPEATED)
      * @throws BlindPayApiException when a page request fails
      */
     public static function iterate(array $query, callable $fetchPage): Generator
@@ -48,8 +50,13 @@ final class AutoPager
                 yield $item;
             }
             $next = $page->pagination?->nextPage;
-            if (! $page->hasMore() || $next === null || $next === ($query['starting_after'] ?? null)) {
+            if (! $page->hasMore() || $next === null) {
                 return;
+            }
+            if ($next === ($query['starting_after'] ?? null)) {
+                // The API answered the cursor it was sent: following it would loop forever, and
+                // stopping quietly would hide the rows after it.
+                throw BlindPayException::api("listAutoPaging() stopped: the API returned the cursor {$next} twice in a row, so the next page would repeat this one.", 'PAGINATION_CURSOR_REPEATED');
             }
             $query['starting_after'] = $next;
         }

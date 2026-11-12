@@ -130,6 +130,28 @@ final class AutoPagerTest extends TestCase
     }
 
     #[Test]
+    public function it_throws_instead_of_looping_when_the_api_repeats_a_cursor(): void
+    {
+        $blindpay = $this->client();
+        // Page 2 answers has_more with next_page po_2 again: the cursor it was just sent.
+        $this->mock->append($this->page(['po_1', 'po_2'], true), $this->page(['po_2'], true), $this->page(['po_3'], false));
+
+        $seen = [];
+
+        try {
+            foreach ($blindpay->payouts->listAutoPaging() as $payout) {
+                $seen[] = $payout->id;
+            }
+            $this->fail('expected BlindPayException');
+        } catch (\BlindPay\SDK\BlindPayException $e) {
+            $this->assertSame('PAGINATION_CURSOR_REPEATED', $e->getErrorCode());
+            $this->assertStringContainsString('po_2', $e->getMessage());
+        }
+        $this->assertSame(['po_1', 'po_2', 'po_2'], $seen, 'the rows already received are yielded first');
+        $this->assertCount(2, $this->history, 'no third request');
+    }
+
+    #[Test]
     public function it_rejects_ending_before(): void
     {
         $this->expectException(BlindPayException::class);
