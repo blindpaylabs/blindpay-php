@@ -722,7 +722,7 @@ function spliceListElement(array &$lines, array $anchor, string $content, string
 function scanAllClasses(string $root): array
 {
     $out = [];
-    foreach (['src/Resources', 'src/Types'] as $dir) {
+    foreach (['src/Resources', 'src/Types', 'src/Webhooks'] as $dir) {
         foreach (phpFilesUnder("{$root}/{$dir}") as $file) {
             $classes = scanClassesDetailed($file);
             foreach ($classes as $name => $info) {

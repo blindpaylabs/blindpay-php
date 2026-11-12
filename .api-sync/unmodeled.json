@@ -808,6 +808,375 @@
       "field": "webhook_event",
       "reason": "The event discriminator; WebhookEvent::\\$type carries it, not the payload class.",
       "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "BankAccountWebhookOut",
+      "path": "offramp_wallets[]",
+      "field": "*",
+      "reason": "Same omission as BankAccountOut.offramp_wallets[], on the webhook payload (decoded by the same SDK class): BankAccountListItem stores offramp_wallets as a raw ?array passthrough (not decoded into OfframpWallet objects); callers who need typed offramp wallets use OfframpWallets::list() instead.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "path": "aml_hits",
+      "field": "*",
+      "reason": "Same omission as CustomerOut.aml_hits, on the webhook payload (decoded by the same SDK class): AML screening hit details; not modeled on the customer response.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "path": "fraud_warnings[]",
+      "field": "*",
+      "reason": "Same omission as CustomerOut.fraud_warnings[], on the webhook payload (decoded by the same SDK class): Fraud warning sub-objects; not modeled as a typed class list.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "path": "kyc_warnings[]",
+      "field": "*",
+      "reason": "Same omission as CustomerOut.kyc_warnings[], on the webhook payload (decoded by the same SDK class): KYC warning sub-objects; CustomerOut's kyc_warnings property is not modeled as a typed class list.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "path": "limit",
+      "field": "*",
+      "reason": "Same omission as CustomerOut.limit, on the webhook payload (decoded by the same SDK class): Per-customer transaction limit sub-object; not modeled, distinct from GetCustomerLimitsOut which also lacks its own nested modeling (see below).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "path": "owners[]",
+      "field": "*",
+      "reason": "Same omission as CustomerOut.owners[], on the webhook payload (decoded by the same SDK class): Beneficial-owner sub-objects echoed back on the customer response; not modeled, same gap as the create/update input side.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerUpdateWebhookOut",
+      "path": "aml_hits",
+      "field": "*",
+      "reason": "Same omission as CustomerOut.aml_hits, on the webhook payload (decoded by the same SDK class): AML screening hit details; not modeled on the customer response.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerUpdateWebhookOut",
+      "path": "fraud_warnings[]",
+      "field": "*",
+      "reason": "Same omission as CustomerOut.fraud_warnings[], on the webhook payload (decoded by the same SDK class): Fraud warning sub-objects; not modeled as a typed class list.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerUpdateWebhookOut",
+      "path": "kyc_warnings[]",
+      "field": "*",
+      "reason": "Same omission as CustomerOut.kyc_warnings[], on the webhook payload (decoded by the same SDK class): KYC warning sub-objects; CustomerOut's kyc_warnings property is not modeled as a typed class list.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerUpdateWebhookOut",
+      "path": "limit",
+      "field": "*",
+      "reason": "Same omission as CustomerOut.limit, on the webhook payload (decoded by the same SDK class): Per-customer transaction limit sub-object; not modeled, distinct from GetCustomerLimitsOut which also lacks its own nested modeling (see below).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerUpdateWebhookOut",
+      "path": "owners[]",
+      "field": "*",
+      "reason": "Same omission as CustomerOut.owners[], on the webhook payload (decoded by the same SDK class): Beneficial-owner sub-objects echoed back on the customer response; not modeled, same gap as the create/update input side.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinCompleteWebhookOut",
+      "path": "blindpay_bank_details.swift_receiving_bank",
+      "field": "*",
+      "reason": "Same omission as PayinOut.blindpay_bank_details.swift_receiving_bank, on the webhook payload (decoded by the same SDK class): International SWIFT receiving-bank sub-object; BankDetails models ach/wire/rtp/beneficiary/receiving_bank but not the SWIFT-specific receiving bank.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinCompleteWebhookOut",
+      "path": "tracking_transaction.card_evidence",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.card_evidence, on the webhook payload (decoded by the same SDK class): Card payment evidence, kept as the raw array on the tracking transaction.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinCompleteWebhookOut",
+      "path": "tracking_transaction.card_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.card_instruction, on the webhook payload (decoded by the same SDK class): Card payment instructions, kept as the raw array (CreatePayinQuoteResponse::$cardInstruction).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinCompleteWebhookOut",
+      "path": "tracking_transaction.pse_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.pse_instruction, on the webhook payload (decoded by the same SDK class): PSE-specific instruction sub-object under tracking_transaction; TrackingTransaction models only the common step/status/transaction_hash/completed_at fields, not the rail-specific instruction payloads.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinCompleteWebhookOut",
+      "path": "tracking_transaction.ted_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.ted_instruction, on the webhook payload (decoded by the same SDK class): TED-specific (Brazil) instruction sub-object under tracking_transaction; same gap as pse_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinCompleteWebhookOut",
+      "path": "tracking_transaction.transfers_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.transfers_instruction, on the webhook payload (decoded by the same SDK class): Transfers-rail (Argentina CVU/CBU/ALIAS) instruction sub-object under tracking_transaction; same gap as pse_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinNewWebhookOut",
+      "path": "blindpay_bank_details.swift_receiving_bank",
+      "field": "*",
+      "reason": "Same omission as PayinOut.blindpay_bank_details.swift_receiving_bank, on the webhook payload (decoded by the same SDK class): International SWIFT receiving-bank sub-object; BankDetails models ach/wire/rtp/beneficiary/receiving_bank but not the SWIFT-specific receiving bank.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinNewWebhookOut",
+      "path": "tracking_transaction.card_evidence",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.card_evidence, on the webhook payload (decoded by the same SDK class): Card payment evidence, kept as the raw array on the tracking transaction.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinNewWebhookOut",
+      "path": "tracking_transaction.card_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.card_instruction, on the webhook payload (decoded by the same SDK class): Card payment instructions, kept as the raw array (CreatePayinQuoteResponse::$cardInstruction).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinNewWebhookOut",
+      "path": "tracking_transaction.pse_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.pse_instruction, on the webhook payload (decoded by the same SDK class): PSE-specific instruction sub-object under tracking_transaction; TrackingTransaction models only the common step/status/transaction_hash/completed_at fields, not the rail-specific instruction payloads.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinNewWebhookOut",
+      "path": "tracking_transaction.ted_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.ted_instruction, on the webhook payload (decoded by the same SDK class): TED-specific (Brazil) instruction sub-object under tracking_transaction; same gap as pse_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinNewWebhookOut",
+      "path": "tracking_transaction.transfers_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.transfers_instruction, on the webhook payload (decoded by the same SDK class): Transfers-rail (Argentina CVU/CBU/ALIAS) instruction sub-object under tracking_transaction; same gap as pse_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinPartnerFeeWebhookOut",
+      "path": "blindpay_bank_details.swift_receiving_bank",
+      "field": "*",
+      "reason": "Same omission as PayinOut.blindpay_bank_details.swift_receiving_bank, on the webhook payload (decoded by the same SDK class): International SWIFT receiving-bank sub-object; BankDetails models ach/wire/rtp/beneficiary/receiving_bank but not the SWIFT-specific receiving bank.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinPartnerFeeWebhookOut",
+      "path": "tracking_transaction.card_evidence",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.card_evidence, on the webhook payload (decoded by the same SDK class): Card payment evidence, kept as the raw array on the tracking transaction.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinPartnerFeeWebhookOut",
+      "path": "tracking_transaction.card_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.card_instruction, on the webhook payload (decoded by the same SDK class): Card payment instructions, kept as the raw array (CreatePayinQuoteResponse::$cardInstruction).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinPartnerFeeWebhookOut",
+      "path": "tracking_transaction.pse_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.pse_instruction, on the webhook payload (decoded by the same SDK class): PSE-specific instruction sub-object under tracking_transaction; TrackingTransaction models only the common step/status/transaction_hash/completed_at fields, not the rail-specific instruction payloads.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinPartnerFeeWebhookOut",
+      "path": "tracking_transaction.ted_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.ted_instruction, on the webhook payload (decoded by the same SDK class): TED-specific (Brazil) instruction sub-object under tracking_transaction; same gap as pse_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinPartnerFeeWebhookOut",
+      "path": "tracking_transaction.transfers_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.transfers_instruction, on the webhook payload (decoded by the same SDK class): Transfers-rail (Argentina CVU/CBU/ALIAS) instruction sub-object under tracking_transaction; same gap as pse_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinUpdateWebhookOut",
+      "path": "blindpay_bank_details.swift_receiving_bank",
+      "field": "*",
+      "reason": "Same omission as PayinOut.blindpay_bank_details.swift_receiving_bank, on the webhook payload (decoded by the same SDK class): International SWIFT receiving-bank sub-object; BankDetails models ach/wire/rtp/beneficiary/receiving_bank but not the SWIFT-specific receiving bank.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinUpdateWebhookOut",
+      "path": "tracking_transaction.card_evidence",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.card_evidence, on the webhook payload (decoded by the same SDK class): Card payment evidence, kept as the raw array on the tracking transaction.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinUpdateWebhookOut",
+      "path": "tracking_transaction.card_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.card_instruction, on the webhook payload (decoded by the same SDK class): Card payment instructions, kept as the raw array (CreatePayinQuoteResponse::$cardInstruction).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinUpdateWebhookOut",
+      "path": "tracking_transaction.pse_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.pse_instruction, on the webhook payload (decoded by the same SDK class): PSE-specific instruction sub-object under tracking_transaction; TrackingTransaction models only the common step/status/transaction_hash/completed_at fields, not the rail-specific instruction payloads.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinUpdateWebhookOut",
+      "path": "tracking_transaction.ted_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.ted_instruction, on the webhook payload (decoded by the same SDK class): TED-specific (Brazil) instruction sub-object under tracking_transaction; same gap as pse_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayinUpdateWebhookOut",
+      "path": "tracking_transaction.transfers_instruction",
+      "field": "*",
+      "reason": "Same omission as PayinOut.tracking_transaction.transfers_instruction, on the webhook payload (decoded by the same SDK class): Transfers-rail (Argentina CVU/CBU/ALIAS) instruction sub-object under tracking_transaction; same gap as pse_instruction.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutCompleteWebhookOut",
+      "path": "tracking_documents",
+      "field": "*",
+      "reason": "Same omission as PayoutOut.tracking_documents, on the webhook payload (decoded by the same SDK class): SWIFT payout document-request tracking sub-object; no TrackingDocuments class exists (same field already recorded above as a scalar-shaped unmodeled field on PayoutOut).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutNewWebhookOut",
+      "path": "tracking_documents",
+      "field": "*",
+      "reason": "Same omission as PayoutOut.tracking_documents, on the webhook payload (decoded by the same SDK class): SWIFT payout document-request tracking sub-object; no TrackingDocuments class exists (same field already recorded above as a scalar-shaped unmodeled field on PayoutOut).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutPartnerFeeWebhookOut",
+      "path": "tracking_documents",
+      "field": "*",
+      "reason": "Same omission as PayoutOut.tracking_documents, on the webhook payload (decoded by the same SDK class): SWIFT payout document-request tracking sub-object; no TrackingDocuments class exists (same field already recorded above as a scalar-shaped unmodeled field on PayoutOut).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "PayoutUpdateWebhookOut",
+      "path": "tracking_documents",
+      "field": "*",
+      "reason": "Same omission as PayoutOut.tracking_documents, on the webhook payload (decoded by the same SDK class): SWIFT payout document-request tracking sub-object; no TrackingDocuments class exists (same field already recorded above as a scalar-shaped unmodeled field on PayoutOut).",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "BankAccountWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "BlockchainWalletWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CustomerDeleteWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "field": "additional_info",
+      "reason": "Same omission as CustomerOut.additional_info, on the customer.* webhook payload (decoded by the same classes): Free-form key/value compliance metadata; not modeled on BaseCustomer or any of its 3 subclasses.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "field": "cnae_condition",
+      "reason": "Same omission as CustomerOut.cnae_condition, on the customer.* webhook payload (decoded by the same classes): Compliance metadata on the customer, not modeled on the customer classes yet (CustomerCnaeCondition / CustomerVirtualAccountPreapproval are object shapes).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "field": "customer_id",
+      "reason": "Same omission as CustomerOut.customer_id, on the customer.* webhook payload (decoded by the same classes): Response envelope carries both `id` (modeled) and a duplicate `customer_id`; not modeled on BaseCustomer.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "field": "is_nested",
+      "reason": "Same omission as CustomerOut.is_nested, on the customer.* webhook payload (decoded by the same classes): Compliance metadata on the customer, not modeled on the customer classes yet (CustomerCnaeCondition / CustomerVirtualAccountPreapproval are object shapes).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "field": "latitude",
+      "reason": "Same omission as CustomerOut.latitude, on the customer.* webhook payload (decoded by the same classes): Geolocation captured at KYC submission time; not modeled on BaseCustomer or any of its 3 subclasses.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "field": "longitude",
+      "reason": "Same omission as CustomerOut.longitude, on the customer.* webhook payload (decoded by the same classes): Geolocation captured at KYC submission time; not modeled on BaseCustomer or any of its 3 subclasses.",
+      "owner": "eric@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "field": "virtual_account_preapproval",
+      "reason": "Same omission as CustomerOut.virtual_account_preapproval, on the customer.* webhook payload (decoded by the same classes): Compliance metadata on the customer, not modeled on the customer classes yet (CustomerCnaeCondition / CustomerVirtualAccountPreapproval are object shapes).",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "CustomerNewWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "LimitIncreaseNewWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayinNewWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "PayoutNewWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "TosAcceptWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
+    },
+    {
+      "schema": "WalletInboundWebhookOut",
+      "field": "webhook_event",
+      "reason": "The event discriminator; WebhookEvent::$type carries it, not the payload class.",
+      "owner": "support@blindpay.com"
     }
   ]
 }
