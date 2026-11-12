@@ -87,6 +87,9 @@ final class WebhookEventTest extends TestCase
         $decode = fn (string $event) => WebhookEvent::fromArray(json_decode((string) file_get_contents(__DIR__."/../Fixtures/spec/webhooks/{$event}.json"), true)['variants']['full']);
 
         $this->assertInstanceOf(CreateEvmPayoutResponse::class, $decode('payout.complete')->data);
+        $this->assertInstanceOf(CreateEvmPayoutResponse::class, $decode('payout.complete')->dataAs(CreateEvmPayoutResponse::class));
+        $this->assertNull($decode('payin.complete')->dataAs(CreateEvmPayoutResponse::class));
+        $this->assertNull(WebhookEvent::fromArray(['webhook_event' => 'future.event'])->dataAs(CreateEvmPayoutResponse::class));
         $this->assertContains($decode('customer.new')->data::class, [IndividualWithStandardKYC::class, IndividualWithEnhancedKYC::class, BusinessWithStandardKYB::class]);
     }
 
