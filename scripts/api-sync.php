@@ -2844,6 +2844,34 @@ function bumpVersion(string $root, string $bump): string
 // Determinism helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Refresh the snapshot from the source spec. A pretty-printed source is copied byte for byte (never
+ * re-serialized, which would reformat escaping and key order). A minified source (one line) is
+ * pretty-printed with 2-space indentation like the committed snapshot, so a refresh stays a small,
+ * reviewable diff instead of turning a 73k-line file into one line.
+ */
+function writeSnapshot(string $specPath, string $snapshotPath): void
+{
+    if (realpath($specPath) === realpath($snapshotPath)) {
+        return;
+    }
+    $raw = (string) file_get_contents($specPath);
+    file_put_contents($snapshotPath, str_contains(rtrim($raw), "\n") ? $raw : prettySpecJson($raw));
+}
+
+/** 2-space pretty JSON that keeps `{}` vs `[]`, slashes, Unicode and float zero fractions as given. */
+function prettySpecJson(string $raw): string
+{
+    $json = json_encode(
+        json_decode($raw, false, 4096, JSON_THROW_ON_ERROR),
+        JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR,
+        4096
+    );
+
+    // json_encode indents with 4 spaces; strings never span lines, so every leading run is indentation.
+    return preg_replace_callback('/^(?: {4})+/m', static fn (array $m): string => str_repeat('  ', intdiv(strlen($m[0]), 4)), $json)."\n";
+}
+
 function encodeJsonDeterministic(array $data): string
 {
     return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n";
@@ -3045,10 +3073,7 @@ function runCli(array $argv, string $root): void
         $report['bump'] = ['type' => $bump, 'version' => $newVersion];
     }
 
-    // Refresh the snapshot with the SOURCE SPEC FILE'S BYTES, verbatim -- never re-serialize via
-    // json_decode/json_encode, which would silently reformat indentation, escaping and key order
-    // and turn every future sync PR into an ~86k-line unreviewable snapshot diff.
-    copy($specPath, resolveWithinRoot($root, '.api-sync/spec-snapshot.json', 'spec snapshot'));
+    writeSnapshot($specPath, resolveWithinRoot($root, '.api-sync/spec-snapshot.json', 'spec snapshot'));
 
     $report['applied'] = $applicable;
     if ($reportPath !== null) {
