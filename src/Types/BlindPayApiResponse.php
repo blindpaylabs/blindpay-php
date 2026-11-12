@@ -93,11 +93,37 @@ readonly class BlindPayApiResponse
         return new self($data, null, $this->requestId, $this->idempotencyReplayed, $this->status, $this->idempotencyKey, $this->headers);
     }
 
+    /**
+     * True when the call succeeded: `error` is null and `data` holds the decoded value (static
+     * analysers narrow both after this check).
+     *
+     * @phpstan-assert-if-true null $this->error
+     * @phpstan-assert-if-true =T $this->data
+     *
+     * @phpstan-assert-if-false !null $this->error
+     *
+     * @psalm-assert-if-true null $this->error
+     *
+     * @psalm-assert-if-false !null $this->error
+     */
     public function isSuccess(): bool
     {
         return $this->error === null;
     }
 
+    /**
+     * True when the call failed: `error` is set. After `if ($r->isError()) { return; }`, static
+     * analysers know `error` is null and `data` holds the decoded value.
+     *
+     * @phpstan-assert-if-true !null $this->error
+     *
+     * @phpstan-assert-if-false null $this->error
+     * @phpstan-assert-if-false =T $this->data
+     *
+     * @psalm-assert-if-true !null $this->error
+     *
+     * @psalm-assert-if-false null $this->error
+     */
     public function isError(): bool
     {
         return $this->error !== null;
