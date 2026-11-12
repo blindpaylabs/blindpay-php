@@ -640,7 +640,7 @@ Other guard tests: `RequestOptionsGuardTest` (every resource method takes a trai
 `src/BlindPay.php` has a `private const VERSION` that is sent in the `User-Agent` header (`blindpay-php/{VERSION}`):
 
 ```php
-private const VERSION = '4.1.0';
+private const VERSION = '4.2.0';
 ```
 
 Keep the exact form `private const VERSION = 'X.Y.Z';`: `scripts/api-sync.php` rewrites it with a regular expression when it bumps the version, and `.github/workflows/release.yaml` reads it on every push to `main` to decide whether to tag a release (it tags only when `vX.Y.Z` does not exist yet).

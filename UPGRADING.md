@@ -1,3 +1,13 @@
+# Upgrading from 4.1 to 4.2
+
+4.2 adds `WebhookEvent::dataAs()`, `WebhookDecodeException` and type narrowing for static analysers. Three behaviours change; none of them needs a code change unless you rely on the old behaviour:
+
+- **`CreateEvmPayoutResponse::$senderWalletAddress` is `?string`** (was `string`). The spec requires the field and the API always sends it, so it is set on every real response and webhook; it is null only when a payload omits it. Before, such a payload failed to decode (`constructEvent()` threw). Code that passes it to a `string` parameter now gets a PHPStan warning: add `?? ''` or a null check.
+- **An authentic webhook that cannot be decoded throws `WebhookDecodeException`**, a subclass of `WebhookException`, so existing `catch (WebhookException)` blocks still catch it. Catch it first to answer 2xx instead of 400 (see the README's Webhooks section). `WebhookException` is no longer `final`.
+- **`listAutoPaging()` throws `BlindPayException` (`PAGINATION_CURSOR_REPEATED`) when the API repeats a cursor**, after yielding the rows it received. 4.1 stopped silently there, which hid the rows after it.
+
+Since 4.1, transport error messages no longer include query strings: branch on `$error->code` / `ErrorCode`, not on message text.
+
 # Upgrading from 3.x to 4.0
 
 4.0 makes the SDK match the BlindPay API contract: every response decodes (including values the SDK does not know yet), every method accepts per-request options, and the client retries and sends idempotency keys. Most application code keeps working with small edits. This guide lists every change that can break existing code, with a before and after for each, then the additions you may want to adopt.
