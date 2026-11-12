@@ -13,12 +13,13 @@ blindpay-php/
   phpunit.xml.dist           # PHPUnit config
   phpstan.neon.dist          # PHPStan level 7 over src/ and examples/ (phpVersion 80200)
   README.md                  # User docs: configuration, results, idempotency, retries, pagination, webhooks
-  UPGRADING.md               # 3.x -> 4.0 migration guide (every breaking change, before/after)
+  UPGRADING.md               # 4.1 -> 4.2 behaviour changes, then the 3.x -> 4.0 migration guide (every breaking change, before/after)
   RELEASING.md               # Release runbook: VERSION, release.yaml, secrets, stuck runs, verifying Packagist
   examples/                  # Runnable scripts (functions only, nothing runs on load); not in the Composer archive
   scripts/
     api-sync.php             # Patches the SDK from the OpenAPI spec (api-sync workflow)
     contract-check.php       # Checks the wire keys the SDK reads/writes against the spec snapshot
+    readme-snippets.php      # Wraps every README ```php block in the function its <!-- snippet: --> header names (composer run readme:check)
   .api-sync/                 # api-sync state, see section 10
   src/
     BlindPay.php             # Main client. Implements ApiClientInterface, builds Transport and every resource in its constructor.
@@ -39,7 +40,7 @@ blindpay-php/
       WebhookVerifier.php    # Standalone Svix verifier: verify() and constructEvent() (no API client needed)
       WebhookEvent.php       # Typed event {type, data, raw}; unknown events keep the raw name and null data
       WebhookPayloads.php    # Payload types with no resource class (CustomerDeletedPayload, TosAcceptedPayload, WalletInboundPayload)
-      WebhookException.php
+      WebhookException.php   # bad signature/timestamp; WebhookDecodeException.php: authentic but undecodable (answer 2xx)
     Resources/               # Each subdirectory = one API resource domain
       Available/Available.php
       BankAccounts/BankAccounts.php
@@ -534,6 +535,7 @@ composer run lint:fix         # Auto-fix code style
 composer run analyse          # PHPStan level 7 over src/ and examples/
 composer run contract-check   # SDK wire keys vs the spec snapshot
 composer run api-sync:check   # SDK vs the spec snapshot (what the api-sync workflow checks)
+composer run readme:check     # PHPStan level 8 over every README code block
 composer dump-autoload        # After adding or removing any src/ file
 ```
 
@@ -543,7 +545,7 @@ Without a local PHP, wrap any of them:
 docker run --rm -v "$PWD":/app -w /app composer:2 composer run test
 ```
 
-CI (`tests.yaml`) runs `composer validate --strict`, Pest and PHPStan on PHP 8.2, 8.4 and 8.5. `composer.lock` must install on all three: run `composer update` under PHP 8.2, the floor, never under a newer PHP (the `composer:2` image ships the newest PHP). A lock that pinned `brianium/paratest` 7.8.4 (`~8.2 || ~8.3 || ~8.4`) could not install on 8.5.
+CI (`tests.yaml`) runs `composer validate --strict`, Pest, PHPStan and `composer run readme:check` on PHP 8.2, 8.4 and 8.5. Every ```php block in README.md needs a `<!-- snippet: name(params): return -->` header on the line above it (extra header lines are setup code, a `return ...` line goes after the block); `readme:check` wraps each block in that function and runs PHPStan level 8 on the result, so README code cannot drift from the SDK's types. `composer.lock` must install on all three: run `composer update` under PHP 8.2, the floor, never under a newer PHP (the `composer:2` image ships the newest PHP). A lock that pinned `brianium/paratest` 7.8.4 (`~8.2 || ~8.3 || ~8.4`) could not install on 8.5.
 
 ### Autoloading: run `composer dump-autoload` after adding a file under `src/`
 
