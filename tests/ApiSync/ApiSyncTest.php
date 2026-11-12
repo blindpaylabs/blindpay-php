@@ -1372,9 +1372,17 @@ class ApiSyncTest extends TestCase
     }
 
     #[Test]
-    public function it_field_only_addition_bumps_patch(): void
+    public function it_field_only_addition_bumps_minor(): void
     {
-        $this->assertSame('patch', computeBump([['kind' => 'field-added']]));
+        // A new optional field is new public surface: MINOR, per CLAUDE.md section 9.
+        $this->assertSame('minor', computeBump([['kind' => 'field-added']]));
+    }
+
+    #[Test]
+    public function it_error_code_changes_bump_minor_when_codes_are_added_and_patch_otherwise(): void
+    {
+        $this->assertSame('minor', computeBump([['kind' => 'error-codes-added']]));
+        $this->assertSame('patch', computeBump([['kind' => 'error-codes-changed']]));
     }
 
     #[Test]
@@ -1672,6 +1680,49 @@ class ApiSyncTest extends TestCase
             file_get_contents("{$this->fixtureRoot}/.api-sync/spec-snapshot.json"),
             'refreshed snapshot must be a byte-identical copy of the source spec file, not a re-serialization'
         );
+    }
+
+    #[Test]
+    public function it_apply_pretty_prints_a_minified_source_spec_with_two_space_indentation(): void
+    {
+        mkdir("{$this->fixtureRoot}/.api-sync", 0777, true);
+        mkdir("{$this->fixtureRoot}/scripts", 0777, true);
+        copy(__DIR__.'/../../scripts/api-sync.php', "{$this->fixtureRoot}/scripts/api-sync.php");
+        file_put_contents("{$this->fixtureRoot}/src/BlindPay.php", "<?php\n\nnamespace BlindPay\\SDK;\n\nclass BlindPay\n{\n    private const VERSION = '1.0.0';\n}\n");
+        file_put_contents("{$this->fixtureRoot}/.api-sync/spec-map.json", json_encode($this->widgetMap()));
+        file_put_contents("{$this->fixtureRoot}/.api-sync/unmodeled.json", json_encode(['entries' => []]));
+        file_put_contents("{$this->fixtureRoot}/.api-sync/known-divergences.json", json_encode(['enumValues' => [], 'fields' => []]));
+        file_put_contents("{$this->fixtureRoot}/.api-sync/spec-snapshot.json", json_encode($this->baseSpec(), JSON_PRETTY_PRINT));
+
+        $newSpec = $this->baseSpec();
+        $newSpec['components']['schemas']['WidgetOut']['properties']['description'] = ['type' => ['string', 'null'], 'example' => 'https://example.com/a', 'default' => 1.0];
+        $newSpec['x-empty-object'] = new \stdClass;
+        $sourceSpecPath = "{$this->fixtureRoot}/.api-sync/spec-current.json";
+        file_put_contents($sourceSpecPath, json_encode($newSpec, JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION));
+
+        exec(sprintf('php %s --apply --spec=%s 2>&1', escapeshellarg("{$this->fixtureRoot}/scripts/api-sync.php"), escapeshellarg($sourceSpecPath)), $output, $exitCode);
+
+        $this->assertSame(0, $exitCode, 'apply failed: '.implode("\n", $output));
+        $snapshot = (string) file_get_contents("{$this->fixtureRoot}/.api-sync/spec-snapshot.json");
+        $this->assertStringStartsWith("{\n  \"", $snapshot);
+        $this->assertStringEndsWith("}\n", $snapshot);
+        $this->assertStringContainsString('"x-empty-object": {}', $snapshot);
+        $this->assertStringContainsString('"default": 1.0', $snapshot);
+        $this->assertStringContainsString('"https://example.com/a"', $snapshot);
+        $this->assertEquals(
+            json_decode((string) file_get_contents($sourceSpecPath)),
+            json_decode($snapshot),
+            'the pretty-printed snapshot must be the same JSON document as the source'
+        );
+    }
+
+    #[Test]
+    public function it_pretty_prints_the_reference_spec_byte_for_byte_like_the_committed_snapshot(): void
+    {
+        $snapshot = (string) file_get_contents(__DIR__.'/../../.api-sync/spec-snapshot.json');
+        $minified = json_encode(json_decode($snapshot), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+
+        $this->assertSame($snapshot, prettySpecJson((string) $minified));
     }
 
     // ---- x-sdk filter: public-but-not-SDK operations are not this tool's business ----

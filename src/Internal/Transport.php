@@ -18,6 +18,7 @@ use GuzzleHttp\Psr7\Response;
 use JsonException;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
+use WeakMap;
 
 /**
  * Sends API requests: headers, idempotency keys, the per-attempt timeout, retries (RetryPolicy)
@@ -28,6 +29,9 @@ use Throwable;
 final class Transport implements ApiClientInterface
 {
     private const MAX_IDEMPOTENCY_KEY_LENGTH = 255;
+
+    /** Headers only the SDK sets; RequestOptions::$headers cannot add or override them. */
+    private const RESERVED_HEADERS = ['authorization', 'idempotency-key', 'content-type'];
 
     /** cURL errnos raised before any byte of the request was sent (DNS, connect). */
     private const NOTHING_SENT_ERRNOS = [6, 7];
@@ -40,6 +44,14 @@ final class Transport implements ApiClientInterface
     /** @var array<string, string> */
     private readonly array $headers;
 
+    /**
+     * Each transport's API key, held off the instance so that no var_export(), (array) cast,
+     * serialize() or debugger view of a Transport (or of the client that owns it) can show it.
+     *
+     * @var WeakMap<self, string>|null
+     */
+    private static ?WeakMap $apiKeys = null;
+
     /** @var Closure(float): void */
     private readonly Closure $sleep;
 
@@ -51,6 +63,7 @@ final class Transport implements ApiClientInterface
      * @param  callable(float): void|null  $sleep  waits the given seconds between retries
      */
     public function __construct(
+        #[\SensitiveParameter]
         string $apiKey,
         string $baseUrl,
         string $userAgent,
@@ -62,8 +75,9 @@ final class Transport implements ApiClientInterface
         $this->headers = [
             'Accept' => 'application/json',
             'User-Agent' => $userAgent,
-            'Authorization' => 'Bearer '.$apiKey,
         ];
+        self::$apiKeys ??= new WeakMap;
+        self::$apiKeys[$this] = $apiKey;
         $this->client = new Client([
             'base_uri' => rtrim($baseUrl, '/').'/v1/',
             'handler' => $handler instanceof HandlerStack ? $handler : HandlerStack::create($handler),
@@ -161,6 +175,7 @@ final class Transport implements ApiClientInterface
                 $headers['Idempotency-Key'] = $key;
             }
         }
+        $headers['Authorization'] = 'Bearer '.self::$apiKeys[$this];
         $request['headers'] = $headers;
 
         for ($attempt = 0; ; $attempt++) {
@@ -191,7 +206,7 @@ final class Transport implements ApiClientInterface
                     }
 
                     return BlindPayApiResponse::error(new ErrorResponse(
-                        message: 'Request failed before a response was received: '.$e->getMessage(),
+                        message: 'Request failed before a response was received: '.self::withoutQueryStrings($e->getMessage()),
                         idempotencyKey: $key,
                         retryable: $multipart === null && (! RetryPolicy::isMutation($method) || $key !== null),
                         type: ErrorType::NETWORK,
@@ -304,7 +319,7 @@ final class Transport implements ApiClientInterface
             }
         }
 
-        return strcasecmp($name, 'Idempotency-Key') === 0 || strcasecmp($name, 'Content-Type') === 0;
+        return in_array(strtolower($name), self::RESERVED_HEADERS, true);
     }
 
     /**
@@ -315,10 +330,20 @@ final class Transport implements ApiClientInterface
     private function buildError(Throwable $e, ?string $key): BlindPayApiResponse
     {
         return BlindPayApiResponse::error(new ErrorResponse(
-            message: 'The request could not be sent: '.$e->getMessage(),
+            message: 'The request could not be sent: '.self::withoutQueryStrings($e->getMessage()),
             idempotencyKey: $key,
             type: ErrorType::VALIDATION,
         ));
+    }
+
+    /**
+     * Guzzle appends the request URL to transport errors ("... for https://.../customers?..."). Query
+     * strings can carry personal data (names, emails, IDs), so error messages keep only the
+     * scheme, host and path.
+     */
+    private static function withoutQueryStrings(string $message): string
+    {
+        return (string) preg_replace('~(\bhttps?://[^\s?#]*)[?#]\S*~i', '$1', $message);
     }
 
     /** @return array<string, mixed> */

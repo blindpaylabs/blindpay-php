@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK\Types;
 
-use BlindPay\SDK\Internal\BlindPayException;
+use BlindPay\SDK\BlindPayException;
 
 /**
  * Per-request options, accepted as the last argument of every resource method.

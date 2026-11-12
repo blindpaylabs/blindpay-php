@@ -111,7 +111,7 @@ On success, `data` holds the decoded value, `requestId` the `X-Request-Id` respo
 |---|---|
 | `message` | The API `message` (for example `not_enough_balance`), or an SDK description. Never contains the request body or the API key. |
 | `status` | HTTP status, or `null` when no response was received. |
-| `code` | The API's stable, UPPERCASE error code (for example `PAYOUTS_INSUFFICIENT_BALANCE`). Branch on this, not on `message`. Absent on some errors (auth, rate limit, idempotency). |
+| `code` | The API's stable, UPPERCASE error code (for example `PAYOUTS_INSUFFICIENT_BALANCE`); compare it with the `ErrorCode` constants (see [Error codes](#error-codes)). Prefer it over `message`. Absent on some errors (idempotency conflicts, some legacy paths). |
 | `description` | A longer explanation, when the API sends one. |
 | `errors` | The raw `errors` array of the body (validation details); empty by default. |
 | `traceId` | The API `trace_id`, when present. Quote it to support. |
@@ -132,7 +132,37 @@ On success, `data` holds the decoded value, `requestId` the `X-Request-Id` respo
 
 `$error->isNetworkError()` and `$error->isApiError()` are shortcuts. An empty 2xx body (for example 204) is a success with `data === null`.
 
-If you prefer exceptions, `getDataOrFail()` returns the data or throws `BlindPay\SDK\BlindPayApiException`, which carries the `ErrorResponse`:
+### Error codes
+
+`BlindPay\SDK\Types\ErrorCode` has a constant for every error code the API documents, generated from the API spec. `ErrorCode::info($code)` returns the code's typical HTTP `status` and its `retry` class, and `$error->retryClass()` returns that class for an error:
+
+| `RetryClass` | Meaning |
+|---|---|
+| `RETRYABLE` | The same request can be retried as is. |
+| `TERMINAL` | Do not retry. |
+| `ACTIONABLE` | The request succeeds only after you fix something (fund a balance, correct bank details, ...). |
+| `UNKNOWN` | The error has no code, or a code newer than this SDK version. |
+
+```php
+use BlindPay\SDK\Types\ErrorCode;
+use BlindPay\SDK\Types\RetryClass;
+
+$response = $blindpay->transfers->createQuote($input);
+
+if ($response->isError()) {
+    $error = $response->error;
+
+    if ($error->code === ErrorCode::TRANSFERS_SWAP_AMOUNT_BELOW_MINIMUM) {
+        // Swaps between different tokens need at least 100 USDC, measured on the USDC side.
+    } elseif ($error->retryClass() === RetryClass::ACTIONABLE) {
+        // Show $error->description: the user has to fix something first.
+    }
+}
+```
+
+`code` stays a plain string, so a code the API adds after your SDK version still reaches you, and `ErrorCode::info()` returns `null` for it. Some errors carry no code (idempotency conflicts and some legacy paths), so keep `message` as the fallback (the swap minimum's `message` is `fx_amount_below_minimum`). The retry class is guidance for your own handling: the SDK's automatic retries (see [Retries](#retries)) follow their own rules.
+
+If you prefer exceptions, `getDataOrFail()` returns the data or throws `BlindPay\SDK\BlindPayApiException`, which carries the `ErrorResponse`. Every exception the SDK throws (configuration errors, `BlindPayApiException`, `WebhookException`) extends `BlindPay\SDK\BlindPayException`, so one `catch` covers them all:
 
 ```php
 use BlindPay\SDK\BlindPayApiException;
@@ -190,6 +220,8 @@ if ($response->isError() && $response->error->retryable && $response->error->sta
 ```
 
 A 409 `idempotency_key_in_flight` usually carries a `Retry-After` above 60 seconds, so after the retries run out you get a retryable error with the key: wait, then resend the same request with the same key.
+
+Indicative FX quote endpoints are rate limited per instance; a limited call returns 429 `AUTH_RATE_LIMITED` with a `Retry-After` header, which the SDK honours when it retries. That covers `quotes->getFxRate()` and `payins->quotes->getFxRate()` in production, and every call on a development instance.
 
 ## Pagination
 
@@ -276,7 +308,7 @@ http_response_code(200);
 | `customer.delete` | `CustomerDeletedPayload` |
 | `bankAccount.new` | `BankAccountListItem` |
 | `blockchainWallet.new`, `blockchainWallet.update` | `BlockchainWallet` |
-| `limitIncrease.new`, `limitIncrease.update` | `LimitIncreaseRequest` |
+| `limitIncrease.new`, `limitIncrease.update` | `LimitIncreaseRequest` (`reviewReason` says why compliance rejected the request or approved lower limits, and what to send to get the full amount) |
 | `payout.new`, `.update`, `.complete`, `.partnerFee` | `CreateEvmPayoutResponse` |
 | `payin.new`, `.update`, `.complete`, `.partnerFee` | `CreateEvmPayinResponse` |
 | `transfer.new`, `.update`, `.complete` | `CreateTransferResponse` |
@@ -343,7 +375,10 @@ Uploads authenticate against your instance ID and need a completed onboarding. T
 | Partner percentage fees | **basis points** (`100` is 1%) |
 | Partner flat fees | cents |
 | Wallet balances | **whole tokens**, decimal (`10.5` is 10.5 USDC) |
-| `total_fee_amount` on payouts and payins | a decimal token amount |
+
+Some response amounts (quote, transfer, payin and payout amounts and fees, `totalFeeAmount` included) are typed `float` for backwards compatibility but always hold integer cents; their docblocks say so, and they become `int` in the next major.
+
+A transfer that swaps between different tokens needs at least 100 USDC, measured on the USDC side; a smaller quote fails with `ErrorCode::TRANSFERS_SWAP_AMOUNT_BELOW_MINIMUM` (see [Error codes](#error-codes)).
 
 For whole-unit sender currencies, a `CurrencyType::SENDER` payin quote amount must be a multiple of 100. Never build cent amounts by multiplying a float: round explicitly (`(int) round($dollars * 100)`).
 
@@ -374,7 +409,7 @@ Some inputs take exactly one of two fields. The SDK does not validate this; the 
 - Amounts of `66600` (666.00) make a payout fail, and `77700` (777.00) make it refund.
 - Payins complete on their own after about 30 seconds.
 - Quotes expire after 5 minutes (OTC payin quotes after 10 seconds; SEPA quotes may expire sooner).
-- Development instances are rate limited to 40 requests per minute. A 429 is retried for you.
+- Development instances are rate limited per minute on every call. A 429 `AUTH_RATE_LIMITED` is retried for you, honouring `Retry-After`.
 - Settlement is simulated with the test token USDB.
 
 ## Resources
@@ -413,6 +448,10 @@ Responses are the readonly classes next to each resource (`BlindPay\SDK\Resource
 
 - [BlindPay API documentation](https://blindpay.com/docs/getting-started/overview)
 - [API reference](https://api.blindpay.com/reference)
+
+## Releasing
+
+Maintainers: [RELEASING.md](RELEASING.md) covers the version source, what a merge to `main` triggers, how to re-run a stuck release and how to verify the published package.
 
 ## Support
 

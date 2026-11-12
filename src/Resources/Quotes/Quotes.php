@@ -121,13 +121,19 @@ readonly class CreateQuoteResponse
         public ?int $expiresAt,
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $receiverAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $senderAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $partnerFeeAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $flatFee,
         public ?QuoteContract $contract,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $customerLocalAmount,
         public ?string $description,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $billingFeeAmount = null,
     ) {}
 
@@ -194,7 +200,9 @@ readonly class GetFxRateResponse
     public function __construct(
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $resultAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $instanceFlatFee,
         /** basis points (100 = 1%) */
         public float $instancePercentageFee

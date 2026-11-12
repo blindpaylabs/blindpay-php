@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace BlindPay\SDK;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
-use BlindPay\SDK\Internal\BlindPayException;
 use BlindPay\SDK\Internal\Transport;
 use BlindPay\SDK\Resources\Available\Available;
 use BlindPay\SDK\Resources\BankAccounts\BankAccounts;
@@ -53,7 +52,7 @@ class BlindPay implements ApiClientInterface
     /** Retries after the first attempt (so 3 attempts in total); 0 disables retries. */
     public const DEFAULT_MAX_RETRIES = 2;
 
-    private const VERSION = '4.0.0';
+    private const VERSION = '4.1.0';
 
     private readonly Transport $transport;
 
@@ -103,6 +102,7 @@ class BlindPay implements ApiClientInterface
      * @throws BlindPayException on an empty API key or instance ID, or an invalid option
      */
     public function __construct(
+        #[\SensitiveParameter]
         string $apiKey,
         private readonly string $instanceId,
         string $baseUrl = self::DEFAULT_BASE_URL,
@@ -223,6 +223,7 @@ class BlindPay implements ApiClientInterface
      * @return bool True if the signature is valid, false otherwise
      */
     public function verifyWebhookSignature(
+        #[\SensitiveParameter]
         string $secret,
         string $id,
         string $timestamp,

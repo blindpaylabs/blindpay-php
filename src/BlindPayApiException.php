@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace BlindPay\SDK;
 
-use BlindPay\SDK\Internal\BlindPayException;
 use BlindPay\SDK\Types\ErrorResponse;
 
 /**

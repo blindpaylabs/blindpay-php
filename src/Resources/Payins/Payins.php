@@ -215,10 +215,14 @@ readonly class Payin
         public ?DateTimeImmutable $updatedAt,
         public string $type,
         public string $paymentMethod,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $senderAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $receiverAmount,
         public StablecoinToken|string $token,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $partnerFeeAmount,
+        /** Sum of the fee fields (docs: payins.md), so integer cents carried in a float (1000 = 10.00); the spec example (1.5) reads like a decimal, an inconsistency reported to the API owners. */
         public ?float $totalFeeAmount,
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
@@ -241,6 +245,7 @@ readonly class Payin
         public ?string $lastName = null,
         public ?string $legalName = null,
         public ?bool $isOtc = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $billingFeeAmount = null,
         public ?string $pseDocumentType = null,
         public ?string $pseFullName = null,
@@ -252,6 +257,7 @@ readonly class Payin
         /** a date-time; its wire shape varies, so it is passed through as returned */
         public mixed $manualConcludedAt = null,
         public ?string $manualConcludedBy = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $transactionFeeAmount = null,
         public ?array $payerRules = null,
     ) {}
@@ -369,6 +375,7 @@ readonly class CreateEvmPayinResponse
         public string $id,
         public TransactionStatus|string $status,
         public ?string $customerId,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $receiverAmount,
         public ?BankDetails $blindpayBankDetails,
         public ?string $pixCode = null,
@@ -379,9 +386,12 @@ readonly class CreateEvmPayinResponse
         public ?TrackingTransaction $trackingTransaction = null,
         public ?TrackingPartnerFee $trackingPartnerFee = null,
         public ?int $partnerFee = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $billingFeeAmount = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $transactionFeeAmount = null,
         public ?string $paymentMethod = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $senderAmount = null,
     ) {}
 

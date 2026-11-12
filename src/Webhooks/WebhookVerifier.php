@@ -37,7 +37,7 @@ final class WebhookVerifier
      * @param  int  $tolerance  maximum allowed |now - timestamp|, in seconds
      * @param  int|null  $now  current Unix time; defaults to time() (override in tests)
      */
-    public static function verify(string $payload, array $headers, string $secret, int $tolerance = self::DEFAULT_TOLERANCE, ?int $now = null): bool
+    public static function verify(string $payload, array $headers, #[\SensitiveParameter] string $secret, int $tolerance = self::DEFAULT_TOLERANCE, ?int $now = null): bool
     {
         $normalized = [];
         foreach ($headers as $name => $value) {
@@ -76,7 +76,7 @@ final class WebhookVerifier
      * @throws WebhookException when the signature or timestamp does not verify, or the body is not
      *                          a JSON object with a `webhook_event`
      */
-    public static function constructEvent(string $payload, array $headers, string $secret, int $tolerance = self::DEFAULT_TOLERANCE, ?int $now = null): WebhookEvent
+    public static function constructEvent(string $payload, array $headers, #[\SensitiveParameter] string $secret, int $tolerance = self::DEFAULT_TOLERANCE, ?int $now = null): WebhookEvent
     {
         if (! self::verify($payload, $headers, $secret, $tolerance, $now)) {
             throw new WebhookException('The webhook signature or timestamp could not be verified.');
@@ -93,7 +93,7 @@ final class WebhookVerifier
     /**
      * @internal Shared by verify() and the deprecated BlindPay::verifyWebhookSignature().
      */
-    public static function verifySignature(string $payload, string $id, string $timestamp, string $signatureHeader, string $secret, int $tolerance, int $now): bool
+    public static function verifySignature(string $payload, string $id, string $timestamp, string $signatureHeader, #[\SensitiveParameter] string $secret, int $tolerance, int $now): bool
     {
         if (preg_match('/^\d{1,18}$/', $timestamp) !== 1 || abs($now - (int) $timestamp) > $tolerance) {
             return false;

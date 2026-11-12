@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Internal;
 
 use BlindPay\SDK\BlindPayApiException;
+use BlindPay\SDK\BlindPayException;
 use BlindPay\SDK\Types\BlindPayApiResponse;
 use BlindPay\SDK\Types\ListResponse;
 use Generator;

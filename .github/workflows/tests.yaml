@@ -10,8 +10,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The floor (composer.json) and the newest PHP composer.lock supports.
-        php: ['8.2', '8.4']
+        # The floor (composer.json), the previous release and the newest PHP. composer.lock must
+        # install on all of them: update dev dependencies under the floor (8.2).
+        php: ['8.2', '8.4', '8.5']
     
     steps:
       - name: Checkout code
@@ -35,6 +36,10 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
           
+      # release.yaml runs this before tagging; fail the PR instead of the release.
+      - name: Validate composer.json
+        run: composer validate --strict
+
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-suggest
         

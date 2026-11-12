@@ -119,10 +119,15 @@ readonly class CreatePayinQuoteResponse
         public ?int $expiresAt,
         public ?float $commercialQuotation,
         public ?float $blindpayQuotation,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $receiverAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $senderAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $partnerFeeAmount = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $flatFee = null,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public ?float $billingFeeAmount = null,
         public ?bool $isOtc = null,
         /** card payment instructions, for `card` quotes */
@@ -173,7 +178,9 @@ readonly class GetPayinFxRateResponse
     public function __construct(
         public float $commercialQuotation,
         public float $blindpayQuotation,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $resultAmount,
+        /** Integer cents carried in a float (1000 = 10.00); the type stays float until the next major. */
         public float $instanceFlatFee,
         public float $instancePercentageFee
     ) {}

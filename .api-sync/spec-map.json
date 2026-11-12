@@ -208,6 +208,14 @@
     {
       "spec": { "schema": "WalletDepositOut", "property": "status" },
       "sdk": { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "WalletDepositStatus" }
+    },
+    {
+      "spec": { "schema": "CustomerDeleteWebhookOut", "property": "kyc_type" },
+      "sdk": { "file": "src/Resources/Customers/Customers.php", "class": "KycType" }
+    },
+    {
+      "spec": { "schema": "AdditionalInfoItem", "property": "label" },
+      "sdk": { "file": "src/Resources/Customers/Customers.php", "class": "AdditionalInfoLabel" }
     }
   ],
   "typesNote": "Class-per-file below always refers to src/Resources/**/*.php unless the file starts with src/Types/.",
@@ -289,69 +297,69 @@
     { "spec": "PayoutOnStellarAuthorizeIn", "sdk": [ { "file": "src/Resources/Payouts/Payouts.php", "class": "AuthorizeStellarTokenInput" } ] },
     { "spec": "SubmitPayoutDocumentsIn", "sdk": [ { "file": "src/Resources/Payouts/Payouts.php", "class": "SubmitPayoutDocumentsInput" } ] },
     {
-      "spec": ["PayoutOut", "PayoutOnEvmOut"],
+      "spec": ["PayoutOut", "PayoutOnEvmOut", "PayoutNewWebhookOut", "PayoutUpdateWebhookOut", "PayoutCompleteWebhookOut", "PayoutPartnerFeeWebhookOut"],
       "path": "tracking_payment",
       "sdk": [ { "file": "src/Types/PayoutTrackingPayment.php", "class": "PayoutTrackingPayment" } ],
-      "note": "inline object, not a $ref'd component schema (no `Tracking*` schema exists in components.schemas); the same 20-property shape also recurs verbatim, unchecked here, in PayoutNewWebhookOut/PayoutUpdateWebhookOut/PayoutCompleteWebhookOut/PayoutPartnerFeeWebhookOut, which this SDK never deserializes (see 'webhook payloads' note below)."
+      "note": "inline object, not a $ref'd component schema (no `Tracking*` schema exists in components.schemas); the same 20-property shape also recurs verbatim, unchecked here, in PayoutNewWebhookOut/PayoutUpdateWebhookOut/PayoutCompleteWebhookOut/PayoutPartnerFeeWebhookOut, which WebhookEvent decodes with CreateEvmPayoutResponse (so they are listed here too)."
     },
     {
-      "spec": ["PayoutOut", "PayoutOnEvmOut"],
+      "spec": ["PayoutOut", "PayoutOnEvmOut", "PayoutNewWebhookOut", "PayoutUpdateWebhookOut", "PayoutCompleteWebhookOut", "PayoutPartnerFeeWebhookOut"],
       "path": "tracking_transaction",
       "sdk": [ { "file": "src/Types/TrackingTransaction.php", "class": "TrackingTransaction" } ]
     },
     {
-      "spec": ["PayoutOut", "PayoutOnEvmOut"],
+      "spec": ["PayoutOut", "PayoutOnEvmOut", "PayoutNewWebhookOut", "PayoutUpdateWebhookOut", "PayoutCompleteWebhookOut", "PayoutPartnerFeeWebhookOut"],
       "path": "tracking_complete",
       "sdk": [ { "file": "src/Types/TrackingComplete.php", "class": "TrackingComplete" } ]
     },
     {
-      "spec": ["PayoutOut", "PayoutOnEvmOut"],
+      "spec": ["PayoutOut", "PayoutOnEvmOut", "PayoutNewWebhookOut", "PayoutUpdateWebhookOut", "PayoutCompleteWebhookOut", "PayoutPartnerFeeWebhookOut"],
       "path": "tracking_liquidity",
       "sdk": [ { "file": "src/Types/TrackingLiquidity.php", "class": "TrackingLiquidity" } ]
     },
     {
-      "spec": ["PayinOut", "CreatePayinOut"],
+      "spec": ["PayinOut", "CreatePayinOut", "PayinNewWebhookOut", "PayinUpdateWebhookOut", "PayinCompleteWebhookOut", "PayinPartnerFeeWebhookOut"],
       "path": "tracking_payment",
       "sdk": [ { "file": "src/Types/PayinTrackingPayment.php", "class": "PayinTrackingPayment" } ],
       "note": "PayinOut's inline tracking_payment is a DIFFERENT, smaller shape (step/provider_name/completed_at/review_source/review_context/approved_risk_sources) than the payout one; previously shared with the payout-side TrackingPayment class, which threw a TypeError on payin fetch. Split into a payin-specific class (step/provider_name/completed_at) and PayoutTrackingPayment (step/provider_name/provider_transaction_id/provider_status/estimated_time_of_arrival/completed_at)."
     },
     {
-      "spec": ["PayinOut", "CreatePayinOut"],
+      "spec": ["PayinOut", "CreatePayinOut", "PayinNewWebhookOut", "PayinUpdateWebhookOut", "PayinCompleteWebhookOut", "PayinPartnerFeeWebhookOut"],
       "path": "tracking_transaction",
       "sdk": [ { "file": "src/Types/TrackingTransaction.php", "class": "TrackingTransaction" } ]
     },
     {
-      "spec": ["PayinOut", "CreatePayinOut"],
+      "spec": ["PayinOut", "CreatePayinOut", "PayinNewWebhookOut", "PayinUpdateWebhookOut", "PayinCompleteWebhookOut", "PayinPartnerFeeWebhookOut"],
       "path": "tracking_complete",
       "sdk": [ { "file": "src/Types/TrackingComplete.php", "class": "TrackingComplete" } ]
     },
     {
-      "spec": ["PayinOut", "CreatePayinOut"],
+      "spec": ["PayinOut", "CreatePayinOut", "PayinNewWebhookOut", "PayinUpdateWebhookOut", "PayinCompleteWebhookOut", "PayinPartnerFeeWebhookOut"],
       "path": "blindpay_bank_details",
       "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankDetails" } ]
     },
     {
-      "spec": ["PayinOut", "CreatePayinOut"],
+      "spec": ["PayinOut", "CreatePayinOut", "PayinNewWebhookOut", "PayinUpdateWebhookOut", "PayinCompleteWebhookOut", "PayinPartnerFeeWebhookOut"],
       "path": "blindpay_bank_details.ach",
       "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankAch" } ]
     },
     {
-      "spec": ["PayinOut", "CreatePayinOut"],
+      "spec": ["PayinOut", "CreatePayinOut", "PayinNewWebhookOut", "PayinUpdateWebhookOut", "PayinCompleteWebhookOut", "PayinPartnerFeeWebhookOut"],
       "path": "blindpay_bank_details.wire",
       "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankWire" } ]
     },
     {
-      "spec": ["PayinOut", "CreatePayinOut"],
+      "spec": ["PayinOut", "CreatePayinOut", "PayinNewWebhookOut", "PayinUpdateWebhookOut", "PayinCompleteWebhookOut", "PayinPartnerFeeWebhookOut"],
       "path": "blindpay_bank_details.rtp",
       "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankRtp" } ]
     },
     {
-      "spec": ["PayinOut", "CreatePayinOut"],
+      "spec": ["PayinOut", "CreatePayinOut", "PayinNewWebhookOut", "PayinUpdateWebhookOut", "PayinCompleteWebhookOut", "PayinPartnerFeeWebhookOut"],
       "path": "blindpay_bank_details.beneficiary",
       "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankBeneficiary" } ]
     },
     {
-      "spec": ["PayinOut", "CreatePayinOut"],
+      "spec": ["PayinOut", "CreatePayinOut", "PayinNewWebhookOut", "PayinUpdateWebhookOut", "PayinCompleteWebhookOut", "PayinPartnerFeeWebhookOut"],
       "path": "blindpay_bank_details.receiving_bank",
       "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "BankReceivingBank" } ]
     },
@@ -440,13 +448,31 @@
     { "spec": ["VirtualAccountNewWebhookOut", "VirtualAccountCompleteWebhookOut"], "sdk": [ { "file": "src/Resources/VirtualAccounts/VirtualAccounts.php", "class": "VirtualAccount" } ]},
     { "spec": "WalletDepositOut", "sdk": [ { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "WalletDeposit" } ]},
     { "spec": ["WalletNewWebhookOut", "WalletUpdateWebhookOut"], "sdk": [ { "file": "src/Resources/CustodialWallets/CustodialWallets.php", "class": "CustodialWallet" } ]},
-    { "spec": ["TransferOut", "CreateTransferOut", "TransferNewWebhookOut", "TransferUpdateWebhookOut", "TransferCompleteWebhookOut"], "path": "tracking_partner_fee", "sdk": [ { "file": "src/Types/TrackingPartnerFee.php", "class": "TrackingPartnerFee" } ]}
+    { "spec": ["TransferOut", "CreateTransferOut", "TransferNewWebhookOut", "TransferUpdateWebhookOut", "TransferCompleteWebhookOut"], "path": "tracking_partner_fee", "sdk": [ { "file": "src/Types/TrackingPartnerFee.php", "class": "TrackingPartnerFee" } ]},
+    { "spec": "AdditionalInfoItem", "sdk": [ { "file": "src/Resources/Customers/Customers.php", "class": "AdditionalInfoItem" } ]},
+    { "spec": "BankAccountWebhookOut", "sdk": [ { "file": "src/Resources/BankAccounts/BankAccounts.php", "class": "BankAccountListItem" } ], "note": "WebhookEvent decodes bankAccount.new as BankAccountListItem" },
+    { "spec": "BlockchainWalletWebhookOut", "sdk": [ { "file": "src/Resources/Wallets/BlockchainWallets.php", "class": "BlockchainWallet" } ], "note": "WebhookEvent decodes blockchainWallet.new as BlockchainWallet" },
+    {
+      "spec": ["CustomerNewWebhookOut", "CustomerUpdateWebhookOut"],
+      "sdk": [
+        { "file": "src/Resources/Customers/Customers.php", "class": "BaseCustomer" },
+        { "file": "src/Resources/Customers/Customers.php", "class": "IndividualWithStandardKYC" },
+        { "file": "src/Resources/Customers/Customers.php", "class": "IndividualWithEnhancedKYC" },
+        { "file": "src/Resources/Customers/Customers.php", "class": "BusinessWithStandardKYB" }
+      ],
+      "note": "WebhookEvent decodes customer.new/customer.update with Customers::customerFromArray(), like CustomerOut"
+    },
+    { "spec": "CustomerDeleteWebhookOut", "sdk": [ { "file": "src/Webhooks/WebhookPayloads.php", "class": "CustomerDeletedPayload" } ] },
+    { "spec": ["LimitIncreaseNewWebhookOut", "LimitIncreaseUpdateWebhookOut"], "sdk": [ { "file": "src/Resources/Customers/Customers.php", "class": "LimitIncreaseRequest" } ], "note": "WebhookEvent decodes limitIncrease.* as LimitIncreaseRequest, like GetCustomerLimitIncreaseOut" },
+    { "spec": ["PayinNewWebhookOut", "PayinUpdateWebhookOut", "PayinCompleteWebhookOut", "PayinPartnerFeeWebhookOut"], "sdk": [ { "file": "src/Resources/Payins/Payins.php", "class": "CreateEvmPayinResponse" } ], "note": "WebhookEvent decodes payin.* as CreateEvmPayinResponse" },
+    { "spec": ["PayoutNewWebhookOut", "PayoutUpdateWebhookOut", "PayoutCompleteWebhookOut", "PayoutPartnerFeeWebhookOut"], "sdk": [ { "file": "src/Resources/Payouts/Payouts.php", "class": "CreateEvmPayoutResponse" } ], "note": "WebhookEvent decodes payout.* as CreateEvmPayoutResponse" },
+    { "spec": "TosAcceptWebhookOut", "sdk": [ { "file": "src/Webhooks/WebhookPayloads.php", "class": "TosAcceptedPayload" } ] },
+    { "spec": "WalletInboundWebhookOut", "sdk": [ { "file": "src/Webhooks/WebhookPayloads.php", "class": "WalletInboundPayload" } ] },
+    { "spec": "WalletInboundTokenOut", "sdk": [ { "file": "src/Webhooks/WebhookPayloads.php", "class": "WalletInboundToken" } ] }
   ],
-  "webhookPayloadsNote": "WebhookVerifier::constructEvent() decodes webhook bodies into the resource types (see WebhookEvent). The *WebhookOut schemas added with the reference spec are mapped above to the class that decodes them; the older ones are covered by tests/Webhooks/WebhookEventTest.php, which decodes every variant of every event.",
+  "webhookPayloadsNote": "WebhookVerifier::constructEvent() decodes webhook bodies into the resource types (see WebhookEvent). Every *WebhookOut schema is mapped above to the class that decodes it, so a field added to a webhook payload alone fails `api-sync.php --check` like any other drift; tests/Webhooks/WebhookEventTest.php also decodes every variant of every event.",
   "ignore": {
     "schemas": [
-      { "schema": "WalletInboundWebhookOut", "reason": "Decoded by Webhooks\\WalletInboundPayload (src/Webhooks, outside the scanned resource tree); covered by tests/Webhooks/WebhookEventTest.php." },
-      { "schema": "WalletInboundTokenOut", "reason": "Decoded by Webhooks\\WalletInboundToken; see WalletInboundWebhookOut." },
       { "schema": "LedgerOperation", "reason": "Unreferenced by any public operation or webhook (zero $ref anywhere in the spec) -- an orphan schema left over in components.schemas." },
       { "schema": "CreatePlaidLinkIn", "reason": "Its one field is a parameter of BankAccounts::createPlaidLink($customerId, ?$redirectUrl); no input class." },
       { "schema": "PresignIn", "reason": "Its one field is the parameter of Upload::presign($fileUrl); no input class." },

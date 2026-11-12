@@ -18,7 +18,9 @@ readonly class ErrorResponse
     /**
      * @param  string  $message  the API `message` (e.g. `not_enough_balance`), or an SDK description
      * @param  int|null  $status  HTTP status; null when no response was received
-     * @param  string|null  $code  API error code, e.g. `PAYOUTS_INSUFFICIENT_BALANCE`
+     * @param  string|null  $code  API error code, e.g. `PAYOUTS_INSUFFICIENT_BALANCE`; compare it with the
+     *                             ErrorCode constants. It stays a plain string, so a code newer than
+     *                             this SDK still arrives, and it is null on bodies without one
      * @param  list<mixed>  $errors  the raw `errors` array of the body
      * @param  string|null  $requestId  the `X-Request-Id` response header
      * @param  string|null  $idempotencyKey  the `Idempotency-Key` the request carried (yours or the
@@ -68,6 +70,15 @@ readonly class ErrorResponse
     public function isApiError(): bool
     {
         return $this->type === ErrorType::API;
+    }
+
+    /**
+     * The documented retry class of `code`: RetryClass::UNKNOWN when there is no code or the code
+     * is not in this SDK version's ErrorCode table. The SDK's own automatic retries do not use it.
+     */
+    public function retryClass(): RetryClass
+    {
+        return $this->code === null ? RetryClass::UNKNOWN : (ErrorCode::info($this->code)->retry ?? RetryClass::UNKNOWN);
     }
 
     public function toArray(): array
