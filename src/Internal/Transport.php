@@ -14,6 +14,7 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use JsonException;
 use Psr\Http\Message\ResponseInterface;
@@ -175,14 +176,16 @@ final class Transport implements ApiClientInterface
                 $headers['Idempotency-Key'] = $key;
             }
         }
-        $headers['Authorization'] = 'Bearer '.self::$apiKeys[$this];
         $request['headers'] = $headers;
+        // The key rides on the PSR-7 request object only, never in the plain options array, so no
+        // frame argument a handler's backtrace can see holds it as a string.
+        $psrRequest = (new Request($method, $path))->withHeader('Authorization', 'Bearer '.self::$apiKeys[$this]);
 
         for ($attempt = 0; ; $attempt++) {
             $bodyUnreadable = false;
 
             try {
-                $response = $this->client->request($method, $path, $request);
+                $response = $this->client->send($psrRequest, $request);
             } catch (TransferException $e) {
                 if (($this->handlerContext($e)['errno'] ?? null) === self::MALFORMED_URL_ERRNO) {
                     return $this->buildError($e, $key);
