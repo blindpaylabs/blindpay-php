@@ -30,6 +30,9 @@ final class Transport implements ApiClientInterface
 {
     private const MAX_IDEMPOTENCY_KEY_LENGTH = 255;
 
+    /** Headers only the SDK sets; RequestOptions::$headers cannot add or override them. */
+    private const RESERVED_HEADERS = ['authorization', 'idempotency-key', 'content-type'];
+
     /** cURL errnos raised before any byte of the request was sent (DNS, connect). */
     private const NOTHING_SENT_ERRNOS = [6, 7];
 
@@ -316,9 +319,7 @@ final class Transport implements ApiClientInterface
             }
         }
 
-        return strcasecmp($name, 'Idempotency-Key') === 0
-            || strcasecmp($name, 'Content-Type') === 0
-            || strcasecmp($name, 'Authorization') === 0;
+        return in_array(strtolower($name), self::RESERVED_HEADERS, true);
     }
 
     /**
