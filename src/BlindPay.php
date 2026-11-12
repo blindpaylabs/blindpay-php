@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace BlindPay\SDK;
 
 use BlindPay\SDK\Internal\ApiClientInterface;
-use BlindPay\SDK\Internal\BlindPayException;
 use BlindPay\SDK\Internal\Transport;
 use BlindPay\SDK\Resources\Available\Available;
 use BlindPay\SDK\Resources\BankAccounts\BankAccounts;

@@ -7,7 +7,10 @@ namespace BlindPay\SDK\Internal;
 use Exception;
 
 /**
- * Base exception for BlindPay SDK errors
+ * Base exception for BlindPay SDK errors.
+ *
+ * Every exception the SDK throws is a \BlindPay\SDK\BlindPayException, a subclass of this one: catch
+ * that public class in new code. This class stays for existing `catch` blocks.
  */
 class BlindPayException extends Exception
 {
