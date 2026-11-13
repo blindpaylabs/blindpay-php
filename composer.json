@@ -55,9 +55,6 @@
         "api-sync": "php scripts/api-sync.php --apply",
         "api-sync:check": "php scripts/api-sync.php --check",
         "analyse": "phpstan analyse --no-progress",
-        "readme:check": [
-            "php scripts/readme-snippets.php build/readme-snippets.php",
-            "phpstan analyse --no-progress --level=8 build/readme-snippets.php"
-        ]
+        "readme:check": "php scripts/readme-snippets.php --analyse"
     }
 }

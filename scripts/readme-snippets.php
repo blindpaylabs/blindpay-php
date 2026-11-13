@@ -17,10 +17,15 @@ declare(strict_types=1);
  * opening tag, `declare` and `require` lines. The `use` imports of all blocks are merged at the
  * top of the file, as a reader who copies the README in order would have them.
  *
- * Usage: php scripts/readme-snippets.php [output.php]   (default: <tmp>/blindpay-readme-snippets.php)
+ * Usage: php scripts/readme-snippets.php [--analyse] [output.php]
+ *   output.php defaults to <tmp>/blindpay-readme-snippets.php (outside the repository);
+ *   --analyse then runs PHPStan level 8 on it and exits with PHPStan's status (composer run readme:check).
  */
 $root = dirname(__DIR__);
-$out = $argv[1] ?? sys_get_temp_dir().'/blindpay-readme-snippets.php';
+$args = array_slice($argv, 1);
+$analyse = in_array('--analyse', $args, true);
+$paths = array_values(array_filter($args, static fn (string $a): bool => ! str_starts_with($a, '--')));
+$out = $paths[0] ?? sys_get_temp_dir().'/blindpay-readme-snippets.php';
 $readme = (string) file_get_contents($root.'/README.md');
 
 preg_match_all('/(?:<!-- snippet: (.*?)-->\s*\n)?```php\n(.*?)```/s', $readme, $blocks, PREG_SET_ORDER);
@@ -97,3 +102,8 @@ if (! is_dir(dirname($out))) {
 file_put_contents($out, "<?php\n\ndeclare(strict_types=1);\n\n// Generated from README.md by scripts/readme-snippets.php. Do not edit.\n\n"
     .implode("\n", array_keys($uses))."\n\n".implode("\n", $functions)."\n".$stubs);
 fwrite(STDOUT, '[readme-snippets] '.count($functions)." snippets -> {$out}\n");
+
+if ($analyse) {
+    passthru(escapeshellarg(PHP_BINARY).' '.escapeshellarg($root.'/vendor/bin/phpstan').' analyse --no-progress --memory-limit=1G --level=8 '.escapeshellarg($out), $status);
+    exit($status);
+}

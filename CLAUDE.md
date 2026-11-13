@@ -19,7 +19,7 @@ blindpay-php/
   scripts/
     api-sync.php             # Patches the SDK from the OpenAPI spec (api-sync workflow)
     contract-check.php       # Checks the wire keys the SDK reads/writes against the spec snapshot
-    readme-snippets.php      # Wraps every README ```php block in the function its <!-- snippet: --> header names (composer run readme:check)
+    readme-snippets.php      # Wraps every README ```php block in the function its <!-- snippet: --> header names; --analyse runs PHPStan level 8 (composer run readme:check)
   .api-sync/                 # api-sync state, see section 10
   src/
     BlindPay.php             # Main client. Implements ApiClientInterface, builds Transport and every resource in its constructor.
@@ -88,7 +88,9 @@ blindpay-php/
     Internal/                # TransportTest (retry table, idempotency, errors), AutoPagerTest, DecodeTest, RequestOptionsGuardTest,
                              # BlindPayExceptionTest (every SDK throw is the public BlindPayException),
                              # SecretHygieneTest (no key/secret in traces or dumps, no query string in transport errors)
-    Webhooks/                # WebhookVerifierTest (shared Svix vectors), WebhookEventTest (every webhook fixture variant)
+    Webhooks/                # WebhookVerifierTest (the 14 shared Svix vectors through verify() and constructEvent(): 1 decoded,
+                             # 10 rejected with WebhookException, 3 minimal payout.complete bodies -> WebhookDecodeException),
+                             # WebhookEventTest (every webhook fixture variant)
     Resources/               # One test file per resource, mirroring src/Resources; RequestBodiesTest checks request bodies,
                              # RequestFieldCoverageTest the optional request fields added in 4.1.0
     SpecFixtures/SpecFixtureDecodeTest.php  # decodes every shared spec fixture through the resource methods
@@ -264,7 +266,7 @@ private function listPage(array $query, ?RequestOptions $options): BlindPayApiRe
 }
 ```
 
-The pager is forward only (`ending_before` throws `BlindPayException`), asks for `limit=100` unless set, and throws `BlindPayApiException` when a page fails. Lists that are always plain arrays (blockchain wallets, virtual accounts, partner fees, webhook endpoints, ...) are not paged: decode them into a PHP array with `array_map`.
+The pager is forward only (`ending_before` throws `BlindPayException`), asks for `limit=100` unless set, and throws `BlindPayApiException` when a page fails. It remembers every cursor it sent (the caller's `starting_after` included) and throws `BlindPayException` with `getErrorCode() === AutoPager::CURSOR_REPEATED` when the API hands one back again (an immediate repeat or a cycle), after yielding that page: never loop, never stop silently with rows missing. Lists that are always plain arrays (blockchain wallets, virtual accounts, partner fees, webhook endpoints, ...) are not paged: decode them into a PHP array with `array_map`.
 
 ## 3. How To: Add a New Resource
 
@@ -631,7 +633,7 @@ Key points:
 
 When you add an operation, add it to `calls()`. When you add a response type, make it decode all variants. `PENDING` (operations that do not decode every variant yet, with a reason) must **stay empty**: do not add to it, fix the type. Fixtures under `tests/Fixtures/` are shared across the BlindPay SDKs: never edit them by hand.
 
-Other guard tests: `RequestOptionsGuardTest` (every resource method takes a trailing `?RequestOptions $options = null`), `RequestBodiesTest` (request bodies are exactly the spec's), `WebhookEventTest` (every webhook fixture variant decodes, unknown events do not fail), `WebhookVerifierTest` (the shared Svix vectors).
+Other guard tests: `RequestOptionsGuardTest` (every resource method takes a trailing `?RequestOptions $options = null`), `RequestBodiesTest` (request bodies are exactly the spec's), `WebhookEventTest` (every webhook fixture variant decodes, unknown events do not fail), `WebhookVerifierTest` (the shared Svix vectors, through both `verify()` and `constructEvent()`; a valid signature on a body that is not spec-shaped must throw `WebhookDecodeException`, never be decoded by relaxing a spec-required field).
 
 ## 9. Versioning
 

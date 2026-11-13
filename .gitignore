@@ -10,6 +10,3 @@
 
 # Delivered fresh by api-sync.yml from the api-sync-data branch on each dispatch; never committed.
 /.api-sync/spec-current.json
-
-# scripts/readme-snippets.php output (composer run readme:check).
-/build/
