@@ -1,8 +1,7 @@
 # Upgrading from 4.1 to 4.2
 
-4.2 adds `WebhookEvent::dataAs()`, `WebhookDecodeException` and type narrowing for static analysers. Three behaviours change; none of them needs a code change unless you rely on the old behaviour:
+4.2 adds `WebhookEvent::dataAs()`, `WebhookDecodeException` and type narrowing for static analysers. Two behaviours change; neither needs a code change unless you rely on the old behaviour:
 
-- **`CreateEvmPayoutResponse::$senderWalletAddress` is `?string`** (was `string`). The spec requires the field and the API always sends it, so it is set on every real response and webhook; it is null only when a payload omits it. Before, such a payload failed to decode (`constructEvent()` threw). Code that passes it to a `string` parameter now gets a PHPStan warning: add `?? ''` or a null check.
 - **An authentic webhook that cannot be decoded throws `WebhookDecodeException`**, a subclass of `WebhookException`, so existing `catch (WebhookException)` blocks still catch it. Catch it first to answer 2xx instead of 400 (see the README's Webhooks section). `WebhookException` is no longer `final`.
 - **`listAutoPaging()` throws `BlindPayException` (`PAGINATION_CURSOR_REPEATED`) when the API repeats a cursor**, after yielding the rows it received. 4.1 stopped silently there, which hid the rows after it.
 

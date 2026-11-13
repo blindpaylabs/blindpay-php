@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace BlindPay\SDK\Tests\Webhooks;
 
 use BlindPay\SDK\BlindPay;
-use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutResponse;
-use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
 use BlindPay\SDK\Webhooks\WebhookDecodeException;
 use BlindPay\SDK\Webhooks\WebhookException;
 use BlindPay\SDK\Webhooks\WebhookVerifier;
@@ -55,28 +53,54 @@ final class WebhookVerifierTest extends TestCase
 
     #[Test]
     #[DataProvider('vectors')]
-    public function it_constructs_an_event_from_every_valid_vector_and_rejects_every_invalid_one(array $vector): void
+    public function it_constructs_or_rejects_every_vector_and_tells_decode_failures_from_bad_signatures(array $vector): void
     {
+        $this->assertSame($vector['expect'] === 'valid', WebhookVerifier::verify($vector['payload'], $vector['headers'], $vector['secret'], now: $vector['now']));
+        $type = json_decode($vector['payload'], true)['webhook_event'] ?? null;
+
         try {
             $event = WebhookVerifier::constructEvent($vector['payload'], $vector['headers'], $vector['secret'], now: $vector['now']);
+        } catch (WebhookDecodeException $e) {
+            // The three valid payout.complete vectors carry a minimal body without the
+            // spec-required sender_wallet_address: authentic, but not spec-shaped.
+            $this->assertSame('valid', $vector['expect'], $vector['name']);
+            $this->assertSame('payout.complete', $type, $vector['name']);
+            $this->assertSame('payout.complete', $e->eventType);
+            $this->assertStringContainsString('sender_wallet_address', $e->getMessage());
+
+            return;
         } catch (WebhookException $e) {
             $this->assertSame('invalid', $vector['expect'], "{$vector['name']}: {$e->getMessage()}");
-            $this->assertNotInstanceOf(WebhookDecodeException::class, $e, 'an invalid signature is not a decode failure');
 
             return;
         }
 
         $this->assertSame('valid', $vector['expect'], $vector['name']);
-        $type = json_decode($vector['payload'], true)['webhook_event'];
-        if ($type === 'payout.complete') {
-            // The vectors carry a minimal payout body (no sender_wallet_address): it still decodes.
-            $this->assertSame(WebhookEvents::PAYOUT_COMPLETE, $event->type);
-            $this->assertInstanceOf(CreateEvmPayoutResponse::class, $event->data);
-            $this->assertNull($event->data->senderWalletAddress);
-        } else {
-            $this->assertSame($type, $event->type);
-            $this->assertNull($event->data);
+        $this->assertNotSame('payout.complete', $type, $vector['name']);
+        $this->assertSame($type, $event->type);
+        $this->assertNull($event->data);
+    }
+
+    #[Test]
+    public function it_sorts_the_fourteen_vectors_into_eleven_handled_and_three_decode_failures(): void
+    {
+        $outcomes = [];
+        foreach (self::fixture()['vectors'] as $v) {
+            try {
+                WebhookVerifier::constructEvent($v['payload'], $v['headers'], $v['secret'], now: $v['now']);
+                $outcomes[] = 'decoded';
+            } catch (WebhookDecodeException) {
+                $outcomes[] = 'decode-failure';
+            } catch (WebhookException) {
+                $outcomes[] = 'rejected';
+            }
         }
+
+        $counts = array_count_values($outcomes);
+        ksort($counts);
+
+        // 1 decoded (future.event) + 10 rejected = the 11 handled as before; 3 payout.complete decode failures.
+        $this->assertSame(['decode-failure' => 3, 'decoded' => 1, 'rejected' => 10], $counts);
     }
 
     private static function valid(): array
