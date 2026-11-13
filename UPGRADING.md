@@ -3,7 +3,7 @@
 4.2 adds `WebhookEvent::dataAs()`, `WebhookDecodeException` and type narrowing for static analysers. Two behaviours change; neither needs a code change unless you rely on the old behaviour:
 
 - **An authentic webhook that cannot be decoded throws `WebhookDecodeException`**, a subclass of `WebhookException`, so existing `catch (WebhookException)` blocks still catch it. Catch it first to answer 2xx instead of 400 (see the README's Webhooks section). `WebhookException` is no longer `final`.
-- **`listAutoPaging()` throws `BlindPayException` (`PAGINATION_CURSOR_REPEATED`) when the API repeats a cursor**, after yielding the rows it received. 4.1 stopped silently there, which hid the rows after it.
+- **`listAutoPaging()` throws `BlindPayException` when the API hands back a cursor it already sent** (an immediate repeat or a cycle), after yielding the rows it received; `getErrorCode()` is `AutoPager::CURSOR_REPEATED` (`PAGINATION_CURSOR_REPEATED`). 4.1 stopped silently on an immediate repeat, which hid the rows after it, and looped on a cycle.
 
 Since 4.1, transport error messages no longer include query strings: branch on `$error->code` / `ErrorCode`, not on message text.
 

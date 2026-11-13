@@ -6,6 +6,7 @@ namespace BlindPay\SDK\Tests\Internal;
 
 use BlindPay\SDK\BlindPay;
 use BlindPay\SDK\BlindPayApiException;
+use BlindPay\SDK\Internal\AutoPager;
 use BlindPay\SDK\Internal\BlindPayException;
 use BlindPay\SDK\Internal\Query;
 use BlindPay\SDK\Resources\CustodialWallets\GetWalletDepositsInput;
@@ -144,11 +145,46 @@ final class AutoPagerTest extends TestCase
             }
             $this->fail('expected BlindPayException');
         } catch (\BlindPay\SDK\BlindPayException $e) {
-            $this->assertSame('PAGINATION_CURSOR_REPEATED', $e->getErrorCode());
+            $this->assertSame(AutoPager::CURSOR_REPEATED, $e->getErrorCode());
+            $this->assertSame('PAGINATION_CURSOR_REPEATED', AutoPager::CURSOR_REPEATED);
             $this->assertStringContainsString('po_2', $e->getMessage());
         }
         $this->assertSame(['po_1', 'po_2', 'po_2'], $seen, 'the rows already received are yielded first');
         $this->assertCount(2, $this->history, 'no third request');
+    }
+
+    #[Test]
+    public function it_throws_instead_of_looping_when_the_cursors_cycle(): void
+    {
+        $blindpay = $this->client();
+        // Cursors A (po_a) -> B (po_b) -> A again: no immediate repeat, but a cycle.
+        $this->mock->append($this->page(['po_a'], true), $this->page(['po_b'], true), $this->page(['po_a'], true), $this->page(['po_z'], false));
+
+        $seen = [];
+
+        try {
+            foreach ($blindpay->payouts->listAutoPaging() as $payout) {
+                $seen[] = $payout->id;
+            }
+            $this->fail('expected BlindPayException');
+        } catch (\BlindPay\SDK\BlindPayException $e) {
+            $this->assertSame(AutoPager::CURSOR_REPEATED, $e->getErrorCode());
+            $this->assertStringContainsString('po_a', $e->getMessage());
+        }
+        $this->assertSame(['po_a', 'po_b', 'po_a'], $seen);
+        $this->assertSame(['limit=100', 'limit=100&starting_after=po_a', 'limit=100&starting_after=po_b'], $this->queries());
+    }
+
+    #[Test]
+    public function it_counts_the_callers_starting_cursor_as_already_sent(): void
+    {
+        $blindpay = $this->client();
+        $this->mock->append($this->page(['po_8'], true), $this->page(['po_9'], false));
+
+        $this->expectException(\BlindPay\SDK\BlindPayException::class);
+
+        // The API answers next_page = po_8, the cursor the caller started from.
+        iterator_to_array($blindpay->payouts->listAutoPaging(new ListPayoutsInput(startingAfter: 'po_8')));
     }
 
     #[Test]

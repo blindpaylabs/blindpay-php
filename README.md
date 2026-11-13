@@ -271,7 +271,7 @@ try {
 }
 ```
 
-The generator is lazy, asks for `limit=100` unless you set one, follows `next_page` as `starting_after` while `has_more`, and goes forward only (`endingBefore` throws `BlindPayException`). Each page goes through the normal retry path. A failed page **throws** `BlindPayApiException`, so put the `try` around the `foreach`. If the API ever answers a page with the same `next_page` cursor it was sent, the generator throws `BlindPayException` (error code `PAGINATION_CURSOR_REPEATED`) after yielding that page, instead of looping forever or stopping silently with rows missing.
+The generator is lazy, asks for `limit=100` unless you set one, follows `next_page` as `starting_after` while `has_more`, and goes forward only (`endingBefore` throws `BlindPayException`). Each page goes through the normal retry path. A failed page **throws** `BlindPayApiException`, so put the `try` around the `foreach`. If the API ever hands back a `next_page` cursor the generator already sent (the same one twice, or a cycle), it throws `BlindPayException` after yielding that page, instead of looping forever or stopping silently with rows missing. Its `getErrorCode()` is `\BlindPay\SDK\Internal\AutoPager::CURSOR_REPEATED` (`PAGINATION_CURSOR_REPEATED`).
 
 Lists that are always plain arrays (blockchain wallets, virtual accounts, partner fees, webhook endpoints, ...) return a PHP array in `data`; customer bank accounts return `ListBankAccountsResponse`, with the rows in `data`.
 
