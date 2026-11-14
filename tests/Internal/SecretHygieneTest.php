@@ -12,6 +12,7 @@ use BlindPay\SDK\Webhooks\WebhookException;
 use BlindPay\SDK\Webhooks\WebhookVerifier;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
@@ -130,6 +131,34 @@ final class SecretHygieneTest extends TestCase
 
         foreach ($dumps as $how => $text) {
             $this->assertStringNotContainsString(self::API_KEY, $text, $how);
+        }
+    }
+
+    #[Test]
+    public function it_keeps_the_api_key_out_of_plain_frame_arguments_inside_a_handler(): void
+    {
+        $frames = [];
+        $handler = new MockHandler([
+            static function (RequestInterface $request) use (&$frames): Response {
+                $frames = debug_backtrace();
+
+                return new Response(200, [], '[]');
+            },
+        ]);
+        $client = new BlindPay(apiKey: self::API_KEY, instanceId: 'in_000000000000', maxRetries: 0, handler: $handler);
+        $client->post('instances/in_000000000000/things', ['a' => 1]);
+
+        // Strings and arrays only: the PSR-7 request object necessarily carries the header.
+        $plain = static function (mixed $value) use (&$plain): string {
+            return match (true) {
+                is_string($value) => $value,
+                is_array($value) => implode("\n", array_map($plain, $value)),
+                default => '',
+            };
+        };
+        $this->assertNotEmpty($frames);
+        foreach ($frames as $i => $frame) {
+            $this->assertStringNotContainsString(self::API_KEY, $plain($frame['args'] ?? []), "frame #{$i} ".($frame['function'] ?? ''));
         }
     }
 

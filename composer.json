@@ -54,6 +54,7 @@
         "contract-check": "php scripts/contract-check.php",
         "api-sync": "php scripts/api-sync.php --apply",
         "api-sync:check": "php scripts/api-sync.php --check",
-        "analyse": "phpstan analyse --no-progress"
+        "analyse": "phpstan analyse --no-progress",
+        "readme:check": "php scripts/readme-snippets.php --analyse"
     }
 }

@@ -16,6 +16,7 @@ composer require blindpay/php
 
 Get your API key and instance ID from the BlindPay dashboard (`https://app.blindpay.com/instances/{instanceId}/api-keys`). Keep the key out of source control; read it from the environment.
 
+<!-- snippet: readme_quickstart(): void -->
 ```php
 <?php
 
@@ -26,7 +27,7 @@ require __DIR__.'/vendor/autoload.php';
 use BlindPay\SDK\BlindPay;
 
 $blindpay = new BlindPay(
-    apiKey: getenv('BLINDPAY_API_KEY'),
+    apiKey: (string) getenv('BLINDPAY_API_KEY'), // getenv() returns false when unset; '' throws a clear BlindPayException
     instanceId: 'in_000000000000',
 );
 
@@ -41,13 +42,15 @@ foreach ($response->data as $rail) {
 }
 ```
 
-More runnable scripts live in [`examples/`](examples): webhook endpoint setup and verification, a managed-wallet payout, a fiat payin and a reconciliation job.
+More runnable scripts live in [`examples/`](https://github.com/blindpaylabs/blindpay-php/tree/main/examples) on GitHub (they are not in the Composer package): webhook endpoint setup and verification, a managed-wallet payin and payout, a fiat payin and a reconciliation job. Every PHP block in this README is type-checked in CI at PHPStan level 8 (`composer run readme:check`).
 
 ## Configuration
 
+<!-- snippet: readme_configuration(): \BlindPay\SDK\BlindPay
+return $blindpay; -->
 ```php
 $blindpay = new BlindPay(
-    apiKey: getenv('BLINDPAY_API_KEY'),
+    apiKey: (string) getenv('BLINDPAY_API_KEY'),
     instanceId: 'in_000000000000',
     baseUrl: 'https://api.blindpay.com', // default
     timeout: 60.0,                        // seconds per attempt, default 60
@@ -67,13 +70,15 @@ The client is immutable and safe to share (build it once, reuse it everywhere). 
 
 Testing with a mock handler:
 
+<!-- snippet: readme_mock_handler(): \BlindPay\SDK\BlindPay
+return $blindpay; -->
 ```php
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 
-$mock = new MockHandler([new Response(200, [], json_encode([]))]);
+$mock = new MockHandler([new Response(200, [], '[]')]);
 $stack = HandlerStack::create($mock);
 $history = [];
 $stack->push(Middleware::history($history));
@@ -85,6 +90,7 @@ $blindpay = new BlindPay(apiKey: 'test_key', instanceId: 'in_000000000000', hand
 
 Resource methods return a `BlindPayApiResponse`. They do not throw for API, network or decoding failures: check `isError()`.
 
+<!-- snippet: readme_results_and_errors(\BlindPay\SDK\BlindPay $blindpay): void -->
 ```php
 $response = $blindpay->payouts->get('pa_000000000000');
 
@@ -127,7 +133,7 @@ On success, `data` holds the decoded value, `requestId` the `X-Request-Id` respo
 |---|---|
 | `API` | The API answered with a non-2xx status. Non-JSON error bodies (for example an HTML 502 page) still produce an `API` error with the status. |
 | `NETWORK` | No response was received: connection, DNS or TLS failure, or the per-attempt timeout. |
-| `VALIDATION` | The SDK rejected the call before sending it (an empty ID, an invalid idempotency key, ...). |
+| `VALIDATION` | The request was not sent: the SDK rejected the call (an empty ID, an invalid idempotency key, ...) or could not build or hand it over (for example a custom `handler` that threw). |
 | `DECODE` | The API answered 2xx but the body did not fit the SDK's types. |
 
 `$error->isNetworkError()` and `$error->isApiError()` are shortcuts. An empty 2xx body (for example 204) is a success with `data === null`.
@@ -143,6 +149,7 @@ On success, `data` holds the decoded value, `requestId` the `X-Request-Id` respo
 | `ACTIONABLE` | The request succeeds only after you fix something (fund a balance, correct bank details, ...). |
 | `UNKNOWN` | The error has no code, or a code newer than this SDK version. |
 
+<!-- snippet: readme_error_codes(\BlindPay\SDK\BlindPay $blindpay, \BlindPay\SDK\Resources\Transfers\CreateTransferQuoteInput $input): void -->
 ```php
 use BlindPay\SDK\Types\ErrorCode;
 use BlindPay\SDK\Types\RetryClass;
@@ -164,6 +171,7 @@ if ($response->isError()) {
 
 If you prefer exceptions, `getDataOrFail()` returns the data or throws `BlindPay\SDK\BlindPayApiException`, which carries the `ErrorResponse`. Every exception the SDK throws (configuration errors, `BlindPayApiException`, `WebhookException`) extends `BlindPay\SDK\BlindPayException`, so one `catch` covers them all:
 
+<!-- snippet: readme_exceptions(\BlindPay\SDK\BlindPay $blindpay): void -->
 ```php
 use BlindPay\SDK\BlindPayApiException;
 
@@ -180,6 +188,8 @@ try {
 
 Every `POST`, `PUT`, `PATCH` and `DELETE` JSON request can carry an `Idempotency-Key`, so a repeated request is executed once. Pass your own key (an order or payment ID works well) in `RequestOptions`, the trailing argument of every resource method:
 
+<!-- snippet: readme_idempotency(\BlindPay\SDK\BlindPay $blindpay): mixed
+return $response; -->
 ```php
 use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutInput;
 use BlindPay\SDK\Types\RequestOptions;
@@ -195,7 +205,7 @@ $response = $blindpay->payouts->createEvm(
 - Multipart requests (uploads) never carry an idempotency key.
 - The terms of service call has its own `idempotencyKey` in the request body (`InitiateInput`). That is unrelated to the header.
 
-`RequestOptions` also takes `timeout` (seconds, for that call) and `headers` (extra headers; they cannot override the SDK's own `Authorization`, `User-Agent`, `Idempotency-Key` or `Content-Type`).
+`RequestOptions` also takes `timeout` (seconds, for that call) and `headers` (extra headers). An `Idempotency-Key` in `headers` is rejected with a `VALIDATION` error (use `idempotencyKey`); `Authorization`, `User-Agent`, `Content-Type` and `Accept` in `headers` are ignored, so the SDK's own values are always sent.
 
 ## Retries
 
@@ -211,6 +221,8 @@ Other 4xx responses are never retried. The delay is the `Retry-After` header whe
 
 A mutation that gets a 5xx is not retried because the API releases the idempotency key on a 5xx, so a resend would run the handler again. The error comes back with `retryable: true` and the key instead. **If a create or payout returns a 5xx, look the resource up (by quote, external id, or a list filter) before resending. Resend with the same `idempotency_key` from the error** (`$response->error->idempotencyKey`).
 
+<!-- snippet: readme_retries(\BlindPay\SDK\BlindPay $blindpay, \BlindPay\SDK\Resources\Payouts\CreateEvmPayoutInput $input): void
+$response = $blindpay->payouts->createEvm($input); -->
 ```php
 if ($response->isError() && $response->error->retryable && $response->error->status >= 500) {
     // 1. check whether the payout exists (payouts->list with a filter, or by quote)
@@ -227,6 +239,7 @@ Indicative FX quote endpoints are rate limited per instance; a limited call retu
 
 List endpoints return a bare array when you send no pagination parameter, and `{data, pagination}` when you send `limit`, `starting_after` or `ending_before`. The SDK decodes both into one type, `ListResponse` (payouts, payins, transfers, customers, payables and wallet deposits):
 
+<!-- snippet: readme_pagination(\BlindPay\SDK\BlindPay $blindpay): void -->
 ```php
 use BlindPay\SDK\Resources\Payouts\ListPayoutsInput;
 
@@ -245,6 +258,7 @@ if ($page->hasMore()) {
 
 **Unpaginated lists return every row.** For a large list (a busy instance's payouts, say), page it with the generator instead. `listAutoPaging()` exists on `payouts`, `payins`, `customers`, `transfers` and `payables`; `wallets->custodial->getDepositsAutoPaging()` does the same for wallet deposits:
 
+<!-- snippet: readme_autopaging(\BlindPay\SDK\BlindPay $blindpay): void -->
 ```php
 use BlindPay\SDK\BlindPayApiException;
 
@@ -257,7 +271,7 @@ try {
 }
 ```
 
-The generator is lazy, asks for `limit=100` unless you set one, follows `next_page` as `starting_after` while `has_more`, and goes forward only (`endingBefore` throws `BlindPayException`). Each page goes through the normal retry path. A failed page **throws** `BlindPayApiException`, so put the `try` around the `foreach`.
+The generator is lazy, asks for `limit=100` unless you set one, follows `next_page` as `starting_after` while `has_more`, and goes forward only (`endingBefore` throws `BlindPayException`). Each page goes through the normal retry path. A failed page **throws** `BlindPayApiException`, so put the `try` around the `foreach`. If the API ever hands back a `next_page` cursor the generator already sent (the same one twice, or a cycle), it throws `BlindPayException` after yielding that page, instead of looping forever or stopping silently with rows missing. Its `getErrorCode()` is `\BlindPay\SDK\Internal\AutoPager::CURSOR_REPEATED` (`PAGINATION_CURSOR_REPEATED`).
 
 Lists that are always plain arrays (blockchain wallets, virtual accounts, partner fees, webhook endpoints, ...) return a PHP array in `data`; customer bank accounts return `ListBankAccountsResponse`, with the rows in `data`.
 
@@ -265,14 +279,17 @@ Lists that are always plain arrays (blockchain wallets, virtual accounts, partne
 
 Verify against the **raw** request body, never re-encoded JSON, and do it before you trust anything in it. No API client is needed, only the endpoint's signing secret (`whsec_...`, from `$blindpay->instances->webhookEndpoints->getSecret($id)` or the dashboard). Never log the secret.
 
+<!-- snippet: readme_webhooks(): void -->
 ```php
+use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutResponse;
 use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
+use BlindPay\SDK\Webhooks\WebhookDecodeException;
 use BlindPay\SDK\Webhooks\WebhookException;
 use BlindPay\SDK\Webhooks\WebhookVerifier;
 
-$rawBody = file_get_contents('php://input');
+$rawBody = (string) file_get_contents('php://input');
 $headers = getallheaders(); // header names are matched case-insensitively
-$secret  = getenv('BLINDPAY_WEBHOOK_SECRET');
+$secret  = (string) getenv('BLINDPAY_WEBHOOK_SECRET');
 
 // Option 1: just check the signature (never throws; 5 minute timestamp tolerance by default)
 if (! WebhookVerifier::verify($rawBody, $headers, $secret)) {
@@ -283,8 +300,14 @@ if (! WebhookVerifier::verify($rawBody, $headers, $secret)) {
 // Option 2: verify and decode into a typed event
 try {
     $event = WebhookVerifier::constructEvent($rawBody, $headers, $secret);
+} catch (WebhookDecodeException $e) {
+    // Authentic, but this SDK version could not decode it. Any non-2xx makes BlindPay retry for
+    // hours: log it, acknowledge, and replay it from the dashboard once your handler is fixed.
+    error_log("undecodable webhook {$e->eventType}: {$e->getMessage()}");
+    http_response_code(200);
+    exit;
 } catch (WebhookException) {
-    http_response_code(400);
+    http_response_code(400); // bad signature or stale timestamp
     exit;
 }
 
@@ -293,14 +316,16 @@ $deliveryId = array_change_key_case($headers, CASE_LOWER)['svix-id'] ?? '';
 // if (alreadyProcessed($deliveryId)) { http_response_code(200); exit; }
 
 if ($event->type === WebhookEvents::PAYOUT_COMPLETE || $event->type === WebhookEvents::PAYOUT_UPDATE) {
-    $payout = $event->data; // CreateEvmPayoutResponse
+    $payout = $event->dataAs(CreateEvmPayoutResponse::class); // ?CreateEvmPayoutResponse
     // see "Failed payouts" below
 }
 
 http_response_code(200);
 ```
 
-`WebhookEvent` has `type` (a `WebhookEvents` case, or the raw string for an event added after this SDK version), `data` (the typed payload, `null` for an unknown event), and `raw` (the decoded JSON). An unknown event never throws: acknowledge it with a 2xx. `$event->isKnown()` tells them apart.
+`WebhookEvent` has `type` (a `WebhookEvents` case, or the raw string for an event added after this SDK version), `data` (the typed payload, `null` for an unknown event), and `raw` (the decoded JSON). `$event->dataAs(CreateEvmPayoutResponse::class)` returns the payload as that class, or `null` for any other payload, so static analysers know its type. An unknown event never throws: acknowledge it with a 2xx. `$event->isKnown()` tells them apart.
+
+`constructEvent()` throws `WebhookException` when the signature or timestamp does not verify: answer 400. It throws the subclass `WebhookDecodeException` (with `eventType` and `raw`) when the delivery is authentic but could not be decoded: BlindPay retries every non-2xx delivery for hours, so log it, answer 2xx and replay the event from the dashboard once fixed, as the handler above does.
 
 | Events | `data` |
 |---|---|
@@ -322,16 +347,17 @@ http_response_code(200);
 
 A failed payout arrives on **both** `payout.update` (with `status: "failed"`) and `payout.complete` (the dev simulation, for example, sends `payout.complete` with a failed status). Do not infer failure from the event name; branch on `status`:
 
+<!-- snippet: readme_failed_payouts(\BlindPay\SDK\Webhooks\WebhookEvent $event): void -->
 ```php
 use BlindPay\SDK\Types\TransactionStatus;
 
-$payout = $event->data;
+$payout = $event->dataAs(CreateEvmPayoutResponse::class); // null for any other payload type
 
-match ($payout->status) { // TransactionStatus|string: a status this SDK does not know is a plain string
+match ($payout?->status) { // TransactionStatus|string: a status this SDK does not know is a plain string
     TransactionStatus::COMPLETED => markPaid($payout->id),
     TransactionStatus::FAILED => markFailed($payout->id),
     TransactionStatus::REFUNDED => markRefunded($payout->id),
-    default => null, // processing, on_hold, ...
+    default => null, // processing, on_hold, another payload type, ...
 };
 ```
 
@@ -341,6 +367,7 @@ To register an endpoint, see [`examples/webhook-endpoint.php`](examples/webhook-
 
 KYC and KYB fields take the URL of an uploaded file. Uploads are `multipart/form-data`; give an `UploadFile` a path, a stream or bytes:
 
+<!-- snippet: readme_uploads(\BlindPay\SDK\BlindPay $blindpay): void -->
 ```php
 use BlindPay\SDK\Resources\Upload\AnalyzeUploadInput;
 use BlindPay\SDK\Resources\Upload\PresignInput;
@@ -351,8 +378,8 @@ use BlindPay\SDK\Resources\Upload\UploadInput;
 
 $file = UploadFile::fromPath('/path/to/proof-of-address.pdf'); // or new UploadFile($bytes, 'doc.pdf', 'application/pdf')
 
-$uploaded = $blindpay->upload->create(new UploadInput(UploadBucket::ONBOARDING, $file));
-echo $uploaded->data->fileUrl ?? '';
+$uploaded = $blindpay->upload->create(new UploadInput(UploadBucket::ONBOARDING, $file))->getDataOrFail();
+echo $uploaded->fileUrl;
 
 // Rate how likely a document is to be approved, before you submit it
 $analysis = $blindpay->upload->analyze(new AnalyzeUploadInput(
@@ -362,7 +389,7 @@ $analysis = $blindpay->upload->analyze(new AnalyzeUploadInput(
 ));
 
 // A short-lived signed URL to read an uploaded file
-$signed = $blindpay->upload->presign(new PresignInput($uploaded->data->fileUrl));
+$signed = $blindpay->upload->presign(new PresignInput($uploaded->fileUrl));
 ```
 
 Uploads authenticate against your instance ID and need a completed onboarding. They carry no idempotency key and are retried only when nothing was sent.
@@ -386,9 +413,10 @@ For whole-unit sender currencies, a `CurrencyType::SENDER` payin quote amount mu
 
 Every enum in a **response** is open: a value this SDK version does not know is kept as the raw string instead of failing the whole response. Response properties are typed `Enum|string`, so compare defensively:
 
+<!-- snippet: readme_enums(\BlindPay\SDK\Resources\Payouts\Payout $payout): void -->
 ```php
-if ($payout->status === TransactionStatus::COMPLETED) { /* known value */ }
-if ($payout->status instanceof TransactionStatus) { $payout->status->value; } // a string never has ->value
+if ($payout->status === TransactionStatus::COMPLETED) { echo "paid\n"; } // a known value
+echo $payout->status instanceof TransactionStatus ? $payout->status->value : $payout->status; // a string never has ->value
 ```
 
 Enums in **requests** (inputs) stay closed, for type safety.

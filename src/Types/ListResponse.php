@@ -42,7 +42,14 @@ readonly class ListResponse implements Countable, IteratorAggregate
         return new static(data: array_map($item, array_values($items)), pagination: $pagination);
     }
 
-    /** Whether another page follows this one (false for the bare-array form). */
+    /**
+     * Whether another page follows this one (false for the bare-array form). When true, static
+     * analysers know `pagination` is set.
+     *
+     * @phpstan-assert-if-true !null $this->pagination
+     *
+     * @psalm-assert-if-true !null $this->pagination
+     */
     public function hasMore(): bool
     {
         return $this->pagination !== null && $this->pagination->hasMore;

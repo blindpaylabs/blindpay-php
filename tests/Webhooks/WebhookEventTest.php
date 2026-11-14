@@ -9,6 +9,7 @@ use BlindPay\SDK\Resources\Customers\IndividualWithEnhancedKYC;
 use BlindPay\SDK\Resources\Customers\IndividualWithStandardKYC;
 use BlindPay\SDK\Resources\Payouts\CreateEvmPayoutResponse;
 use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
+use BlindPay\SDK\Webhooks\WebhookDecodeException;
 use BlindPay\SDK\Webhooks\WebhookEvent;
 use BlindPay\SDK\Webhooks\WebhookException;
 use BlindPay\SDK\Webhooks\WebhookVerifier;
@@ -86,6 +87,9 @@ final class WebhookEventTest extends TestCase
         $decode = fn (string $event) => WebhookEvent::fromArray(json_decode((string) file_get_contents(__DIR__."/../Fixtures/spec/webhooks/{$event}.json"), true)['variants']['full']);
 
         $this->assertInstanceOf(CreateEvmPayoutResponse::class, $decode('payout.complete')->data);
+        $this->assertInstanceOf(CreateEvmPayoutResponse::class, $decode('payout.complete')->dataAs(CreateEvmPayoutResponse::class));
+        $this->assertNull($decode('payin.complete')->dataAs(CreateEvmPayoutResponse::class));
+        $this->assertNull(WebhookEvent::fromArray(['webhook_event' => 'future.event'])->dataAs(CreateEvmPayoutResponse::class));
         $this->assertContains($decode('customer.new')->data::class, [IndividualWithStandardKYC::class, IndividualWithEnhancedKYC::class, BusinessWithStandardKYB::class]);
     }
 
@@ -113,12 +117,26 @@ final class WebhookEventTest extends TestCase
     }
 
     #[Test]
-    public function it_throws_on_a_known_event_with_an_undecodable_payload(): void
+    public function it_throws_a_decode_exception_for_an_authentic_but_undecodable_payload(): void
     {
         $payload = '{"webhook_event":"payout.complete","id":"po_1"}';
 
-        $this->expectException(WebhookException::class);
+        try {
+            WebhookVerifier::constructEvent($payload, self::sign($payload), self::SECRET, now: self::NOW);
+            $this->fail('expected a WebhookDecodeException');
+        } catch (WebhookDecodeException $e) {
+            $this->assertInstanceOf(WebhookException::class, $e, 'existing catch (WebhookException) blocks still match');
+            $this->assertSame('payout.complete', $e->eventType);
+            $this->assertSame(['webhook_event' => 'payout.complete', 'id' => 'po_1'], $e->raw);
+        }
 
-        WebhookVerifier::constructEvent($payload, self::sign($payload), self::SECRET, now: self::NOW);
+        foreach (['[1]', '{"id":"x"}'] as $body) {
+            try {
+                WebhookVerifier::constructEvent($body, self::sign($body), self::SECRET, now: self::NOW);
+                $this->fail("{$body}: expected a WebhookDecodeException");
+            } catch (WebhookDecodeException) {
+                $this->addToAssertionCount(1);
+            }
+        }
     }
 }

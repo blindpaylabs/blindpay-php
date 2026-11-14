@@ -1,3 +1,12 @@
+# Upgrading from 4.1 to 4.2
+
+4.2 adds `WebhookEvent::dataAs()`, `WebhookDecodeException` and type narrowing for static analysers. Two behaviours change; neither needs a code change unless you rely on the old behaviour:
+
+- **An authentic webhook that cannot be decoded throws `WebhookDecodeException`**, a subclass of `WebhookException`, so existing `catch (WebhookException)` blocks still catch it. Catch it first to answer 2xx instead of 400 (see the README's Webhooks section). `WebhookException` is no longer `final`.
+- **`listAutoPaging()` throws `BlindPayException` when the API hands back a cursor it already sent** (an immediate repeat or a cycle), after yielding the rows it received; `getErrorCode()` is `AutoPager::CURSOR_REPEATED` (`PAGINATION_CURSOR_REPEATED`). 4.1 stopped silently on an immediate repeat, which hid the rows after it, and looped on a cycle.
+
+Since 4.1, transport error messages no longer include query strings: branch on `$error->code` / `ErrorCode`, not on message text.
+
 # Upgrading from 3.x to 4.0
 
 4.0 makes the SDK match the BlindPay API contract: every response decodes (including values the SDK does not know yet), every method accepts per-request options, and the client retries and sends idempotency keys. Most application code keeps working with small edits. This guide lists every change that can break existing code, with a before and after for each, then the additions you may want to adopt.

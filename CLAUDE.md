@@ -13,12 +13,13 @@ blindpay-php/
   phpunit.xml.dist           # PHPUnit config
   phpstan.neon.dist          # PHPStan level 7 over src/ and examples/ (phpVersion 80200)
   README.md                  # User docs: configuration, results, idempotency, retries, pagination, webhooks
-  UPGRADING.md               # 3.x -> 4.0 migration guide (every breaking change, before/after)
+  UPGRADING.md               # 4.1 -> 4.2 behaviour changes, then the 3.x -> 4.0 migration guide (every breaking change, before/after)
   RELEASING.md               # Release runbook: VERSION, release.yaml, secrets, stuck runs, verifying Packagist
   examples/                  # Runnable scripts (functions only, nothing runs on load); not in the Composer archive
   scripts/
     api-sync.php             # Patches the SDK from the OpenAPI spec (api-sync workflow)
     contract-check.php       # Checks the wire keys the SDK reads/writes against the spec snapshot
+    readme-snippets.php      # Wraps every README ```php block in the function its <!-- snippet: --> header names; --analyse runs PHPStan level 8 (composer run readme:check)
   .api-sync/                 # api-sync state, see section 10
   src/
     BlindPay.php             # Main client. Implements ApiClientInterface, builds Transport and every resource in its constructor.
@@ -39,7 +40,7 @@ blindpay-php/
       WebhookVerifier.php    # Standalone Svix verifier: verify() and constructEvent() (no API client needed)
       WebhookEvent.php       # Typed event {type, data, raw}; unknown events keep the raw name and null data
       WebhookPayloads.php    # Payload types with no resource class (CustomerDeletedPayload, TosAcceptedPayload, WalletInboundPayload)
-      WebhookException.php
+      WebhookException.php   # bad signature/timestamp; WebhookDecodeException.php: authentic but undecodable (answer 2xx)
     Resources/               # Each subdirectory = one API resource domain
       Available/Available.php
       BankAccounts/BankAccounts.php
@@ -87,7 +88,9 @@ blindpay-php/
     Internal/                # TransportTest (retry table, idempotency, errors), AutoPagerTest, DecodeTest, RequestOptionsGuardTest,
                              # BlindPayExceptionTest (every SDK throw is the public BlindPayException),
                              # SecretHygieneTest (no key/secret in traces or dumps, no query string in transport errors)
-    Webhooks/                # WebhookVerifierTest (shared Svix vectors), WebhookEventTest (every webhook fixture variant)
+    Webhooks/                # WebhookVerifierTest (the 14 shared Svix vectors through verify() and constructEvent(): 1 decoded,
+                             # 10 rejected with WebhookException, 3 minimal payout.complete bodies -> WebhookDecodeException),
+                             # WebhookEventTest (every webhook fixture variant)
     Resources/               # One test file per resource, mirroring src/Resources; RequestBodiesTest checks request bodies,
                              # RequestFieldCoverageTest the optional request fields added in 4.1.0
     SpecFixtures/SpecFixtureDecodeTest.php  # decodes every shared spec fixture through the resource methods
@@ -263,7 +266,7 @@ private function listPage(array $query, ?RequestOptions $options): BlindPayApiRe
 }
 ```
 
-The pager is forward only (`ending_before` throws `BlindPayException`), asks for `limit=100` unless set, and throws `BlindPayApiException` when a page fails. Lists that are always plain arrays (blockchain wallets, virtual accounts, partner fees, webhook endpoints, ...) are not paged: decode them into a PHP array with `array_map`.
+The pager is forward only (`ending_before` throws `BlindPayException`), asks for `limit=100` unless set, and throws `BlindPayApiException` when a page fails. It remembers every cursor it sent (the caller's `starting_after` included) and throws `BlindPayException` with `getErrorCode() === AutoPager::CURSOR_REPEATED` when the API hands one back again (an immediate repeat or a cycle), after yielding that page: never loop, never stop silently with rows missing. Lists that are always plain arrays (blockchain wallets, virtual accounts, partner fees, webhook endpoints, ...) are not paged: decode them into a PHP array with `array_map`.
 
 ## 3. How To: Add a New Resource
 
@@ -534,6 +537,7 @@ composer run lint:fix         # Auto-fix code style
 composer run analyse          # PHPStan level 7 over src/ and examples/
 composer run contract-check   # SDK wire keys vs the spec snapshot
 composer run api-sync:check   # SDK vs the spec snapshot (what the api-sync workflow checks)
+composer run readme:check     # PHPStan level 8 over every README code block
 composer dump-autoload        # After adding or removing any src/ file
 ```
 
@@ -543,7 +547,7 @@ Without a local PHP, wrap any of them:
 docker run --rm -v "$PWD":/app -w /app composer:2 composer run test
 ```
 
-CI (`tests.yaml`) runs `composer validate --strict`, Pest and PHPStan on PHP 8.2, 8.4 and 8.5. `composer.lock` must install on all three: run `composer update` under PHP 8.2, the floor, never under a newer PHP (the `composer:2` image ships the newest PHP). A lock that pinned `brianium/paratest` 7.8.4 (`~8.2 || ~8.3 || ~8.4`) could not install on 8.5.
+CI (`tests.yaml`) runs `composer validate --strict`, Pest, PHPStan and `composer run readme:check` on PHP 8.2, 8.4 and 8.5. Every ```php block in README.md needs a `<!-- snippet: name(params): return -->` header on the line above it (extra header lines are setup code, a `return ...` line goes after the block); `readme:check` wraps each block in that function and runs PHPStan level 8 on the result, so README code cannot drift from the SDK's types. `composer.lock` must install on all three: run `composer update` under PHP 8.2, the floor, never under a newer PHP (the `composer:2` image ships the newest PHP). A lock that pinned `brianium/paratest` 7.8.4 (`~8.2 || ~8.3 || ~8.4`) could not install on 8.5.
 
 ### Autoloading: run `composer dump-autoload` after adding a file under `src/`
 
@@ -629,7 +633,7 @@ Key points:
 
 When you add an operation, add it to `calls()`. When you add a response type, make it decode all variants. `PENDING` (operations that do not decode every variant yet, with a reason) must **stay empty**: do not add to it, fix the type. Fixtures under `tests/Fixtures/` are shared across the BlindPay SDKs: never edit them by hand.
 
-Other guard tests: `RequestOptionsGuardTest` (every resource method takes a trailing `?RequestOptions $options = null`), `RequestBodiesTest` (request bodies are exactly the spec's), `WebhookEventTest` (every webhook fixture variant decodes, unknown events do not fail), `WebhookVerifierTest` (the shared Svix vectors).
+Other guard tests: `RequestOptionsGuardTest` (every resource method takes a trailing `?RequestOptions $options = null`), `RequestBodiesTest` (request bodies are exactly the spec's), `WebhookEventTest` (every webhook fixture variant decodes, unknown events do not fail), `WebhookVerifierTest` (the shared Svix vectors, through both `verify()` and `constructEvent()`; a valid signature on a body that is not spec-shaped must throw `WebhookDecodeException`, never be decoded by relaxing a spec-required field).
 
 ## 9. Versioning
 
@@ -638,7 +642,7 @@ Other guard tests: `RequestOptionsGuardTest` (every resource method takes a trai
 `src/BlindPay.php` has a `private const VERSION` that is sent in the `User-Agent` header (`blindpay-php/{VERSION}`):
 
 ```php
-private const VERSION = '4.1.0';
+private const VERSION = '4.2.0';
 ```
 
 Keep the exact form `private const VERSION = 'X.Y.Z';`: `scripts/api-sync.php` rewrites it with a regular expression when it bumps the version, and `.github/workflows/release.yaml` reads it on every push to `main` to decide whether to tag a release (it tags only when `vX.Y.Z` does not exist yet).

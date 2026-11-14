@@ -54,6 +54,10 @@ use BlindPay\SDK\Resources\Webhooks\WebhookEvents;
 final readonly class WebhookEvent
 {
     /**
+     * `data` is the typed payload (see the table above), null for an unknown event. For a variable
+     * of one precise type, use dataAs().
+     *
+     * @param  IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB|CustomerDeletedPayload|BankAccountListItem|BlockchainWallet|LimitIncreaseRequest|CreateEvmPayoutResponse|CreateEvmPayinResponse|CreateTransferResponse|Payable|VirtualAccount|CustodialWallet|WalletInboundPayload|TosAcceptedPayload|null  $data
      * @param  array<string, mixed>  $raw  the decoded JSON body
      */
     public function __construct(
@@ -61,6 +65,22 @@ final readonly class WebhookEvent
         public ?object $data,
         public array $raw,
     ) {}
+
+    /**
+     * The payload as an instance of $class, or null when this event carries another payload type
+     * (or none). Gives static analysers a precise type:
+     *
+     *     $payout = $event->dataAs(CreateEvmPayoutResponse::class); // ?CreateEvmPayoutResponse
+     *
+     * @template TPayload of object
+     *
+     * @param  class-string<TPayload>  $class
+     * @return TPayload|null
+     */
+    public function dataAs(string $class): ?object
+    {
+        return $this->data instanceof $class ? $this->data : null;
+    }
 
     /** Whether this SDK version knows the event type (and so decoded `data`). */
     public function isKnown(): bool
@@ -74,14 +94,14 @@ final readonly class WebhookEvent
      *
      * @param  array<string, mixed>  $body
      *
-     * @throws WebhookException when the body has no `webhook_event` or a known event's payload
-     *                          does not decode
+     * @throws WebhookDecodeException when the body has no `webhook_event` or a known event's
+     *                                payload does not decode
      */
     public static function fromArray(array $body): self
     {
         $name = $body['webhook_event'] ?? null;
         if (! is_string($name) || $name === '') {
-            throw new WebhookException('The webhook body has no webhook_event.');
+            throw new WebhookDecodeException('The webhook body has no webhook_event.', raw: $body);
         }
         $type = WebhookEvents::tryFrom($name);
         if ($type === null) {
@@ -91,12 +111,13 @@ final readonly class WebhookEvent
         try {
             $data = ErrorGuard::run(fn () => self::decode($type, $body));
         } catch (\Throwable $e) {
-            throw new WebhookException("The {$name} payload could not be decoded: {$e->getMessage()}", previous: $e instanceof \Exception ? $e : null);
+            throw new WebhookDecodeException("The {$name} payload could not be decoded: {$e->getMessage()}", $name, $body, $e instanceof \Exception ? $e : null);
         }
 
         return new self($type, $data, $body);
     }
 
+    /** @return IndividualWithStandardKYC|IndividualWithEnhancedKYC|BusinessWithStandardKYB|CustomerDeletedPayload|BankAccountListItem|BlockchainWallet|LimitIncreaseRequest|CreateEvmPayoutResponse|CreateEvmPayinResponse|CreateTransferResponse|Payable|VirtualAccount|CustodialWallet|WalletInboundPayload|TosAcceptedPayload */
     private static function decode(WebhookEvents $type, array $body): object
     {
         return match ($type) {
